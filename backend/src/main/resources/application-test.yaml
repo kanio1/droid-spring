@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bss_test
+    username: test
+    password: test
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+  sql:
+    init:
+      mode: never
+
+security:
+  oauth2:
+    audience: bss-backend

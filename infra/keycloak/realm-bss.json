@@ -1,0 +1,109 @@
+{
+  "realm": "bss",
+  "enabled": true,
+  "displayName": "BSS",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": false,
+  "internationalizationEnabled": false,
+  "clients": [
+    {
+      "clientId": "bss-frontend",
+      "name": "BSS Frontend",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "300"
+      },
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone"
+      ]
+    },
+    {
+      "clientId": "bss-backend",
+      "name": "BSS Backend",
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "changeme-backend-secret",
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
+      "redirectUris": [
+        "http://backend:8080/*",
+        "http://localhost:8080/*"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "bss-user",
+        "description": "Standard user role for BSS hello-world access",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+  "groups": [],
+  "users": [
+    {
+      "username": "bss-user",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "BSS",
+      "lastName": "User",
+      "email": "bss.user@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "bss-user"
+      ]
+    }
+  ],
+  "identityProviders": [],
+  "components": {}
+}

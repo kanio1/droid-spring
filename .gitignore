@@ -1,0 +1,5 @@
+.env
+backend/target/
+node_modules
+dev/certs/
+.jdk/
