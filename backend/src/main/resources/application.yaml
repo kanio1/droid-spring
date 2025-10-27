@@ -1,12 +1,29 @@
 spring:
   application:
     name: bss-backend
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:bss}
+    username: ${POSTGRES_USER:bss_app}
+    password: ${POSTGRES_PASSWORD:placeholder_password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    defer-datasource-initialization: false
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+    baseline-on-migrate: true
+
   threads:
     virtual:
       enabled: true
-  flyway:
-    locations: classpath:db/migration
-
+  
   security:
     oauth2:
       resourceserver:
