@@ -1,0 +1,66 @@
+:global {
+  log {
+    output stdout
+    format json
+    level info
+  }
+}
+
+:80 {
+  @health {
+    path /healthz
+  }
+
+  handle @health {
+    respond "OK" 200
+  }
+
+  handle {
+    redir https://localhost:8443{uri}
+  }
+}
+
+https://localhost {
+  tls /certs/dev-localhost.crt.pem /certs/dev-localhost.key.pem
+  encode gzip zstd
+
+  metrics /metrics
+
+  @health {
+    path /healthz
+  }
+
+  handle @health {
+    respond "OK" 200
+  }
+
+  handle_path /api/* {
+    reverse_proxy backend:8080 {
+      header_up X-Forwarded-Port {http.request.port}
+    }
+  }
+
+  handle_path /actuator/* {
+    reverse_proxy backend:8080 {
+      header_up X-Forwarded-Port {http.request.port}
+    }
+  }
+
+  handle_path /auth/* {
+    reverse_proxy keycloak:8080 {
+      header_up X-Forwarded-Port {http.request.port}
+    }
+  }
+
+  handle_path /realms/* {
+    reverse_proxy keycloak:8080 {
+      header_up X-Forwarded-Port {http.request.port}
+    }
+  }
+
+  handle {
+    reverse_proxy frontend:3000 {
+      header_up X-Forwarded-Port {http.request.port}
+    }
+  }
+}

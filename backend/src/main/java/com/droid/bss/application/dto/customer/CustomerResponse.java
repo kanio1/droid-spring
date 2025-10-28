@@ -1,0 +1,46 @@
+package com.droid.bss.application.dto.customer;
+
+import com.droid.bss.domain.customer.Customer;
+import com.droid.bss.domain.customer.CustomerId;
+import com.droid.bss.domain.customer.CustomerInfo;
+import com.droid.bss.domain.customer.ContactInfo;
+import com.droid.bss.domain.customer.CustomerStatus;
+import java.time.LocalDateTime;
+
+public record CustomerResponse(
+    String id,
+    String firstName,
+    String lastName,
+    String pesel,
+    String nip,
+    String email,
+    String phone,
+    String status,
+    String statusDisplayName,
+    LocalDateTime createdAt,
+    LocalDateTime updatedAt,
+    int version
+) {
+    
+    public static CustomerResponse from(Customer customer) {
+        CustomerInfo personalInfo = customer.getPersonalInfo();
+        ContactInfo contactInfo = customer.getContactInfo();
+        CustomerId customerId = customer.getId();
+        CustomerStatus status = customer.getStatus();
+        
+        return new CustomerResponse(
+            customerId.toString(),
+            personalInfo.firstName(),
+            personalInfo.lastName(),
+            personalInfo.pesel(),
+            personalInfo.nip(),
+            contactInfo.email(),
+            contactInfo.phone(),
+            status.name(),
+            status.getDisplayName(),
+            customer.getCreatedAt(),
+            customer.getUpdatedAt(),
+            customer.getVersion()
+        );
+    }
+}

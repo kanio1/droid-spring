@@ -1,0 +1,129 @@
+/* Page Transitions - Przejścia między stronami */
+
+/* Page Transition - Fade + Slide */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity var(--transition-base) var(--transition-timing),
+              transform var(--transition-base) var(--transition-timing);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* Modal Transitions */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity var(--transition-base) var(--transition-timing);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-content-enter-active,
+.modal-content-leave-active {
+  transition: opacity var(--transition-base) var(--transition-timing),
+              transform var(--transition-base) var(--transition-timing);
+}
+
+.modal-content-enter-from,
+.modal-content-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Toast Transitions */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all var(--transition-base) var(--transition-timing);
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* Fade Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--transition-fast) var(--transition-timing);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide Down */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all var(--transition-fast) var(--transition-timing);
+}
+
+.slide-down-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Scale Transitions */
+.scale-enter-active,
+.scale-leave-active {
+  transition: transform var(--transition-fast) var(--transition-timing);
+}
+
+.scale-enter-from {
+  transform: scale(0.95);
+}
+
+.scale-leave-to {
+  transform: scale(0.95);
+}
+
+/* Button Hover States */
+.btn-hover {
+  transition: all var(--transition-fast) var(--transition-timing);
+}
+
+.btn-hover:hover {
+  transform: translateY(-1px);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+}
+
+/* Table Row Hover */
+.table-row-hover {
+  transition: background-color var(--transition-fast) var(--transition-timing);
+}
+
+.table-row-hover:hover {
+  background-color: var(--color-surface-alt);
+}
+
+/* Input Focus Animation */
+.input-focus {
+  transition: all var(--transition-fast) var(--transition-timing);
+}
+
+.input-focus:focus {
+  transform: translateY(-1px);
+}
