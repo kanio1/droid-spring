@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: bss-backend
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:bss}
+    username: ${POSTGRES_USER:bss_app}
+    password: ${POSTGRES_PASSWORD:placeholder_password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    defer-datasource-initialization: false
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+    baseline-on-migrate: true
+
+  threads:
+    virtual:
+      enabled: true
+  
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8081/realms/bss}
+
+security:
+  oauth2:
+    audience: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_AUDIENCE:bss-backend}
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+
+server:
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      protocol-header: X-Forwarded-Proto
+      remote-ip-header: X-Forwarded-For
+      host-header: X-Forwarded-Host
+      port-header: X-Forwarded-Port
+      internal-proxies: 127\.0\.0\.1|::1|10\.(\d{1,3}\.){2}\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.)\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}
