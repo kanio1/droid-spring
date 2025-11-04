@@ -30,11 +30,15 @@ public class BusinessMetrics {
     private final Timer invoiceProcessingTimer;
     private final Timer paymentProcessingTimer;
     private final Timer customerQueryTimer;
+    private final Timer serviceActivationTimer;
+    private final Timer serviceDeactivationTimer;
 
     // Gauges for tracking current state
     private final AtomicLong activeSubscriptionsGauge;
     private final AtomicLong pendingInvoicesGauge;
     private final AtomicLong totalCustomersGauge;
+    private final AtomicLong activeServicesGauge;
+    private final AtomicLong pendingActivationsGauge;
 
     public BusinessMetrics(MeterRegistry meterRegistry) {
         // Customer metrics
@@ -87,11 +91,19 @@ public class BusinessMetrics {
         this.customerQueryTimer = Timer.builder("bss.customers.query.duration")
                 .description("Time taken to query customers")
                 .register(meterRegistry);
+        this.serviceActivationTimer = Timer.builder("bss.services.activation.duration")
+                .description("Time taken to activate services")
+                .register(meterRegistry);
+        this.serviceDeactivationTimer = Timer.builder("bss.services.deactivation.duration")
+                .description("Time taken to deactivate services")
+                .register(meterRegistry);
 
         // Gauges
         this.activeSubscriptionsGauge = meterRegistry.gauge("bss.subscriptions.active", new AtomicLong(0));
         this.pendingInvoicesGauge = meterRegistry.gauge("bss.invoices.pending", new AtomicLong(0));
         this.totalCustomersGauge = meterRegistry.gauge("bss.customers.total", new AtomicLong(0));
+        this.activeServicesGauge = meterRegistry.gauge("bss.services.active", new AtomicLong(0));
+        this.pendingActivationsGauge = meterRegistry.gauge("bss.services.pending_activations", new AtomicLong(0));
     }
 
     // Customer metrics methods
@@ -179,5 +191,31 @@ public class BusinessMetrics {
 
     public void setTotalCustomers(long count) {
         totalCustomersGauge.set(count);
+    }
+
+    // Service metrics methods
+    public Timer.Sample startServiceActivation() {
+        return Timer.start();
+    }
+
+    public void recordServiceActivation(Timer.Sample sample) {
+        sample.stop(serviceActivationTimer);
+    }
+
+    public Timer.Sample startServiceDeactivation() {
+        return Timer.start();
+    }
+
+    public void recordServiceDeactivation(Timer.Sample sample) {
+        sample.stop(serviceDeactivationTimer);
+    }
+
+    // Gauge update methods
+    public void setActiveServices(long count) {
+        activeServicesGauge.set(count);
+    }
+
+    public void setPendingActivations(long count) {
+        pendingActivationsGauge.set(count);
     }
 }
