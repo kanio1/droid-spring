@@ -10,7 +10,10 @@ import com.droid.bss.application.dto.customer.CreateCustomerCommand;
 import com.droid.bss.application.dto.customer.CustomerResponse;
 import com.droid.bss.application.dto.customer.UpdateCustomerCommand;
 import com.droid.bss.application.query.customer.CustomerQueryService;
+import com.droid.bss.infrastructure.metrics.BusinessMetrics;
 import com.droid.bss.infrastructure.security.RateLimiting;
+import io.micrometer.core.annotation.Timed;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,24 +40,27 @@ import java.net.URI;
 @RequestMapping("/api/customers")
 @Tag(name = "Customer", description = "Customer management API")
 public class CustomerController {
-    
+
     private final CreateCustomerUseCase createCustomerUseCase;
     private final UpdateCustomerUseCase updateCustomerUseCase;
     private final ChangeCustomerStatusUseCase changeCustomerStatusUseCase;
     private final DeleteCustomerUseCase deleteCustomerUseCase;
     private final CustomerQueryService customerQueryService;
-    
+    private final BusinessMetrics businessMetrics;
+
     public CustomerController(
             CreateCustomerUseCase createCustomerUseCase,
             UpdateCustomerUseCase updateCustomerUseCase,
             ChangeCustomerStatusUseCase changeCustomerStatusUseCase,
             DeleteCustomerUseCase deleteCustomerUseCase,
-            CustomerQueryService customerQueryService) {
+            CustomerQueryService customerQueryService,
+            BusinessMetrics businessMetrics) {
         this.createCustomerUseCase = createCustomerUseCase;
         this.updateCustomerUseCase = updateCustomerUseCase;
         this.changeCustomerStatusUseCase = changeCustomerStatusUseCase;
         this.deleteCustomerUseCase = deleteCustomerUseCase;
         this.customerQueryService = customerQueryService;
+        this.businessMetrics = businessMetrics;
     }
     
     // Create
@@ -67,6 +73,7 @@ public class CustomerController {
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Timed(value = "bss.customers.create.time", description = "Time to create customer")
     public ResponseEntity<CustomerResponse> createCustomer(
             @Valid @RequestBody CreateCustomerCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -74,13 +81,16 @@ public class CustomerController {
         var customerId = createCustomerUseCase.handle(command);
         var customer = customerQueryService.findById(customerId.toString())
                 .orElseThrow(() -> new RuntimeException("Customer not found after creation"));
-        
+
+        // Record business metrics
+        businessMetrics.incrementCustomerCreated();
+
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(customerId.toString())
                 .toUri();
-        
+
         return ResponseEntity.created(location).body(customer);
     }
     
@@ -134,6 +144,7 @@ public class CustomerController {
     @ApiResponse(responseCode = "400", description = "Invalid status value")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Timed(value = "bss.customers.query_by_status.time", description = "Time to query customers by status")
     public ResponseEntity<PageResponse<CustomerResponse>> getCustomersByStatus(
             @Parameter(description = "Customer status (ACTIVE, INACTIVE, BLOCKED)", required = true) @PathVariable String status,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
@@ -190,10 +201,13 @@ public class CustomerController {
                 command.email(),
                 command.phone()
         );
-        
+
         var updatedCustomer = updateCustomerUseCase.handle(updatedCommand);
         var response = CustomerResponse.from(updatedCustomer);
-        
+
+        // Record business metrics
+        businessMetrics.incrementCustomerUpdated();
+
         return ResponseEntity.ok(response);
     }
     
@@ -216,7 +230,10 @@ public class CustomerController {
         var statusCommand = new ChangeCustomerStatusCommand(id, command.status());
         var updatedCustomer = changeCustomerStatusUseCase.handle(statusCommand);
         var response = CustomerResponse.from(updatedCustomer);
-        
+
+        // Record business metrics
+        businessMetrics.incrementCustomerStatusChanged();
+
         return ResponseEntity.ok(response);
     }
     

@@ -1,0 +1,54 @@
+# Tempo Configuration
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 4317
+
+# Distributor configuration
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+# Ingester configuration
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+  trace_idle_period: 1s
+  max_block_bytes: 1_000_000
+  max_block_duration: 5m
+
+# Memberlist configuration for cluster
+memberlist:
+  join_members:
+    - tempo:7946
+
+# Compactor configuration
+compactor:
+  working_directory: /var/lib/tempo/compactor
+  compaction_interval: 5s
+  compaction_concurrency: 5
+  compaction_retention: 24h  # Keep traces for 24 hours
+
+# Storage configuration
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/lib/tempo/wal
+    local:
+      path: /var/lib/tempo/blocks
+
+# Query configuration
+query_frontend:
+  search:
+    duration_slo: 1s
+    throughput_slo: 64_MB_s
