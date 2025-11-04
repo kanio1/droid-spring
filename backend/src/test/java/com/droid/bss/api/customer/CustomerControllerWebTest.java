@@ -38,11 +38,18 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.anyInt;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = CustomerController.class)
+@WebMvcTest(
+    controllers = CustomerController.class,
+    excludeAutoConfiguration = {
+        com.droid.bss.infrastructure.security.WebMvcConfig.class
+    }
+)
 @Import(CustomerControllerWebTest.TestSecurityConfiguration.class)
 @TestPropertySource(properties = "security.oauth2.audience=bss-backend")
 @DisplayName("CustomerController Web layer")
@@ -69,12 +76,19 @@ class CustomerControllerWebTest {
     @MockBean
     private JwtDecoder jwtDecoder;
 
+    @MockBean
+    private com.droid.bss.infrastructure.security.RateLimitingService rateLimitingService;
+
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+
+        // Configure rate limiting mock to allow all requests
+        when(rateLimitingService.isAllowed(anyString(), anyInt(), anyInt())).thenReturn(true);
+        when(rateLimitingService.getRateLimitKey(anyString())).thenReturn("test:key");
     }
 
     @TestConfiguration

@@ -6,6 +6,12 @@ export default defineNuxtConfig({
     typeCheck: false,
     strict: true
   },
+  modules: [
+    '@pinia/nuxt'
+  ],
+  css: [
+    '~/assets/styles/main.css'
+  ],
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL ?? 'https://localhost:8443/api',
@@ -25,5 +31,16 @@ export default defineNuxtConfig({
   },
   future: {
     typescriptBundlerResolution: true
+  },
+  pinia: {
+    autoImports: [
+      'defineStore',
+      'acceptHMRUpdate'
+    ]
+  },
+  vite: {
+    optimizeDeps: {
+      include: ['primevue']
+    }
   }
 })

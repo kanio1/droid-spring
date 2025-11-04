@@ -5,8 +5,14 @@ import com.droid.bss.domain.customer.CustomerId;
 import com.droid.bss.domain.customer.CustomerInfo;
 import com.droid.bss.domain.customer.ContactInfo;
 import com.droid.bss.domain.customer.CustomerStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 
+/**
+ * Response DTO for Customer entity
+ */
+@Schema(name = "CustomerResponse", description = "Customer response with full details")
 public record CustomerResponse(
     String id,
     String firstName,

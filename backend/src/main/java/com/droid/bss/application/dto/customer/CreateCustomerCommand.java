@@ -2,30 +2,35 @@ package com.droid.bss.application.dto.customer;
 
 import com.droid.bss.domain.customer.CustomerInfo;
 import com.droid.bss.domain.customer.ContactInfo;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Pattern;
 
+/**
+ * Command for creating a new customer
+ */
+@Schema(name = "CreateCustomerRequest", description = "Request to create a new customer")
 public record CreateCustomerCommand(
     @NotBlank(message = "First name is required")
     @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
     String firstName,
-    
+
     @NotBlank(message = "Last name is required")
     @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
     String lastName,
-    
+
     @Pattern(regexp = "^\\d{11}$", message = "PESEL must be exactly 11 digits")
     String pesel,
-    
+
     @Pattern(regexp = "^\\d{10}$", message = "NIP must be exactly 10 digits")
     String nip,
-    
+
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     String email,
-    
+
     @Pattern(regexp = "^\\+?[0-9\\s-]{9,15}$", message = "Phone must be between 9-15 characters")
     String phone
 ) {

@@ -1,0 +1,111 @@
+/* Main CSS - imports all styles */
+@import './tokens.css';
+@import './base.css';
+@import './transitions.css';
+
+/* PrimeVue Customizations */
+.p-component {
+  font-family: var(--font-family-base);
+}
+
+/* Custom PrimeVue Theme Overrides */
+.p-datatable .p-datatable-header {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  background: var(--color-surface);
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  background: var(--color-surface-alt);
+}
+
+.p-button {
+  font-weight: var(--font-weight-medium);
+}
+
+.p-inputtext, .p-dropdown, .p-calendar {
+  font-family: var(--font-family-base);
+}
+
+/* Status Badge Styles */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge--active {
+  background: var(--color-success-light);
+  color: var(--color-accent);
+}
+
+.status-badge--inactive {
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+}
+
+.status-badge--suspended {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.status-badge--terminated {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.status-badge--pending {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.status-badge--completed {
+  background: var(--color-success-light);
+  color: var(--color-accent);
+}
+
+/* Custom Utilities */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.page-header {
+  margin-bottom: var(--space-6);
+}
+
+.section {
+  margin-bottom: var(--space-6);
+}
+
+/* Loading States */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface-alt) 25%, var(--color-border) 50%, var(--color-surface-alt) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Responsive Tables */
+@media (max-width: 768px) {
+  .p-datatable .p-datatable-tbody > tr > td {
+    padding: var(--space-2);
+  }
+
+  .p-datatable .p-datatable-thead > tr > th {
+    padding: var(--space-2);
+  }
+}

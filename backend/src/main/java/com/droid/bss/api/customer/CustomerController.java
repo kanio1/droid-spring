@@ -10,8 +10,14 @@ import com.droid.bss.application.dto.customer.CreateCustomerCommand;
 import com.droid.bss.application.dto.customer.CustomerResponse;
 import com.droid.bss.application.dto.customer.UpdateCustomerCommand;
 import com.droid.bss.application.query.customer.CustomerQueryService;
+import com.droid.bss.infrastructure.security.RateLimiting;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,6 +35,7 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/customers")
+@Tag(name = "Customer", description = "Customer management API")
 public class CustomerController {
     
     private final CreateCustomerUseCase createCustomerUseCase;
@@ -52,6 +59,14 @@ public class CustomerController {
     
     // Create
     @PostMapping
+    @Operation(
+        summary = "Create a new customer",
+        description = "Creates a new customer with the provided details"
+    )
+    @ApiResponse(responseCode = "201", description = "Customer created successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomerResponse> createCustomer(
             @Valid @RequestBody CreateCustomerCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -71,7 +86,19 @@ public class CustomerController {
     
     // Read single
     @GetMapping("/{id}")
-    public ResponseEntity<CustomerResponse> getCustomer(@PathVariable String id) {
+    @Operation(
+        summary = "Get customer by ID",
+        description = "Retrieves a single customer by its unique identifier"
+    )
+    @ApiResponse(responseCode = "200", description = "Customer found")
+    @ApiResponse(responseCode = "404", description = "Customer not found")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "429", description = "Too Many Requests - Rate limit exceeded")
+    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.getClaimAsString('customer_id')")
+    @RateLimiting(value = 100, timeWindow = 60, keyPrefix = "customer_get")
+    public ResponseEntity<CustomerResponse> getCustomer(
+            @Parameter(description = "Customer ID", required = true) @PathVariable String id
+    ) {
         return customerQueryService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -79,10 +106,19 @@ public class CustomerController {
     
     // Read all with pagination and sorting
     @GetMapping
+    @Operation(
+        summary = "Get all customers",
+        description = "Retrieves a paginated list of all customers"
+    )
+    @ApiResponse(responseCode = "200", description = "Customers retrieved successfully")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "429", description = "Too Many Requests - Rate limit exceeded")
+    @PreAuthorize("hasRole('ADMIN')")
+    @RateLimiting(value = 50, timeWindow = 60, keyPrefix = "customer_list")
     public ResponseEntity<PageResponse<CustomerResponse>> getAllCustomers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')") @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
         var pageResponse = customerQueryService.findAll(page, size, sort);
         return ResponseEntity.ok(pageResponse);
@@ -90,11 +126,19 @@ public class CustomerController {
     
     // Read by status
     @GetMapping("/by-status/{status}")
+    @Operation(
+        summary = "Get customers by status",
+        description = "Retrieves customers filtered by their status"
+    )
+    @ApiResponse(responseCode = "200", description = "Customers retrieved successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid status value")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PageResponse<CustomerResponse>> getCustomersByStatus(
-            @PathVariable String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Customer status (ACTIVE, INACTIVE, BLOCKED)", required = true) @PathVariable String status,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort criteria") @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
         var pageResponse = customerQueryService.findByStatus(status, page, size, sort);
         return ResponseEntity.ok(pageResponse);
@@ -102,11 +146,20 @@ public class CustomerController {
     
     // Search
     @GetMapping("/search")
+    @Operation(
+        summary = "Search customers",
+        description = "Searches customers by name, email, PESEL, or NIP"
+    )
+    @ApiResponse(responseCode = "200", description = "Search completed successfully")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "429", description = "Too Many Requests - Rate limit exceeded")
+    @PreAuthorize("hasRole('ADMIN')")
+    @RateLimiting(value = 30, timeWindow = 60, keyPrefix = "customer_search")
     public ResponseEntity<PageResponse<CustomerResponse>> searchCustomers(
-            @RequestParam String searchTerm,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Search term", required = true) @RequestParam String searchTerm,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort criteria") @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
         var pageResponse = customerQueryService.search(searchTerm, page, size, sort);
         return ResponseEntity.ok(pageResponse);
@@ -114,8 +167,18 @@ public class CustomerController {
     
     // Update
     @PutMapping("/{id}")
+    @Operation(
+        summary = "Update customer",
+        description = "Updates an existing customer with new details"
+    )
+    @ApiResponse(responseCode = "200", description = "Customer updated successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data or ID mismatch")
+    @ApiResponse(responseCode = "404", description = "Customer not found")
+    @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.getClaimAsString('customer_id')")
     public ResponseEntity<CustomerResponse> updateCustomer(
-            @PathVariable String id,
+            @Parameter(description = "Customer ID", required = true) @PathVariable String id,
             @Valid @RequestBody UpdateCustomerCommand command
     ) {
         var updatedCommand = new UpdateCustomerCommand(
@@ -136,8 +199,18 @@ public class CustomerController {
     
     // Change status
     @PutMapping("/{id}/status")
+    @Operation(
+        summary = "Change customer status",
+        description = "Changes the status of an existing customer"
+    )
+    @ApiResponse(responseCode = "200", description = "Customer status changed successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data or ID mismatch")
+    @ApiResponse(responseCode = "404", description = "Customer not found")
+    @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomerResponse> changeCustomerStatus(
-            @PathVariable String id,
+            @Parameter(description = "Customer ID", required = true) @PathVariable String id,
             @Valid @RequestBody ChangeCustomerStatusCommand command
     ) {
         var statusCommand = new ChangeCustomerStatusCommand(id, command.status());
@@ -149,7 +222,18 @@ public class CustomerController {
     
     // Delete
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable String id) {
+    @Operation(
+        summary = "Delete customer",
+        description = "Soft deletes a customer by setting the deleted_at date"
+    )
+    @ApiResponse(responseCode = "204", description = "Customer deleted successfully")
+    @ApiResponse(responseCode = "404", description = "Customer not found")
+    @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCustomer(
+            @Parameter(description = "Customer ID", required = true) @PathVariable String id
+    ) {
         boolean deleted = deleteCustomerUseCase.handle(id);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }

@@ -65,14 +65,12 @@ public class CustomerQueryService {
     
     public PageResponse<CustomerResponse> search(String searchTerm, int page, int size, String sort) {
         List<Customer> customers = customerRepository.search(searchTerm, page, size);
-        
-        // For now, total count approximation
-        long total = Math.min(customers.size() + page * size, 1000L);
-        
+        long total = customerRepository.count();
+
         List<CustomerResponse> responses = customers.stream()
                 .map(CustomerResponse::from)
                 .toList();
-        
+
         return PageResponse.of(responses, page, size, total);
     }
     

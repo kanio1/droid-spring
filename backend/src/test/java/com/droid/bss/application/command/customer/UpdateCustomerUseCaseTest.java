@@ -36,19 +36,19 @@ class UpdateCustomerUseCaseTest {
         // Given
         String customerId = UUID.randomUUID().toString();
         UpdateCustomerCommand command = new UpdateCustomerCommand(
-                customerId, "Jane", "Smith", "98765432109", "0987654321", 
+                customerId, "Jane", "Smith", "98765432109", "0987654321",
                 "jane.smith@example.com", "+48987654321");
 
         CustomerId expectedId = new CustomerId(UUID.fromString(customerId));
         CustomerInfo personalInfo = new CustomerInfo("John", "Doe", "12345678901", "1234567890");
         ContactInfo contactInfo = new ContactInfo("john.doe@example.com", "+48123456789");
         Customer existingCustomer = Customer.create(personalInfo, contactInfo);
-        
+
         CustomerInfo newInfo = command.toCustomerInfo();
         ContactInfo newContact = command.toContactInfo();
         Customer updatedCustomer = existingCustomer.updatePersonalInfo(newInfo)
                 .updateContactInfo(newContact);
-        
+
         when(customerRepository.findById(eq(expectedId))).thenReturn(Optional.of(existingCustomer));
         when(customerRepository.save(any(Customer.class))).thenReturn(updatedCustomer);
 
@@ -60,9 +60,9 @@ class UpdateCustomerUseCaseTest {
         assertThat(result.getPersonalInfo().lastName()).isEqualTo("Smith");
         assertThat(result.getContactInfo().email()).isEqualTo("jane.smith@example.com");
         assertThat(result.getContactInfo().phone()).isEqualTo("+48987654321");
-        
+
         verify(customerRepository).findById(expectedId);
-        verify(customerRepository).save(argThat(customer -> 
+        verify(customerRepository).save(argThat(customer ->
             customer.getPersonalInfo().firstName().equals("Jane") &&
             customer.getContactInfo().email().equals("jane.smith@example.com")
         ));

@@ -9,9 +9,19 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED);
+        detail.setTitle("Method not allowed");
+        detail.setDetail(ex.getMessage());
+        applyDefaults(detail, "http.methodNotAllowed");
+        return detail;
+    }
 
     @ExceptionHandler(AuthenticationException.class)
     ProblemDetail handleAuthentication(AuthenticationException ex) {

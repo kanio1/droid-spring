@@ -1,0 +1,72 @@
+# Test profile configuration
+# This profile is used for integration tests and disables certain features
+
+spring:
+  # JPA settings for tests
+  jpa:
+    hibernate:
+      ddl-auto: update  # Allow schema changes for tests
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+  # Test datasource (overridden by Testcontainers)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bss_test
+    username: test
+    password: test
+    driver-class-name: org.postgresql.Driver
+
+  # Redis test settings
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  # Kafka test settings
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      retries: 3
+    consumer:
+      group-id: test-group
+
+  # Security - OAuth2 test configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/bss
+      audience: bss-backend
+
+# Logging configuration for tests
+logging:
+  level:
+    root: WARN
+    com.droid.bss: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
+# Management endpoints for tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Server configuration
+server:
+  port: 0  # Use random port for tests
+
+# Test-specific configurations
+test:
+  # Disable rate limiting for all tests
+  rate-limiting:
+    enabled: false
