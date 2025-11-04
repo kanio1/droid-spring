@@ -1,0 +1,76 @@
+-- Migration to convert ENUM types to VARCHAR for compatibility with @Enumerated(EnumType.STRING)
+-- This fixes the mismatch between PostgreSQL ENUM types and JPA STRING enum mapping
+
+-- Drop existing ENUM types and convert columns to VARCHAR
+-- Order Status
+ALTER TABLE orders ALTER COLUMN status TYPE VARCHAR(50);
+ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'PENDING';
+
+-- Payment Status (payment_status column)
+ALTER TABLE payments ALTER COLUMN payment_status TYPE VARCHAR(50);
+ALTER TABLE payments ALTER COLUMN payment_status SET DEFAULT 'PENDING';
+
+-- Invoice Status and Type
+ALTER TABLE invoices ALTER COLUMN status TYPE VARCHAR(50);
+ALTER TABLE invoices ALTER COLUMN status SET DEFAULT 'DRAFT';
+ALTER TABLE invoices ALTER COLUMN invoice_type TYPE VARCHAR(50);
+ALTER TABLE invoices ALTER COLUMN invoice_type SET DEFAULT 'RECURRING';
+
+-- Product Status and Category
+ALTER TABLE products ALTER COLUMN status TYPE VARCHAR(50);
+ALTER TABLE products ALTER COLUMN status SET DEFAULT 'ACTIVE';
+ALTER TABLE products ALTER COLUMN category TYPE VARCHAR(50);
+ALTER TABLE products ALTER COLUMN category SET DEFAULT 'STANDARD';
+
+-- Subscription Status
+ALTER TABLE subscriptions ALTER COLUMN status TYPE VARCHAR(50);
+ALTER TABLE subscriptions ALTER COLUMN status SET DEFAULT 'ACTIVE';
+
+-- Order Item Status
+ALTER TABLE order_items ALTER COLUMN status TYPE VARCHAR(50);
+ALTER TABLE order_items ALTER COLUMN status SET DEFAULT 'PENDING';
+
+-- Invoice Item Type
+ALTER TABLE invoice_items ALTER COLUMN item_type TYPE VARCHAR(50);
+ALTER TABLE invoice_items ALTER COLUMN item_type SET DEFAULT 'SERVICE';
+
+-- Product Feature Data Type (data_type column)
+ALTER TABLE product_features ALTER COLUMN data_type TYPE VARCHAR(50);
+ALTER TABLE product_features ALTER COLUMN data_type SET DEFAULT 'STRING';
+
+-- Drop ENUM types (safe to do after converting columns)
+DROP TYPE IF EXISTS order_status CASCADE;
+DROP TYPE IF EXISTS payment_status CASCADE;
+DROP TYPE IF EXISTS payment_method CASCADE;
+DROP TYPE IF EXISTS invoice_status CASCADE;
+DROP TYPE IF EXISTS invoice_type CASCADE;
+DROP TYPE IF EXISTS product_status CASCADE;
+DROP TYPE IF EXISTS product_category CASCADE;
+DROP TYPE IF EXISTS subscription_status CASCADE;
+DROP TYPE IF EXISTS order_item_status CASCADE;
+DROP TYPE IF EXISTS invoice_item_type CASCADE;
+DROP TYPE IF EXISTS feature_data_type CASCADE;
+DROP TYPE IF EXISTS product_feature_type CASCADE;
+
+-- Customer status was already handled separately in previous migrations
+-- It should already be VARCHAR, but ensure it is
+DO $$
+BEGIN
+    -- Check if customer_status type still exists and convert if needed
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'customer_status') THEN
+        ALTER TABLE customers ALTER COLUMN status TYPE VARCHAR(50);
+        DROP TYPE customer_status CASCADE;
+    END IF;
+END $$;
+
+-- Add comments for documentation (only for columns that exist and were converted)
+COMMENT ON COLUMN orders.status IS 'Order status: PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED';
+COMMENT ON COLUMN payments.payment_status IS 'Payment status: PENDING, PROCESSING, COMPLETED, FAILED, REFUNDED';
+COMMENT ON COLUMN invoices.status IS 'Invoice status: DRAFT, SENT, PAID, OVERDUE, CANCELLED';
+COMMENT ON COLUMN invoices.invoice_type IS 'Invoice type: RECURRING, USAGE, ONE_TIME, ADJUSTMENT';
+COMMENT ON COLUMN products.status IS 'Product status: ACTIVE, INACTIVE, DISCONTINUED';
+COMMENT ON COLUMN products.category IS 'Product category: STANDARD, PREMIUM, ADDON';
+COMMENT ON COLUMN subscriptions.status IS 'Subscription status: ACTIVE, SUSPENDED, CANCELLED, EXPIRED';
+COMMENT ON COLUMN order_items.status IS 'Order item status: PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED';
+COMMENT ON COLUMN invoice_items.item_type IS 'Invoice item type: SERVICE, PRODUCT, DISCOUNT, TAX';
+COMMENT ON COLUMN product_features.data_type IS 'Feature data type: STRING, NUMBER, BOOLEAN, JSON';

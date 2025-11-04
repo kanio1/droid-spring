@@ -1,0 +1,1343 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m-----------------------< [0;36mcom.droid:bss-backend[0;1m >------------------------[m
+[[1;34mINFO[m] [1mBuilding bss-backend 0.0.1-SNAPSHOT[m
+[[1;34mINFO[m]   from pom.xml
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mresources:3.3.1:resources[m [1m(default-resources)[m @ [36mbss-backend[0;1m ---[m
+[[1;34mINFO[m] Copying 2 resources from src/main/resources to target/classes
+[[1;34mINFO[m] Copying 20 resources from src/main/resources to target/classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mcompiler:3.13.0:compile[m [1m(default-compile)[m @ [36mbss-backend[0;1m ---[m
+[[1;34mINFO[m] Nothing to compile - all classes are up to date.
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mresources:3.3.1:testResources[m [1m(default-testResources)[m @ [36mbss-backend[0;1m ---[m
+[[1;34mINFO[m] Copying 1 resource from src/test/resources to target/test-classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mcompiler:3.13.0:testCompile[m [1m(default-testCompile)[m @ [36mbss-backend[0;1m ---[m
+[[1;34mINFO[m] Nothing to compile - all classes are up to date.
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32msurefire:3.5.2:test[m [1m(default-test)[m @ [36mbss-backend[0;1m ---[m
+[[1;34mINFO[m] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[[1;34mINFO[m] 
+[[1;34mINFO[m] -------------------------------------------------------
+[[1;34mINFO[m]  T E S T S
+[[1;34mINFO[m] -------------------------------------------------------
+[[1;34mINFO[m] Running com.droid.bss.infrastructure.[1mCustomerRepositoryDataJpaTest[m
+08:44:58.719 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest]: CustomerRepositoryDataJpaTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+08:44:58.798 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.droid.bss.BssApplication for test class com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest
+08:44:58.826 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+08:44:58.827 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+08:44:58.843 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 1.20.4
+08:44:58.924 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.UnixSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+08:44:59.072 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
+08:44:59.073 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+08:44:59.083 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Ubuntu 25.10
+  Total Memory: 15477 MB
+08:44:59.094 [main] INFO tc.testcontainers/ryuk:0.11.0 -- Creating container for image: testcontainers/ryuk:0.11.0
+08:44:59.097 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Failure when attempting to lookup auth config. Please ignore if you don't have images in an authenticated registry. Details: (dockerImageName: testcontainers/ryuk:0.11.0, configFile: /home/labadmin/.docker/config.json, configEnv: DOCKER_AUTH_CONFIG). Falling back to docker-java default behaviour. Exception message: Status 404: No config supplied. Checked in order: /home/labadmin/.docker/config.json (file not found), DOCKER_AUTH_CONFIG (not set)
+08:44:59.228 [main] INFO tc.testcontainers/ryuk:0.11.0 -- Container testcontainers/ryuk:0.11.0 is starting: 9202cd2e079cae6b5c41f76f974b2d48809a5c1f0bc826ee4b69608fdb0b7093
+08:44:59.399 [main] INFO tc.testcontainers/ryuk:0.11.0 -- Container testcontainers/ryuk:0.11.0 started in PT0.304568163S
+08:44:59.402 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+08:44:59.402 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+08:44:59.402 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+08:44:59.403 [main] INFO tc.postgres:18-alpine -- Creating container for image: postgres:18-alpine
+08:44:59.466 [main] INFO tc.postgres:18-alpine -- Container postgres:18-alpine is starting: c5024c037185539a26f6dc9f45418598850a47825b156569c805eeb8e1a0ccb3
+08:45:00.703 [main] INFO tc.postgres:18-alpine -- Container postgres:18-alpine started in PT1.300433937S
+08:45:00.704 [main] INFO tc.postgres:18-alpine -- Container is started (JDBC URL: jdbc:postgresql://localhost:32881/testdb?loggerLevel=OFF)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.0)
+
+2025-11-03T08:45:00.919Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] c.d.b.i.CustomerRepositoryDataJpaTest    : Starting CustomerRepositoryDataJpaTest using Java 21.0.9-ea with PID 39873 (started by labadmin in /home/labadmin/projects/droid-spring/backend)
+2025-11-03T08:45:00.921Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] c.d.b.i.CustomerRepositoryDataJpaTest    : No active profile set, falling back to 1 default profile: "default"
+2025-11-03T08:45:01.161Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2025-11-03T08:45:01.162Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-03T08:45:01.253Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 85 ms. Found 7 JPA repository interfaces.
+2025-11-03T08:45:01.602Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32881/testdb?loggerLevel=OFF (PostgreSQL 18.0)
+2025-11-03T08:45:01.611Z  WARN 39873 --- [bss-backend] [           main] [                                                 ] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: PostgreSQL 18.0 is newer than this version of Flyway and support has not been tested. The latest supported version of PostgreSQL is 17.
+2025-11-03T08:45:01.633Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2025-11-03T08:45:01.635Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbValidate     : Successfully validated 20 migrations (execution time 00:00.017s)
+2025-11-03T08:45:01.645Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2025-11-03T08:45:01.681Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2025-11-03T08:45:01.685Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "001 - init"
+2025-11-03T08:45:01.701Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "002 - create customers table"
+2025-11-03T08:45:01.720Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "003 - create products table"
+2025-11-03T08:45:01.739Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "004 - create product features table"
+2025-11-03T08:45:01.754Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "005 - create orders table"
+2025-11-03T08:45:01.771Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "006 - create order items table"
+2025-11-03T08:45:01.787Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "007 - create subscriptions table"
+2025-11-03T08:45:01.804Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "008 - create invoices table"
+2025-11-03T08:45:01.822Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "009 - create invoice items table"
+2025-11-03T08:45:01.841Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "010 - create payments table"
+2025-11-03T08:45:01.860Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "011 - create usage records table"
+2025-11-03T08:45:01.876Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "012 - create network elements table"
+2025-11-03T08:45:01.889Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "998 - add soft delete to payments"
+2025-11-03T08:45:01.904Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "999 - fix customer entity baseentity"
+2025-11-03T08:45:01.925Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1000 - fix all version columns bigint"
+2025-11-03T08:45:01.991Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1001 - fix invoice items usage record id"
+2025-11-03T08:45:01.996Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1002 - add deleted at to invoices"
+2025-11-03T08:45:02.000Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1003 - add deleted at to orders"
+2025-11-03T08:45:02.003Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1004 - add deleted at to products"
+2025-11-03T08:45:02.007Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1005 - add deleted at to subscriptions"
+2025-11-03T08:45:02.013Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.f.core.internal.command.DbMigrate      : Successfully applied 20 migrations to schema "public", now at version v1005 (execution time 00:00.220s)
+2025-11-03T08:45:02.063Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-03T08:45:02.093Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.2.Final
+2025-11-03T08:45:02.109Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-03T08:45:02.229Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-03T08:45:02.243Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-11-03T08:45:02.255Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@a4dcede
+2025-11-03T08:45:02.256Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-11-03T08:45:02.269Z  WARN 39873 --- [bss-backend] [           main] [                                                 ] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-03T08:45:02.279Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 18.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-03T08:45:02.931Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-03T08:45:02.972Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-03T08:45:03.188Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-03T08:45:03.900Z  INFO 39873 --- [bss-backend] [           main] [                                                 ] c.d.b.i.CustomerRepositoryDataJpaTest    : Started CustomerRepositoryDataJpaTest in 3.168 seconds (process running for 5.596)
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.nip=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.pesel=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    delete 
+    from
+        customers ce1_0
+Hibernate: 
+    select
+        count(ce1_0.id) 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+Hibernate: 
+    select
+        ce1_0.id,
+        ce1_0.created_at,
+        ce1_0.created_by,
+        ce1_0.email,
+        ce1_0.first_name,
+        ce1_0.last_name,
+        ce1_0.nip,
+        ce1_0.pesel,
+        ce1_0.phone,
+        ce1_0.status,
+        ce1_0.updated_at,
+        ce1_0.updated_by,
+        ce1_0.version 
+    from
+        customers ce1_0 
+    where
+        ce1_0.id=?
+[[1;31mERROR[m] [1;31mTests [0;1mrun: [0;1m16[m, Failures: 0, [1;31mErrors: [0;1;31m13[m, Skipped: 0, Time elapsed: 6.020 s[1;31m <<< FAILURE![m -- in com.droid.bss.infrastructure.[1mCustomerRepositoryDataJpaTest[m
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCountCustomers -- Time elapsed: 0.392 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#3680ebea-6b2f-42cf-b4b0-10c36c29c69f]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCountCustomers(CustomerRepositoryDataJpaTest.java:270)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#3680ebea-6b2f-42cf-b4b0-10c36c29c69f]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldSearchCustomersByTerm -- Time elapsed: 0.008 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#4aec84bc-aabc-45ca-9641-7fa3baa05b46]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldSearchCustomersByTerm(CustomerRepositoryDataJpaTest.java:200)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#4aec84bc-aabc-45ca-9641-7fa3baa05b46]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindAllCustomersWithPagination -- Time elapsed: 0.006 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#4ab78950-25ce-4ee3-9274-ee0fb46d46dd]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindAllCustomersWithPagination(CustomerRepositoryDataJpaTest.java:155)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#4ab78950-25ce-4ee3-9274-ee0fb46d46dd]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindCustomersByStatus -- Time elapsed: 0.005 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#41ab95b1-19b4-4c17-a270-8a6b45f4e3a7]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindCustomersByStatus(CustomerRepositoryDataJpaTest.java:175)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#41ab95b1-19b4-4c17-a270-8a6b45f4e3a7]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldReturnAllCustomersWhenSearchTermIsEmpty -- Time elapsed: 0.004 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#412325f6-9def-4da6-a8e6-f87798ed9dd9]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldReturnAllCustomersWhenSearchTermIsEmpty(CustomerRepositoryDataJpaTest.java:222)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#412325f6-9def-4da6-a8e6-f87798ed9dd9]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCheckIfNipExists -- Time elapsed: 0.003 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#6b7d188c-10e8-4127-ba07-c0d573ce2a78]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCheckIfNipExists(CustomerRepositoryDataJpaTest.java:255)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#6b7d188c-10e8-4127-ba07-c0d573ce2a78]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldDeleteCustomerById -- Time elapsed: 0.004 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#8843404e-c828-4437-a3ba-e613220e6168]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldDeleteCustomerById(CustomerRepositoryDataJpaTest.java:309)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#8843404e-c828-4437-a3ba-e613220e6168]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindCustomerByNip -- Time elapsed: 0.004 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#ff422959-62d6-4f8d-8e03-26a30de3edc0]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindCustomerByNip(CustomerRepositoryDataJpaTest.java:116)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#ff422959-62d6-4f8d-8e03-26a30de3edc0]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindCustomerByPesel -- Time elapsed: 0.003 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#788e0bfa-c33a-4ffc-9bb3-6ae0faef8e0c]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldFindCustomerByPesel(CustomerRepositoryDataJpaTest.java:99)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#788e0bfa-c33a-4ffc-9bb3-6ae0faef8e0c]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCountCustomersByStatus -- Time elapsed: 0.004 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#a7380b61-3607-4c4c-8e8d-37f8f550760b]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCountCustomersByStatus(CustomerRepositoryDataJpaTest.java:286)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#a7380b61-3607-4c4c-8e8d-37f8f550760b]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldSaveAndRetrieveCustomer -- Time elapsed: 0.004 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#f340d30f-173b-45fa-bf2f-892f130cf5e1]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldSaveAndRetrieveCustomer(CustomerRepositoryDataJpaTest.java:75)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#f340d30f-173b-45fa-bf2f-892f130cf5e1]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCheckIfPeselExists -- Time elapsed: 0.004 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#595b4b7e-ce48-4dd5-89e4-f78b119d471d]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldCheckIfPeselExists(CustomerRepositoryDataJpaTest.java:241)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#595b4b7e-ce48-4dd5-89e4-f78b119d471d]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;31mERROR[m] com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldHandleCustomerUpdateWithVersionIncrement -- Time elapsed: 0.003 s <<< ERROR!
+jakarta.persistence.OptimisticLockException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#dd62db57-79dd-48c7-83a2-19bd9a12f7f6]
+	at org.hibernate.internal.ExceptionConverterImpl.wrapStaleStateException(ExceptionConverterImpl.java:209)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:95)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:167)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:173)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:865)
+	at org.hibernate.internal.SessionImpl.merge(SessionImpl.java:840)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:320)
+	at jdk.proxy2/jdk.proxy2.$Proxy163.merge(Unknown Source)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl.save(CustomerRepositoryImpl.java:47)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727)
+	at com.droid.bss.infrastructure.write.CustomerRepositoryImpl$$SpringCGLIB$$0.save(<generated>)
+	at com.droid.bss.infrastructure.CustomerRepositoryDataJpaTest.shouldHandleCustomerUpdateWithVersionIncrement(CustomerRepositoryDataJpaTest.java:340)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: org.hibernate.StaleObjectStateException: Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#dd62db57-79dd-48c7-83a2-19bd9a12f7f6]
+	at org.hibernate.event.internal.DefaultMergeEventListener.entityIsDetached(DefaultMergeEventListener.java:426)
+	at org.hibernate.event.internal.DefaultMergeEventListener.merge(DefaultMergeEventListener.java:214)
+	at org.hibernate.event.internal.DefaultMergeEventListener.doMerge(DefaultMergeEventListener.java:152)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:136)
+	at org.hibernate.event.internal.DefaultMergeEventListener.onMerge(DefaultMergeEventListener.java:89)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.fireMerge(SessionImpl.java:854)
+	... 20 more
+
+[[1;34mINFO[m] 
+[[1;34mINFO[m] Results:
+[[1;34mINFO[m] 
+[[1;31mERROR[m] [1;31mErrors: [m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldCheckIfNipExists:255 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#6b7d188c-10e8-4127-ba07-c0d573ce2a78][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldCheckIfPeselExists:241 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#595b4b7e-ce48-4dd5-89e4-f78b119d471d][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldCountCustomers:270 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#3680ebea-6b2f-42cf-b4b0-10c36c29c69f][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldCountCustomersByStatus:286 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#a7380b61-3607-4c4c-8e8d-37f8f550760b][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldDeleteCustomerById:309 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#8843404e-c828-4437-a3ba-e613220e6168][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldFindAllCustomersWithPagination:155 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#4ab78950-25ce-4ee3-9274-ee0fb46d46dd][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldFindCustomerByNip:116 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#ff422959-62d6-4f8d-8e03-26a30de3edc0][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldFindCustomerByPesel:99 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#788e0bfa-c33a-4ffc-9bb3-6ae0faef8e0c][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldFindCustomersByStatus:175 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#41ab95b1-19b4-4c17-a270-8a6b45f4e3a7][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldHandleCustomerUpdateWithVersionIncrement:340 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#dd62db57-79dd-48c7-83a2-19bd9a12f7f6][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldReturnAllCustomersWhenSearchTermIsEmpty:222 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#412325f6-9def-4da6-a8e6-f87798ed9dd9][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldSaveAndRetrieveCustomer:75 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#f340d30f-173b-45fa-bf2f-892f130cf5e1][m
+[[1;31mERROR[m] [1;31m  CustomerRepositoryDataJpaTest.shouldSearchCustomersByTerm:200 » OptimisticLock Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect): [com.droid.bss.domain.customer.CustomerEntity#4aec84bc-aabc-45ca-9641-7fa3baa05b46][m
+[[1;34mINFO[m] 
+[[1;31mERROR[m] [1;31mTests run: 16, Failures: 0, Errors: 13, Skipped: 0[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] [1;31mBUILD FAILURE[m
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] Total time:  7.219 s
+[[1;34mINFO[m] Finished at: 2025-11-03T08:45:04Z
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;31mERROR[m] Failed to execute goal [32morg.apache.maven.plugins:maven-surefire-plugin:3.5.2:test[m [1m(default-test)[m on project [36mbss-backend[m: [1;31m[m
+[[1;31mERROR[m] [1;31m[m
+[[1;31mERROR[m] [1;31mSee /home/labadmin/projects/droid-spring/backend/target/surefire-reports for the individual test results.[m
+[[1;31mERROR[m] [1;31mSee dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.[m
+[[1;31mERROR[m] -> [1m[Help 1][m
+[[1;31mERROR[m] 
+[[1;31mERROR[m] To see the full stack trace of the errors, re-run Maven with the [1m-e[m switch.
+[[1;31mERROR[m] Re-run Maven using the [1m-X[m switch to enable full debug logging.
+[[1;31mERROR[m] 
+[[1;31mERROR[m] For more information about the errors and possible solutions, please read the following articles:
+[[1;31mERROR[m] [1m[Help 1][m http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

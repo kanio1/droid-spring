@@ -20,6 +20,25 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:#{null}}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000
+      cache-null-values: false
+
   threads:
     virtual:
       enabled: true
@@ -29,6 +48,26 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8081/realms/bss}
+
+  # Kafka configuration for CloudEvents
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 1
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:bss-backend}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.droid.bss.domain.*"
+    template:
+      default-topic: ${KAFKA_DEFAULT_TOPIC:bss.events}
 
 security:
   oauth2:
@@ -44,12 +83,19 @@ management:
     health:
       probes:
         enabled: true
+      show-details: always
+      show-components: always
     prometheus:
       enabled: true
   metrics:
     export:
       prometheus:
         enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      sla:
+        http.server.requests: 5ms,10ms,20ms,50ms,100ms,200ms,500ms,1s,2s,5s
     tags:
       application: ${spring.application.name}
   tracing:
@@ -68,3 +114,18 @@ server:
       host-header: X-Forwarded-Host
       port-header: X-Forwarded-Port
       internal-proxies: 127\.0\.0\.1|::1|10\.(\d{1,3}\.){2}\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.)\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    filter: true
+    display-request-duration: true
+    show-extensions: true
+    show-common-extensions: true
+  packages-to-scan: com.droid.bss.api
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json

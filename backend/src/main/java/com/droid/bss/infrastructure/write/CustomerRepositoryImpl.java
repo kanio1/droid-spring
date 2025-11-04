@@ -2,6 +2,7 @@ package com.droid.bss.infrastructure.write;
 
 import com.droid.bss.domain.customer.*;
 import com.droid.bss.domain.customer.CustomerEntity;
+import com.droid.bss.domain.customer.event.CustomerEventPublisher;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -18,25 +19,48 @@ import java.util.stream.Collectors;
 @Repository
 @Transactional
 public class CustomerRepositoryImpl implements CustomerRepository {
-    
+
     @PersistenceContext
     private EntityManager entityManager;
-    
+
+    private final CustomerEventPublisher eventPublisher;
+
+    public CustomerRepositoryImpl(CustomerEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
     @Override
     public Customer save(Customer customer) {
         CustomerEntity entity = CustomerEntity.from(customer);
-        
-        if (entityManager.find(CustomerEntity.class, entity.getId()) == null) {
-            // New entity - persist
-            entityManager.persist(entity);
-            entityManager.flush(); // Ensure ID is generated
-            return entity.toDomain();
+        CustomerStatus previousStatus = entity.getStatus();
+
+        // Check if this is a new entity by querying COUNT (don't load the entity to avoid conflicts)
+        Long count = entityManager.createQuery(
+            "SELECT COUNT(c) FROM CustomerEntity c WHERE c.id = :id",
+            Long.class
+        ).setParameter("id", entity.getId())
+         .getSingleResult();
+
+        boolean exists = count != null && count > 0;
+
+        // Always use merge to handle both new and existing entities
+        CustomerEntity merged = entityManager.merge(entity);
+        entityManager.flush();
+
+        // Publish appropriate event based on whether this was new or existing
+        if (!exists) {
+            // New entity - was created by merge
+            eventPublisher.publishCustomerCreated(merged);
         } else {
-            // Existing entity - merge
-            CustomerEntity merged = entityManager.merge(entity);
-            entityManager.flush();
-            return merged.toDomain();
+            // Existing entity - publish events based on changes
+            if (!previousStatus.equals(merged.getStatus())) {
+                eventPublisher.publishCustomerStatusChanged(merged, previousStatus);
+            } else {
+                eventPublisher.publishCustomerUpdated(merged);
+            }
         }
+
+        return merged.toDomain();
     }
     
     @Override
@@ -192,5 +216,10 @@ public class CustomerRepositoryImpl implements CustomerRepository {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void deleteAll() {
+        entityManager.createQuery("DELETE FROM CustomerEntity c").executeUpdate();
     }
 }

@@ -41,9 +41,9 @@ class ChangeCustomerStatusUseCaseTest {
         CustomerInfo personalInfo = new CustomerInfo("John", "Doe", "12345678901", "1234567890");
         ContactInfo contactInfo = new ContactInfo("john.doe@example.com", "+48123456789");
         Customer existingCustomer = Customer.create(personalInfo, contactInfo);
-        
+
         Customer suspendedCustomer = existingCustomer.suspend();
-        
+
         when(customerRepository.findById(eq(expectedId))).thenReturn(Optional.of(existingCustomer));
         when(customerRepository.save(any(Customer.class))).thenReturn(suspendedCustomer);
 
@@ -53,7 +53,7 @@ class ChangeCustomerStatusUseCaseTest {
         // Then
         assertThat(result.getStatus()).isEqualTo(CustomerStatus.SUSPENDED);
         verify(customerRepository).findById(expectedId);
-        verify(customerRepository).save(argThat(customer -> 
+        verify(customerRepository).save(argThat(customer ->
             customer.getStatus() == CustomerStatus.SUSPENDED
         ));
     }

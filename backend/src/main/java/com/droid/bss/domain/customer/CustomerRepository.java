@@ -64,4 +64,9 @@ public interface CustomerRepository {
      * Delete customer by ID
      */
     boolean deleteById(CustomerId customerId);
+
+    /**
+     * Delete all customers
+     */
+    void deleteAll();
 }

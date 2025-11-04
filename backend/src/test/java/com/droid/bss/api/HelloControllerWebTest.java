@@ -3,6 +3,7 @@ package com.droid.bss.api;
 import com.droid.bss.application.HelloService;
 import com.droid.bss.application.dto.HelloResponse;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +21,19 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.anyInt;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = HelloController.class)
+@WebMvcTest(
+    controllers = HelloController.class,
+    excludeAutoConfiguration = {
+        com.droid.bss.infrastructure.security.WebMvcConfig.class
+    }
+)
 @Import(HelloControllerWebTest.TestSecurityConfiguration.class)
 @TestPropertySource(properties = "security.oauth2.audience=bss-backend")
 @DisplayName("HelloController Web layer")
@@ -39,6 +47,15 @@ class HelloControllerWebTest {
 
     @MockBean
     private JwtDecoder jwtDecoder;
+
+    @MockBean
+    private com.droid.bss.infrastructure.security.RateLimitingService rateLimitingService;
+
+    @BeforeEach
+    void setUp() {
+        when(rateLimitingService.isAllowed(anyString(), anyInt(), anyInt())).thenReturn(true);
+        when(rateLimitingService.getRateLimitKey(anyString())).thenReturn("test:key");
+    }
 
     @TestConfiguration
     static class TestSecurityConfiguration {

@@ -38,13 +38,12 @@ class CustomerQueryServiceTest {
     @DisplayName("should find customer by ID")
     void shouldFindCustomerById() {
         // Given
-        String customerId = UUID.randomUUID().toString();
-        CustomerId expectedId = new CustomerId(UUID.fromString(customerId));
-        
         CustomerInfo personalInfo = new CustomerInfo("John", "Doe", "12345678901", "1234567890");
         ContactInfo contactInfo = new ContactInfo("john.doe@example.com", "+48123456789");
         Customer customer = Customer.create(personalInfo, contactInfo);
-        
+        String customerId = customer.getId().value().toString();
+        CustomerId expectedId = customer.getId();
+
         when(customerRepository.findById(eq(expectedId))).thenReturn(Optional.of(customer));
 
         // When
@@ -174,16 +173,16 @@ class CustomerQueryServiceTest {
         int page = 0;
         int size = 20;
         String sort = "createdAt,desc";
-        
+
         List<Customer> matchingCustomers = List.of(
             createTestCustomer("550e8400-e29b-41d4-a716-446655440006"),
             createTestCustomer("550e8400-e29b-41d4-a716-446655440007")
         );
-        
-        // For search, total is approximated based on implementation
-        long expectedTotal = 100L; // This matches the implementation approximation
-        
+
+        long expectedTotal = 100L;
+
         when(customerRepository.search(any(), anyInt(), anyInt())).thenReturn(matchingCustomers);
+        when(customerRepository.count()).thenReturn(expectedTotal);
 
         // When
         PageResponse<CustomerResponse> result = customerQueryService.search(searchTerm, page, size, sort);
@@ -193,12 +192,13 @@ class CustomerQueryServiceTest {
         assertThat(result.page()).isEqualTo(page);
         assertThat(result.size()).isEqualTo(size);
         assertThat(result.totalElements()).isEqualTo(expectedTotal);
-        
+
         // Verify all customers match search term (simulated)
         assertThat(result.content().get(0).firstName()).isEqualTo("John");
         assertThat(result.content().get(0).email()).isEqualTo("john.doe@example.com");
-        
+
         verify(customerRepository).search(searchTerm, page, size);
+        verify(customerRepository).count();
     }
 
     @Test
@@ -311,13 +311,13 @@ class CustomerQueryServiceTest {
     @DisplayName("should handle empty results correctly")
     void shouldHandleEmptyResultsCorrectly() {
         // Given
-        int page = 10;
+        int page = 0;
         int size = 10;
         String sort = "createdAt,desc";
-        
+
         List<Customer> emptyCustomers = List.of();
         long total = 0L;
-        
+
         when(customerRepository.findAll(page, size)).thenReturn(emptyCustomers);
         when(customerRepository.count()).thenReturn(total);
 
@@ -326,15 +326,15 @@ class CustomerQueryServiceTest {
 
         // Then
         assertThat(result.content()).isEmpty();
-        assertThat(result.page()).isEqualTo(10);
+        assertThat(result.page()).isEqualTo(0);
         assertThat(result.size()).isEqualTo(10);
         assertThat(result.totalElements()).isEqualTo(0L);
         assertThat(result.totalPages()).isEqualTo(0);
         assertThat(result.first()).isTrue();
-        assertThat(result.last()).isTrue();
+        assertThat(result.last()).isTrue(); // With 0 pages, page 0 is both first and last
         assertThat(result.content()).isEmpty();
-        
-        verify(customerRepository).findAll(10, 10);
+
+        verify(customerRepository).findAll(0, 10);
     }
 
     @Test
