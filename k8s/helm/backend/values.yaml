@@ -1,0 +1,259 @@
+# Default values for BSS Backend
+replicaCount: 3
+
+image:
+  repository: ghcr.io/your-org/bss-backend
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/actuator/prometheus"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.bss.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: bss-backend-tls
+      hosts:
+        - api.bss.local
+
+# Database Configuration
+database:
+  host: ""
+  port: 5432
+  name: bss
+  username: ""
+  password: ""
+  sslMode: "require"
+  driverClassName: "org.postgresql.Driver"
+  hikari:
+    maximumPoolSize: 20
+    minimumIdle: 5
+    connectionTimeout: 30000
+    idleTimeout: 600000
+    maxLifetime: 1800000
+
+# Redis Configuration
+redis:
+  host: ""
+  port: 6379
+  password: ""
+  database: 0
+  timeout: 2000
+  lettuce:
+    pool:
+      maxActive: 20
+      maxIdle: 10
+      minIdle: 5
+
+# Kafka Configuration
+kafka:
+  bootstrapServers: ""
+  securityProtocol: "PLAINTEXT"
+  sasl:
+    mechanism: ""
+    username: ""
+    password: ""
+
+# Keycloak Configuration
+keycloak:
+  authServerUrl: ""
+  realm: "bss"
+  resource: "bss-backend"
+  publicClient: false
+  confidentialPort: 0
+  principalAttribute: "preferred_username"
+  tokenMinimumTimeToLive: 300
+  tokenRefreshTimeToLive: 3600
+
+# Actuator Configuration
+actuator:
+  enabled: true
+  endpoints:
+    - health
+    - info
+    - metrics
+    - prometheus
+    - readiness
+    - liveness
+  showDetails: "when-authorized"
+
+# OpenTelemetry Configuration
+opentelemetry:
+  enabled: true
+  endpoint: "http://tempo-observability.svc.cluster.local:4317"
+  traces:
+    sampler: "traceidratio"
+    samplerParam: 0.1
+
+# Application Configuration
+spring:
+  profiles:
+    active: "prod"
+  threads:
+    virtual:
+      enabled: true
+
+application:
+  name: "BSS Backend"
+  version: "1.0.0"
+  cors:
+    allowedOrigins:
+      - "https://bss.local"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowedHeaders:
+      - "*"
+    allowCredentials: true
+
+# Logging Configuration
+logging:
+  level:
+    root: "INFO"
+    com.droid.bss: "INFO"
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    json: '{"timestamp": "%d{yyyy-MM-dd HH:mm:ss}", "level": "%level", "logger": "%logger{36}", "message": "%msg"}%n'
+  logstash:
+    enabled: true
+    destination: "loki-logs.svc.cluster.local:5000"
+
+# Environment Variables
+envVars:
+  - name: JAVA_OPTS
+    value: "-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Node Selection
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity Rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - bss-backend
+          topologyKey: kubernetes.io/hostname
+
+# Init Containers
+initContainers: []
+
+# Sidecar Containers
+sidecarContainers: []
+
+# Volume Mounts
+extraVolumeMounts: []
+
+# Extra Volumes
+extraVolumes: []
+
+# Liveness Probe
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# Readiness Probe
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Startup Probe
+startupProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 10
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  path: /actuator/prometheus
+  namespace: "monitoring"
+
+# Vertical Pod Autoscaler
+verticalPodAutoscaler:
+  enabled: true
+  updateMode: "Auto"
+  minReplicas: 3

@@ -1,0 +1,128 @@
+# Grafana Datasources Configuration
+# Defines data sources for Prometheus, Tempo, and Loki
+
+apiVersion: 1
+
+datasources:
+  # Prometheus
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: POST
+      manageAlerts: true
+      alertmanagerUid: alertmanager
+    secureJsonData: {}
+    version: 1
+
+  # Tempo (Tracing)
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: true
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: 'loki'
+        tags: ['job', 'instance', 'pod', 'namespace']
+        mappedTags: [{ key: 'service.name', value: 'service' }]
+        mapTagNamesEnabled: false
+        spanStartTimeShift: '1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: false
+        filterBySpanID: false
+      tracesToMetrics:
+        datasourceUid: 'prometheus'
+        tags: [{ key: 'service.name', value: 'job' }]
+        query: 'sum(rate(tempo_spanmetrics_latency_bucket{$$__tags}[5m]))'
+      serviceMap:
+        datasourceUid: 'prometheus'
+      search:
+        hide: false
+      nodeGraph:
+        enabled: true
+    version: 1
+
+  # Loki (Logs)
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: 'tempo'
+          matcherRegex: '(?:trace_id)=(\w+)'
+          name: 'TraceID'
+          url: '$${__value.raw}'
+    version: 1
+
+  # Jaeger (Tracing - Alternative)
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+    jsonData:
+      tracesToLogs:
+        datasourceUid: 'loki'
+        tags: ['job', 'instance', 'pod', 'namespace']
+        mappedTags: [{ key: 'service.name', value: 'service' }]
+        mapTagNamesEnabled: false
+        spanStartTimeShift: '1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: false
+        filterBySpanID: false
+      tracesToMetrics:
+        datasourceUid: 'prometheus'
+        tags: [{ key: 'service.name', value: 'job' }]
+        query: 'sum(rate(tempo_spanmetrics_latency_bucket{$$__tags}[5m]))'
+      serviceMap:
+        datasourceUid: 'prometheus'
+      ui:
+        collapseForm: false
+        hide: false
+    version: 1
+
+  # AlertManager (for Grafana alerting)
+  - name: AlertManager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    editable: true
+    jsonData:
+      implementation: 'prometheus'
+    version: 1
+
+  # CloudWatch (Optional - for AWS metrics)
+  # Uncomment and configure if using AWS
+  # - name: CloudWatch
+  #   type: cloudwatch
+  #   access: proxy
+  #   editable: true
+  #   jsonData:
+  #     authType: keys
+  #     defaultRegion: us-west-2
+  #     customMetricsNamespaces: ''
+  #   version: 1
+
+  # Elasticsearch (Optional - for logs)
+  # Uncomment and configure if using Elasticsearch
+  # - name: Elasticsearch
+  #   type: elasticsearch
+  #   access: proxy
+  #   url: http://elasticsearch:9200
+  #   database: '[logstash-]YYYY.MM.DD'
+  #   editable: true
+  #   jsonData:
+  #     interval: Daily
+  #     timeField: '@timestamp'
+  #     esVersion: '8.0.0'
+  #   version: 1

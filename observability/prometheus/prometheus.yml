@@ -1,0 +1,169 @@
+# Prometheus Configuration for BSS System
+# Comprehensive monitoring setup with alerting and recording rules
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'bss-production'
+    replica: 'prometheus-1'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+      scheme: http
+      timeout: 10s
+      api_version: v2
+
+# Load rules once and evaluate according to the global 'evaluation_interval'
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # BSS Backend Spring Boot Application
+  - job_name: 'bss-backend'
+    scrape_interval: 10s
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - 'backend:8080'
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 'backend:8080'
+    metric_relabel_configs:
+      # Keep only relevant metrics
+      - source_labels: [__name__]
+        regex: '^(bss_|jvm_|http_server_requests|system_cpu_usage|process_uptime)'
+        action: keep
+
+  # PostgreSQL Exporter
+  - job_name: 'postgresql'
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - 'postgres-exporter:9187'
+    metrics_path: /metrics
+
+  # Redis Exporter
+  - job_name: 'redis'
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - 'redis-exporter:9121'
+    metrics_path: /metrics
+
+  # Kafka Exporter
+  - job_name: 'kafka'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'kafka-exporter:9308'
+    metrics_path: /metrics
+
+  # Keycloak Exporter
+  - job_name: 'keycloak'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'keycloak-exporter:9308'
+    metrics_path: /metrics
+
+  # Kong Gateway
+  - job_name: 'kong'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'kong:8000'
+    metrics_path: /metrics
+
+  # Node Exporter (for host metrics)
+  - job_name: 'node-exporter'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+    metrics_path: /metrics
+
+  # cAdvisor (for container metrics)
+  - job_name: 'cadvisor'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'cadvisor:8080'
+    metrics_path: /metrics
+
+  # Tempo (for tracing metrics)
+  - job_name: 'tempo'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'tempo:3200'
+    metrics_path: /metrics
+
+  # Grafana
+  - job_name: 'grafana'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 'grafana:3000'
+    metrics_path: /metrics
+
+  # Alertmanager
+  - job_name: 'alertmanager'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 'alertmanager:9093'
+    metrics_path: /metrics
+
+# Remote write configuration (optional - for long-term storage)
+remote_write:
+  - url: "http://victoriametrics:8428/api/v1/write"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+    write_relabel_configs:
+      # Only write metrics matching these patterns
+      - source_labels: [__name__]
+        regex: '^(bss_|jvm_|http_server_requests|system_cpu_usage)'
+        action: keep
+
+# Remote read configuration (optional - for querying historical data)
+remote_read:
+  - url: "http://victoriametrics:8428/api/v1/read"
+    read_recent: true
+    required_matchers:
+      - job: 'bss-backend'
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true
+
+# Feature flags
+feature_flags:
+  - promql-at-modifier
+  - expand-external-labels
+  - memory-snapshot-on-shutdown
+  - extra-scrape-metrics
+  - extra-encode-metrics

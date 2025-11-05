@@ -1,0 +1,321 @@
+# Alertmanager Configuration for BSS System
+# Routes alerts to appropriate teams based on severity and service
+
+global:
+  # The SMTP server from which emails are sent
+  smtp_smarthost: 'smtp.company.com:587'
+  smtp_from: 'alerts@company.com'
+  smtp_auth_username: 'alerts@company.com'
+  smtp_auth_password: 'YOUR_SMTP_PASSWORD'
+
+  # The Slack API URL
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+  # PagerDuty API key
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# Templates for notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# The root route on which all alerts enter
+route:
+  # The initial grouping key
+  group_by: ['alertname', 'service', 'severity']
+
+  # How long to wait to send a notification about a group of alerts
+  group_wait: 10s
+
+  # How long to wait before sending a notification if a new alert is added to the group
+  group_interval: 10s
+
+  # How long to wait before resending an alert if it has not been resolved
+  repeat_interval: 1h
+
+  # A child route
+  receiver: 'default'
+
+  # Routes
+  routes:
+    # Critical backend alerts - notify immediately
+    - match:
+        severity: critical
+        team: backend
+      receiver: 'backend-critical'
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 15m
+
+    # Warning backend alerts - less urgent
+    - match:
+        severity: warning
+        team: backend
+      receiver: 'backend-warning'
+      group_interval: 5m
+      repeat_interval: 2h
+
+    # Billing critical alerts
+    - match:
+        severity: critical
+        team: billing
+      receiver: 'billing-critical'
+      group_wait: 0s
+      repeat_interval: 15m
+
+    # Infrastructure alerts
+    - match:
+        team: infrastructure
+      receiver: 'infrastructure-team'
+      group_wait: 2m
+      repeat_interval: 30m
+
+    # SLO breaches - high priority
+    - match:
+        slo: availability
+      receiver: 'slo-team'
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # All PagerDuty alerts
+    - match:
+        severity: critical
+      receiver: 'pagerduty'
+
+    # Default route for any unmatched alerts
+    - match_re:
+        alertname: '^(.*)$'
+      receiver: 'default'
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit high alerts if backend is down
+  - source_match:
+      alertname: 'BackendDown'
+    target_match:
+      alertname: 'HighErrorRate'
+    equal: ['service', 'instance']
+
+  # Inhibit warning if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+  # Inhibit DB connection warnings if PostgreSQL is down
+  - source_match:
+      alertname: 'PostgreSQLDown'
+    target_match:
+      alertname: 'PostgreSQLHighConnections'
+    equal: ['service']
+
+# Receivers
+receivers:
+  # Default receiver
+  - name: 'default'
+    email_configs:
+      - to: 'devops@company.com'
+        subject: '[{{ .GroupLabels.alertname }}] {{ .GroupLabels.service }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Instance: {{ .Labels.instance }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+    slack_configs:
+      - api_url: '{{ .Global.SlackAPIURL }}'
+        channel: '#alerts-default'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Instance:* {{ .Labels.instance }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        send_resolved: true
+
+  # Backend Critical Team
+  - name: 'backend-critical'
+    email_configs:
+      - to: 'backend-team@company.com'
+        subject: '[CRITICAL] Backend Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 CRITICAL ALERT 🚨
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Instance: {{ .Labels.instance }}
+          Service: {{ .Labels.service }}
+          Runbook: {{ .Annotations.runbook_url }}
+          Dashboard: {{ .Annotations.dashboard_url }}
+
+          Time: {{ .StartsAt }}
+          {{ end }}
+
+    slack_configs:
+      - api_url: '{{ .Global.SlackAPIURL }}'
+        channel: '#alerts-backend'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Instance:* {{ .Labels.instance }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          *Dashboard:* {{ .Annotations.dashboard_url }}
+          {{ end }}
+        send_resolved: true
+
+    # VictorOps (Splunk On-Call) integration
+    victorops_configs:
+      - api_key: 'YOUR_VICTOROPS_API_KEY'
+        routing_key: 'backend-critical'
+        message_type: 'CRITICAL'
+        entity_display_name: '{{ .GroupLabels.alertname }}'
+        state_message: |
+          {{ range .Alerts }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  # Backend Warning Team
+  - name: 'backend-warning'
+    email_configs:
+      - to: 'backend-team@company.com'
+        subject: '[WARNING] Backend Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          ⚠️ WARNING ⚠️
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Instance: {{ .Labels.instance }}
+          Service: {{ .Labels.service }}
+          Runbook: {{ .Annotations.runbook_url }}
+
+          Time: {{ .StartsAt }}
+          {{ end }}
+
+    slack_configs:
+      - api_url: '{{ .Global.SlackAPIURL }}'
+        channel: '#alerts-backend'
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        send_resolved: true
+
+  # Billing Critical Team
+  - name: 'billing-critical'
+    email_configs:
+      - to: 'billing-team@company.com'
+        subject: '[CRITICAL] Billing Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 CRITICAL BILLING ALERT 🚨
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Runbook: {{ .Annotations.runbook_url }}
+
+          Time: {{ .StartsAt }}
+          {{ end }}
+
+    slack_configs:
+      - api_url: '{{ .Global.SlackAPIURL }}'
+        channel: '#alerts-billing'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          {{ end }}
+        send_resolved: true
+
+  # Infrastructure Team
+  - name: 'infrastructure-team'
+    email_configs:
+      - to: 'infrastructure@company.com'
+        subject: 'Infrastructure Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Infrastructure Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Instance: {{ .Labels.instance }}
+
+          Time: {{ .StartsAt }}
+          {{ end }}
+
+    slack_configs:
+      - api_url: '{{ .Global.SlackAPIURL }}'
+        channel: '#infrastructure'
+        title: 'Infrastructure Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        send_resolved: true
+
+  # SLO Team
+  - name: 'slo-team'
+    email_configs:
+      - to: 'sre@company.com'
+        subject: '[SLO BREACH] {{ .GroupLabels.slo }} - {{ .GroupLabels.alertname }}'
+        body: |
+          SLO Breach Detected
+
+          SLO: {{ .GroupLabels.slo }}
+          Target: {{ .GroupLabels.target }}
+          Current: {{ .GroupLabels.current }}
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+
+          Time: {{ .StartsAt }}
+          {{ end }}
+
+    slack_configs:
+      - api_url: '{{ .Global.SlackAPIURL }}'
+        channel: '#sre'
+        title: 'SLO Breach: {{ .GroupLabels.slo }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Target:* {{ .GroupLabels.target }}
+          {{ end }}
+        send_resolved: true
+
+  # PagerDuty for critical alerts
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+        description: '{{ .GroupLabels.alertname }}'
+        details:
+          summary: '{{ .GroupLabels.alertname }}'
+          severity: '{{ .GroupLabels.severity }}'
+          instance: '{{ .GroupLabels.instance }}'
+          service: '{{ .GroupLabels.service }}'
+        client: 'Alertmanager'
+        client_url: 'http://alertmanager:9093'
