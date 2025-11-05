@@ -64,27 +64,14 @@ export const useBillingStore = defineStore('billing', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const query = {
-        page: params.page ?? pagination.page,
-        size: params.size ?? pagination.size,
-        sort: params.sort ?? 'timestamp,desc',
-        ...(params.unrated !== undefined && { unrated: params.unrated }),
-        ...(params.customerId && { customerId: params.customerId }),
-        ...(params.subscriptionId && { subscriptionId: params.subscriptionId }),
-        ...(params.usageType && { usageType: params.usageType })
-      }
 
-      const response = await get<UsageRecordListResponse>('/billing/usage-records', { query })
-      usageRecords.value = response.data.content
+      // Backend API: GET /api/billing/usage-records
+      const response = await get<UsageRecord[]>('/billing/usage-records')
+      usageRecords.value = response.data
 
-      pagination.page = response.data.page
-      pagination.size = response.data.size
-      pagination.totalElements = response.data.totalElements
-      pagination.totalPages = response.data.totalPages
-      pagination.first = response.data.first
-      pagination.last = response.data.last
-      pagination.numberOfElements = response.data.numberOfElements
-      pagination.empty = response.data.empty
+      pagination.totalElements = response.data.length
+      pagination.totalPages = Math.ceil(response.data.length / pagination.size)
+      pagination.empty = response.data.length === 0
 
       return response.data
     } catch (err: any) {
@@ -102,25 +89,14 @@ export const useBillingStore = defineStore('billing', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const query = {
-        page: params.page ?? pagination.page,
-        size: params.size ?? pagination.size,
-        sort: params.sort ?? 'startDate,desc',
-        ...(params.status && { status: params.status }),
-        ...(params.customerId && { customerId: params.customerId })
-      }
 
-      const response = await get<BillingCycleListResponse>('/billing/cycles', { query })
-      billingCycles.value = response.data.content
+      // Backend API: GET /api/billing/cycles
+      const response = await get<BillingCycle[]>('/billing/cycles')
+      billingCycles.value = response.data
 
-      pagination.page = response.data.page
-      pagination.size = response.data.size
-      pagination.totalElements = response.data.totalElements
-      pagination.totalPages = response.data.totalPages
-      pagination.first = response.data.first
-      pagination.last = response.data.last
-      pagination.numberOfElements = response.data.numberOfElements
-      pagination.empty = response.data.empty
+      pagination.totalElements = response.data.length
+      pagination.totalPages = Math.ceil(response.data.length / pagination.size)
+      pagination.empty = response.data.length === 0
 
       return response.data
     } catch (err: any) {

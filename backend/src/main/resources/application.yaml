@@ -60,6 +60,17 @@ spring:
       time-to-live: 300000
       cache-null-values: false
 
+  session:
+    store-type: redis
+    redis:
+      namespace: bss:session
+      flush-mode: on_save
+      timeout: 1800s
+    timeout: 1800s
+    redis:
+      repository:
+        enabled: true
+
   threads:
     virtual:
       enabled: true

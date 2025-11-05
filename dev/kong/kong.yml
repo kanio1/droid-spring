@@ -21,10 +21,6 @@ services:
       - name: request-size-limiting
         config:
           allowed_payload_size: 10
-      - name: rate-limiting
-        config:
-          minute: 1000
-          hour: 10000
       - name: correlation-id
         config:
           header_name: X-Correlation-ID
@@ -33,6 +29,91 @@ services:
     read_timeout: 60000
     write_timeout: 60000
     connect_timeout: 60000
+
+  # Backend API - Authentication Endpoints (stricter limits)
+  - name: bss-auth-service
+    url: http://backend:8080
+    routes:
+      - name: auth-route
+        paths:
+          - /api/auth
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: rate-limiting
+        config:
+          minute: 60
+          hour: 500
+          day: 5000
+          policy: local
+          redis_host: redis
+          redis_port: 6379
+          redis_database: 0
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 5
+    host_header: localhost:3001
+
+  # Backend API - Customer Management (moderate limits)
+  - name: bss-customer-service
+    url: http://backend:8080
+    routes:
+      - name: customer-route
+        paths:
+          - /api/customers
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: rate-limiting
+        config:
+          minute: 300
+          hour: 5000
+          day: 50000
+          policy: local
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10
+
+  # Backend API - Billing/Invoice (stricter - financial data)
+  - name: bss-billing-service
+    url: http://backend:8080
+    routes:
+      - name: billing-route
+        paths:
+          - /api/billing
+          - /api/invoices
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: rate-limiting
+        config:
+          minute: 200
+          hour: 3000
+          day: 30000
+          policy: local
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10
+
+  # Backend API - Public/Read endpoints (higher limits)
+  - name: bss-public-service
+    url: http://backend:8080
+    routes:
+      - name: public-route
+        paths:
+          - /api/public
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: rate-limiting
+        config:
+          minute: 2000
+          hour: 20000
+          day: 200000
+          policy: local
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10
 
   # Grafana Service
   - name: grafana-service
@@ -95,32 +176,123 @@ services:
 # ==========================================
 
 consumers:
+  # Frontend Client (web app) - Balanced limits
   - username: bss-frontend
     keyauth_credentials:
       - key: frontend_api_key_123
     tags:
       - frontend
       - internal
+    rate_limit_tier: standard
 
+  # Mobile Client (mobile apps) - Similar to frontend
   - username: bss-mobile
     keyauth_credentials:
       - key: mobile_api_key_456
     tags:
       - mobile
       - external
+    rate_limit_tier: standard
 
+  # Partner/B2B Client - Higher limits for API integration
   - username: bss-partner
     keyauth_credentials:
       - key: partner_api_key_789
     tags:
       - partner
       - external
+    rate_limit_tier: premium
+
+  # Admin Client - Strict limits for administrative operations
+  - username: bss-admin
+    keyauth_credentials:
+      - key: admin_api_key_999
+    tags:
+      - admin
+      - internal
+    rate_limit_tier: restricted
+
+  # Anonymous/Unauthenticated - Very strict limits
+  - username: anonymous
+    keyauth_credentials:
+      - key: anon_key_000
+    tags:
+      - anonymous
+      - public
+    rate_limit_tier: minimal
 
 # ==========================================
 # PLUGINS (Global)
 # ==========================================
 
 plugins:
+  # Rate Limiting Tier: Standard (Frontend/Mobile)
+  - name: rate-limiting
+    route:
+      _path_: /api/auth
+    config:
+      minute: 60
+      hour: 500
+      day: 5000
+      policy: local
+      limit_by: credential
+      hide_client_headers: false
+    consumer: bss-frontend,bss-mobile
+
+  # Rate Limiting Tier: Premium (Partners) - Higher limits
+  - name: rate-limiting
+    service: bss-backend-service
+    config:
+      minute: 2000
+      hour: 20000
+      day: 200000
+      policy: local
+      limit_by: credential
+      hide_client_headers: false
+    consumer: bss-partner
+
+  # Rate Limiting Tier: Restricted (Admin) - Lower limits
+  - name: rate-limiting
+    route:
+      _path_: /api/admin
+    config:
+      minute: 30
+      hour: 200
+      day: 2000
+      policy: local
+      limit_by: credential
+      hide_client_headers: false
+    consumer: bss-admin
+
+  # Rate Limiting Tier: Minimal (Anonymous) - Very strict
+  - name: rate-limiting
+    route:
+      _path_: /api/public
+    config:
+      minute: 10
+      hour: 50
+      day: 500
+      policy: local
+      limit_by: ip
+      hide_client_headers: false
+    consumer: anonymous
+
+  # Burst Protection - Limit request bursts
+  - name: proxy-cache
+    config:
+      response_code:
+        - 200
+        - 201
+        - 204
+      request_method:
+        - GET
+        - HEAD
+      content_type:
+        - text/plain
+        - application/json
+      cache_ttl: 30
+      strategy: memory
+
   # Enable Prometheus metrics
   - name: prometheus
     config:
@@ -169,6 +341,57 @@ plugins:
         - ::1
         - 172.16.0.0/12  # Docker networks
 
+  # Bot Detection and Rate Limiting
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - "X-RateLimit-Limit:1000"
+          - "X-RateLimit-Remaining:999"
+          - "X-RateLimit-Reset:60"
+    route:
+      _path_: /api/*
+
+  # Bot Protection - Block common bot patterns
+  - name: ip-restriction
+    config:
+      allow:
+        - 127.0.0.1
+        - ::1
+      deny:
+        - 10.0.0.0/8  # Block common bot net ranges
+        - 192.168.0.0/16
+
+  # Circuit Breaker - Fail fast when backend is unhealthy
+  - name: request-termination
+    config:
+      status_code: 503
+      message: Service temporarily unavailable
+      size: 10
+      interval: 5
+    route:
+      _path_: /api/*
+
+  # Response Rate Limiting - Limit responses per client
+  - name: response-ratelimiting
+    config:
+      rate_limit_header: X-RateLimit-Remaining
+      header_limit: X-RateLimit-Limit
+      header_reset: X-RateLimit-Reset
+      seconds: 60
+      header_count: X-RateLimit-Count
+    route:
+      _path_: /api/*
+
+  # Bot Protection - User-Agent filtering
+  - name: response-transformer
+    config:
+      rename:
+        headers:
+          - "User-Agent:X-Bot-Detected"
+    route:
+      _path_: /api/*
+
 # ==========================================
 # UPSTREAMS (Load Balancing)
 # ==========================================
@@ -190,22 +413,37 @@ upstreams:
     hash_fallback: none
 
 # ==========================================
-# CERTIFICATES (for HTTPS)
+# CERTIFICATES (mTLS Configuration)
 # ==========================================
 
 certificates:
-  - id: bss-ssl-cert
+  # Kong Server Certificate
+  - id: kong-server-cert
     cert: |
       -----BEGIN CERTIFICATE-----
-      # SSL certificate would be placed here
+$(cat /home/labadmin/projects/droid-spring/dev/certs/server/kong-cert.pem | sed 's/^/      /')
       -----END CERTIFICATE-----
     key: |
       -----BEGIN PRIVATE KEY-----
-      # SSL private key would be placed here
+$(cat /home/labadmin/projects/droid-spring/dev/certs/server/kong-key.pem | sed 's/^/      /')
       -----END PRIVATE KEY-----
     snis:
-      - name: bss.local
-        cert: bss-ssl-cert
+      - name: kong.bss.local
+        cert: kong-server-cert
+      - name: localhost
+        cert: kong-server-cert
+
+# ==========================================
+# MTLS CLIENT AUTHENTICATION
+# ==========================================
+
+# CA Certificate for Client Verification
+ca_certificates:
+  - id: bss-ca-cert
+    cert: |
+      -----BEGIN CERTIFICATE-----
+$(cat /home/labadmin/projects/droid-spring/dev/certs/ca/ca-cert.pem | sed 's/^/      /')
+      -----END CERTIFICATE-----
 
 # ==========================================
 # PARAMETERS

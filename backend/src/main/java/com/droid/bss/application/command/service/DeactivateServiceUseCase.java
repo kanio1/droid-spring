@@ -5,6 +5,7 @@ import com.droid.bss.application.dto.service.ServiceActivationResponse;
 import com.droid.bss.domain.service.ActivationStatus;
 import com.droid.bss.domain.service.ServiceActivationEntity;
 import com.droid.bss.domain.service.ServiceActivationStepEntity;
+import com.droid.bss.domain.service.event.ServiceEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,14 +20,17 @@ public class DeactivateServiceUseCase {
     private final ServiceActivationService service;
     private final ServiceActivationRepository activationRepository;
     private final ServiceActivationStepRepository stepRepository;
+    private final ServiceEventPublisher eventPublisher;
 
     public DeactivateServiceUseCase(
             ServiceActivationService service,
             ServiceActivationRepository activationRepository,
-            ServiceActivationStepRepository stepRepository) {
+            ServiceActivationStepRepository stepRepository,
+            ServiceEventPublisher eventPublisher) {
         this.service = service;
         this.activationRepository = activationRepository;
         this.stepRepository = stepRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -37,6 +41,13 @@ public class DeactivateServiceUseCase {
         if (!activation.isActive()) {
             throw new IllegalStateException("Service is not active: " + command.activationId());
         }
+
+        // Publish deactivation started event
+        eventPublisher.publishServiceDeactivated(
+                activation.getService(),
+                activation.getCustomer().getId(),
+                command.reason() != null ? command.reason() : "Service deactivated by user"
+        );
 
         // Update status to deprovisioning
         activation.setStatus(ActivationStatus.DEPROVISIONING);

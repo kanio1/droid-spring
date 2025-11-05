@@ -5,6 +5,9 @@ export * from './order'
 export * from './invoice'
 export * from './payment'
 export * from './subscription'
+export * from './address'
+export * from './coverage-node'
+export * from './service'
 
 // Common validation utilities
 import { z } from 'zod'

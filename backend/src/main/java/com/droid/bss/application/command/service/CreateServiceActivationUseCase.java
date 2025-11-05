@@ -6,6 +6,7 @@ import com.droid.bss.domain.service.*;
 import com.droid.bss.domain.customer.CustomerEntity;
 import com.droid.bss.domain.customer.CustomerRepository;
 import com.droid.bss.domain.service.ServiceActivationStepEntity;
+import com.droid.bss.domain.service.event.ServiceEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +24,21 @@ public class CreateServiceActivationUseCase {
     private final ServiceActivationStepRepository stepRepository;
     private final CustomerRepository customerRepository;
     private final ServiceRepository serviceRepository;
+    private final ServiceEventPublisher eventPublisher;
 
     public CreateServiceActivationUseCase(
             ServiceActivationService service,
             ServiceActivationRepository activationRepository,
             ServiceActivationStepRepository stepRepository,
             CustomerRepository customerRepository,
-            ServiceRepository serviceRepository) {
+            ServiceRepository serviceRepository,
+            ServiceEventPublisher eventPublisher) {
         this.service = service;
         this.activationRepository = activationRepository;
         this.stepRepository = stepRepository;
         this.customerRepository = customerRepository;
         this.serviceRepository = serviceRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -71,6 +75,9 @@ public class CreateServiceActivationUseCase {
 
         // Save
         ServiceActivationEntity saved = activationRepository.save(activation);
+
+        // Publish activation created event
+        eventPublisher.publishServiceActivated(serviceEntity, saved);
 
         return ServiceActivationResponse.from(saved);
     }

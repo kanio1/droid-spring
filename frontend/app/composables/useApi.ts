@@ -32,17 +32,16 @@ interface PaginatedResponse<T = any> {
 
 export const useApi = () => {
   const config = useRuntimeConfig()
-  const { getToken } = useAuth()
-  const { showToast } = useToast()
+  const { token } = useAuth()
+  const toast = useToast()
   const loading = ref(false)
 
   const baseURL = config.public.apiBaseUrl || 'http://localhost:8080/api'
 
   // Get auth headers
-  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const getAuthHeaders = (): Record<string, string> => {
     try {
-      const token = await getToken()
-      return token ? { 'Authorization': `Bearer ${token}` } : {}
+      return token.value ? { 'Authorization': `Bearer ${token.value}` } : {}
     } catch (error) {
       console.warn('Failed to get auth token:', error)
       return {}
@@ -67,15 +66,16 @@ export const useApi = () => {
   // Handle API errors
   const handleError = (error: any, skipErrorToast = false) => {
     const message = error?.message || error?.error?.message || 'An unexpected error occurred'
-    
+
     if (!skipErrorToast) {
-      showToast({
-        type: 'error',
-        title: 'Error',
-        message
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: message,
+        life: 5000
       })
     }
-    
+
     throw error
   }
 
@@ -103,7 +103,7 @@ export const useApi = () => {
       const url = buildUrl(endpoint, query)
       
       // Prepare headers
-      const authHeaders = skipAuth ? {} : await getAuthHeaders()
+      const authHeaders = skipAuth ? {} : getAuthHeaders()
       const requestHeaders = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -218,10 +218,11 @@ export const useApi = () => {
   // Success toast helper
   const handleSuccess = (message?: string) => {
     if (message) {
-      showToast({
-        type: 'success',
-        title: 'Success',
-        message
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: message,
+        life: 3000
       })
     }
   }

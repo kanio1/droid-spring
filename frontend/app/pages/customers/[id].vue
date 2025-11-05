@@ -203,6 +203,70 @@
       </div>
     </div>
 
+    <!-- Status Change Modal -->
+    <AppModal
+      v-model="showStatusModal"
+      title="Change Customer Status"
+      size="md"
+      :closable="true"
+    >
+      <div class="status-modal-content">
+        <p>Change status for {{ formatCustomerName(customer) }}</p>
+        <div class="current-status">
+          <span class="current-status-label">Current Status:</span>
+          <AppBadge
+            :variant="getCustomerStatusVariant(customer.status)"
+            :text="CUSTOMER_STATUS_LABELS[customer.status]"
+            size="lg"
+          />
+        </div>
+
+        <div class="status-options">
+          <label class="status-option-label">Select New Status:</label>
+          <div class="status-option-grid">
+            <button
+              v-for="status in availableStatuses"
+              :key="status"
+              class="status-option-button"
+              :class="{ active: selectedStatus === status }"
+              @click="selectedStatus = status"
+            >
+              <AppBadge
+                :variant="getCustomerStatusVariant(status)"
+                :text="CUSTOMER_STATUS_LABELS[status]"
+                size="md"
+              />
+            </button>
+          </div>
+        </div>
+
+        <div v-if="selectedStatus && selectedStatus !== customer.status" class="status-change-notice">
+          <p class="notice-text">
+            <i class="pi pi-info-circle"></i>
+            Changing status will update the customer's service access.
+          </p>
+        </div>
+
+        <div class="modal-actions">
+          <AppButton
+            variant="secondary"
+            @click="handleCancelStatusChange"
+            :disabled="changingStatus"
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            variant="primary"
+            :loading="changingStatus"
+            :disabled="!selectedStatus || selectedStatus === customer.status"
+            @click="handleSubmitStatusChange"
+          >
+            Update Status
+          </AppButton>
+        </div>
+      </div>
+    </AppModal>
+
     <!-- Delete Confirmation Modal -->
     <AppModal
       v-model="showDeleteModal"
@@ -213,16 +277,16 @@
       <div class="delete-modal-content">
         <p>Are you sure you want to delete {{ formatCustomerName(customer) }}?</p>
         <p class="warning-text">This action cannot be undone.</p>
-        
+
         <div class="modal-actions">
-          <AppButton 
-            variant="secondary" 
+          <AppButton
+            variant="secondary"
             @click="showDeleteModal = false"
           >
             Cancel
           </AppButton>
-          <AppButton 
-            variant="danger" 
+          <AppButton
+            variant="danger"
             :loading="deleting"
             @click="handleDelete"
           >
@@ -235,15 +299,15 @@
 </template>
 
 <script setup lang="ts">
-import type { 
-  Customer, 
+import type {
+  Customer,
   CustomerStatus,
   CUSTOMER_STATUS_LABELS,
   CUSTOMER_STATUS_COLORS,
   formatCustomerName,
   getInitials,
   getCustomerStatusVariant
-} from '~/types/customer'
+} from '~/schemas/customer'
 
 // Page meta
 definePageMeta({
@@ -254,10 +318,9 @@ definePageMeta({
 const route = useRoute()
 const customerId = computed(() => route.params.id as string)
 
-// Composables
-const { get, del } = useApi()
-const { showToast, confirm } = useToast()
-const { showModal, closeModal } = useModal()
+// Store
+const customerStore = useCustomerStore()
+const toast = useToast()
 
 // Reactive state
 const customer = ref<Customer>({} as Customer)
@@ -265,22 +328,30 @@ const loading = ref(true)
 const error = ref<string>('')
 const deleting = ref(false)
 const showDeleteModal = ref(false)
+const showStatusModal = ref(false)
+const selectedStatus = ref<CustomerStatus | null>(null)
+const changingStatus = ref(false)
+
+// Computed
+const currentCustomer = computed(() => customerStore.currentCustomer)
+
+// Available statuses (exclude current status)
+const availableStatuses = computed<CustomerStatus[]>(() => {
+  const allStatuses: CustomerStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'TERMINATED']
+  return allStatuses.filter(status => status !== customer.value.status)
+})
 
 // Methods
 const fetchCustomer = async () => {
   loading.value = true
   error.value = ''
-  
+
   try {
-    const response = await get<Customer>(`/customers/${customerId.value}`)
-    customer.value = response.data
+    const response = await customerStore.fetchCustomerById(customerId.value)
+    customer.value = response
   } catch (err: any) {
     console.error('Failed to fetch customer:', err)
-    if (err.status === 404) {
-      error.value = 'Customer not found'
-    } else {
-      error.value = 'Failed to load customer details'
-    }
+    error.value = err.message || 'Failed to load customer details'
   } finally {
     loading.value = false
   }
@@ -291,42 +362,79 @@ const handleEdit = () => {
 }
 
 const handleChangeStatus = () => {
-  // TODO: Implement status change modal
-  showToast({
-    type: 'info',
-    title: 'Coming Soon',
-    message: 'Status change functionality will be implemented soon.'
-  })
+  selectedStatus.value = null
+  showStatusModal.value = true
+}
+
+const handleCancelStatusChange = () => {
+  selectedStatus.value = null
+  showStatusModal.value = false
+}
+
+const handleSubmitStatusChange = async () => {
+  if (!selectedStatus.value || selectedStatus.value === customer.value.status) {
+    return
+  }
+
+  changingStatus.value = true
+
+  try {
+    const response = await customerStore.changeCustomerStatus({
+      id: customerId.value,
+      status: selectedStatus.value
+    })
+
+    // Update local customer data
+    customer.value = response
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `Customer status changed to ${CUSTOMER_STATUS_LABELS[selectedStatus.value]}.`,
+      life: 5000
+    })
+
+    showStatusModal.value = false
+    selectedStatus.value = null
+
+  } catch (err: any) {
+    console.error('Failed to change customer status:', err)
+    // Error handling is done in customerStore
+  } finally {
+    changingStatus.value = false
+  }
 }
 
 const handleDelete = async () => {
   deleting.value = true
-  
+
   try {
-    await del(`/customers/${customerId.value}`)
-    
-    showToast({
-      type: 'success',
-      title: 'Customer Deleted',
-      message: `${formatCustomerName(customer.value)} has been successfully deleted.`
+    await customerStore.deleteCustomer(customerId.value)
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `${formatCustomerName(customer.value)} has been successfully deleted.`,
+      life: 5000
     })
-    
+
     showDeleteModal.value = false
     navigateTo('/customers')
-    
-  } catch (err) {
+
+  } catch (err: any) {
     console.error('Failed to delete customer:', err)
-    // Error handling is done in useApi composable
+    // Error handling is done in customerStore
   } finally {
     deleting.value = false
   }
 }
 
 const handleAddAddress = () => {
-  showToast({
-    type: 'info',
-    title: 'Coming Soon',
-    message: 'Address management will be implemented soon.'
+  toast.add({
+    severity: 'info',
+    summary: 'Coming Soon',
+    detail: 'Address management will be implemented soon.',
+    life: 5000
   })
 }
 
@@ -597,6 +705,92 @@ watch(() => route.params.id, () => {
   color: var(--color-text-secondary);
 }
 
+/* Status Modal */
+.status-modal-content {
+  padding: var(--space-4) 0;
+}
+
+.status-modal-content > p {
+  margin: 0 0 var(--space-4) 0;
+  color: var(--color-text-primary);
+}
+
+.current-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+}
+
+.current-status-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.status-options {
+  margin-bottom: var(--space-6);
+}
+
+.status-option-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.status-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.status-option-button {
+  padding: var(--space-3);
+  background: var(--color-surface-secondary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast) var(--transition-timing);
+  display: flex;
+  justify-content: center;
+}
+
+.status-option-button:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+.status-option-button.active {
+  background: var(--color-primary-100);
+  border-color: var(--color-primary);
+}
+
+.status-change-notice {
+  padding: var(--space-3);
+  background: var(--blue-50);
+  border: 1px solid var(--blue-200);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+}
+
+.notice-text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.notice-text .pi {
+  color: var(--blue-600);
+}
+
 /* Delete Modal */
 .delete-modal-content {
   padding: var(--space-4) 0;
@@ -671,11 +865,24 @@ watch(() => route.params.id, () => {
   .modal-actions {
     flex-direction: column;
   }
+
+  .status-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .current-status {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Tablet adjustments */
 @media (min-width: 769px) and (max-width: 1024px) {
   .info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .status-option-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }

@@ -3,58 +3,88 @@
     <!-- Page Header -->
     <div class="page-header">
       <div class="page-header__content">
-        <h1 class="page-title">Services</h1>
-        <p class="page-subtitle">Manage service catalog and activations</p>
+        <h1 class="page-title">Service Catalog</h1>
+        <p class="page-subtitle">
+          Manage service offerings and pricing
+        </p>
       </div>
       <div class="page-header__actions">
-        <Button
-          label="View Activations"
-          icon="pi pi-list"
-          severity="secondary"
-          @click="navigateTo('/services/activations')"
-        />
+        <NuxtLink to="/services/activations">
+          <Button
+            label="Activations"
+            icon="pi pi-list"
+            severity="secondary"
+          />
+        </NuxtLink>
+        <NuxtLink to="/services/create">
+          <Button
+            label="Add Service"
+            icon="pi pi-plus"
+            severity="primary"
+          />
+        </NuxtLink>
       </div>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="summary-cards">
-      <div class="summary-card">
-        <div class="summary-card__icon">
+    <!-- Service Statistics -->
+    <div class="service-stats">
+      <div class="stat-card">
+        <div class="stat-card__icon">
           <i class="pi pi-cog"></i>
         </div>
-        <div class="summary-card__content">
-          <div class="summary-card__label">Total Services</div>
-          <div class="summary-card__value">{{ services.length }}</div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ paginationProps.total }}</div>
+          <div class="stat-card__label">Total Services</div>
         </div>
       </div>
 
-      <div class="summary-card">
-        <div class="summary-card__icon active">
+      <div class="stat-card stat-card--success">
+        <div class="stat-card__icon">
           <i class="pi pi-check-circle"></i>
         </div>
-        <div class="summary-card__content">
-          <div class="summary-card__label">Active Services</div>
-          <div class="summary-card__value">{{ activeCount }}</div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ activeServices.length }}</div>
+          <div class="stat-card__label">Active</div>
         </div>
       </div>
 
-      <div class="summary-card">
-        <div class="summary-card__icon activation">
-          <i class="pi pi-play"></i>
-        </div>
-        <div class="summary-card__content">
-          <div class="summary-card__label">Activations</div>
-          <div class="summary-card__value">{{ totalActivations }}</div>
-        </div>
-      </div>
-
-      <div class="summary-card">
-        <div class="summary-card__icon pending">
+      <div class="stat-card stat-card--warning">
+        <div class="stat-card__icon">
           <i class="pi pi-clock"></i>
         </div>
-        <div class="summary-card__content">
-          <div class="summary-card__label">Pending</div>
-          <div class="summary-card__value">{{ pendingActivations }}</div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ plannedServices.length }}</div>
+          <div class="stat-card__label">Planned</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--info">
+        <div class="stat-card__icon">
+          <i class="pi pi-dollar"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ formatPrice(averagePrice, 'USD') }}</div>
+          <div class="stat-card__label">Avg Price</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--purple">
+        <div class="stat-card__icon">
+          <i class="pi pi-chart-line"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ formatPrice(totalRevenue, 'USD') }}</div>
+          <div class="stat-card__label">Total Revenue</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--neutral">
+        <div class="stat-card__icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ totalCustomers }}</div>
+          <div class="stat-card__label">Total Customers</div>
         </div>
       </div>
     </div>
@@ -62,7 +92,7 @@
     <!-- Filters and Search -->
     <div class="services-filters">
       <div class="filters-row">
-        <span class="p-input-icon-left">
+        <span class="p-input-icon-left search-input">
           <i class="pi pi-search" />
           <InputText
             v-model="searchTerm"
@@ -73,13 +103,13 @@
         </span>
 
         <Dropdown
-          v-model="serviceTypeFilter"
-          :options="serviceTypeOptions"
+          v-model="typeFilter"
+          :options="typeOptions"
           optionLabel="label"
           optionValue="value"
           placeholder="All Types"
           style="width: 180px"
-          @change="handleServiceTypeFilter"
+          @change="handleTypeFilter"
         />
 
         <Dropdown
@@ -97,9 +127,19 @@
           :options="statusOptions"
           optionLabel="label"
           optionValue="value"
-          placeholder="All Statuses"
-          style="width: 180px"
+          placeholder="All Status"
+          style="width: 150px"
           @change="handleStatusFilter"
+        />
+
+        <Dropdown
+          v-model="technologyFilter"
+          :options="technologyOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All Technologies"
+          style="width: 180px"
+          @change="handleTechnologyFilter"
         />
 
         <Dropdown
@@ -118,368 +158,386 @@
       <AppTable
         :columns="tableColumns"
         :data="services"
-        :loading="serviceStore.loading"
-        :show-pagination="true"
+        :loading="loading"
         :pagination="paginationProps"
-        @page="handlePage"
-        @sort="handleSort"
-        @row-click="handleView"
+        :clickable="true"
+        @row-click="handleRowClick"
+        @page-change="handlePageChange"
       >
-        <!-- Service Code column -->
-        <template #cell-serviceCode="{ row }">
-          <div class="service-code">
-            <span class="service-code__text">{{ row.serviceCode }}</span>
+        <!-- Custom cell templates -->
+        <template #cell(type)="{ value }">
+          <div class="type-cell">
+            <i :class="getTypeIcon(value)" class="type-icon"></i>
+            <Tag :value="value" severity="secondary" />
           </div>
         </template>
 
-        <!-- Service Name column -->
-        <template #cell-serviceName="{ row }">
-          <div class="service-name">
-            <div class="service-name__text">{{ row.serviceName }}</div>
-            <div class="service-type">{{ formatServiceType(row.serviceType) }}</div>
+        <template #cell(status)="{ value }">
+          <Tag :value="value" :severity="getStatusVariant(value)" />
+        </template>
+
+        <template #cell(category)="{ value }">
+          <Tag :value="value" severity="info" />
+        </template>
+
+        <template #cell(technology)="{ value }">
+          <Tag :value="value" severity="success" />
+        </template>
+
+        <template #cell(price)="{ row }">
+          <div class="price-cell">
+            <div class="price-cell__main">{{ formatPrice(row.price, row.currency) }}</div>
+            <div class="price-cell__cycle">{{ getBillingCycleLabel(row.billingCycle) }}</div>
           </div>
         </template>
 
-        <!-- Category column -->
-        <template #cell-category="{ row }">
-          <div class="category">
-            <span>{{ formatCategory(row.category) }}</span>
+        <template #cell(dataLimit)="{ value }">
+          <div class="data-cell">
+            <span>{{ formatDataLimit(value) }}</span>
           </div>
         </template>
 
-        <!-- Status column -->
-        <template #cell-status="{ row }">
-          <StatusBadge :status="row.status" type="service" size="small" />
-        </template>
-
-        <!-- Provisioning Time column -->
-        <template #cell-provisioningTime="{ row }">
-          <div class="provisioning-time">
-            <i class="pi pi-clock"></i>
-            <span>{{ row.provisioningTime }} min</span>
+        <template #cell(speed)="{ value }">
+          <div class="speed-cell">
+            <span>{{ formatSpeed(value) }}</span>
           </div>
         </template>
 
-        <!-- Activations column -->
-        <template #cell-activations="{ row }">
-          <div class="activations">
-            <div class="activations-count">{{ row.activations || 0 }}</div>
-            <div class="activations-label">activations</div>
+        <template #cell(activeCustomerCount)="{ value }">
+          <div class="customers-cell">
+            <i class="pi pi-users"></i>
+            <span>{{ value }}</span>
           </div>
         </template>
 
-        <!-- Actions column -->
-        <template #cell-actions="{ row }">
-          <div class="service-actions">
+        <template #cell(actions)="{ row }">
+          <div class="action-buttons">
             <Button
               icon="pi pi-eye"
+              severity="secondary"
+              size="small"
               text
               rounded
-              @click.stop="handleView(row)"
-              v-tooltip.top="'View details'"
+              v-tooltip.top="'View Details'"
+              @click.stop="handleViewService(row.id)"
+            />
+            <Button
+              icon="pi pi-pencil"
+              severity="info"
+              size="small"
+              text
+              rounded
+              v-tooltip.top="'Edit'"
+              @click.stop="handleEditService(row.id)"
             />
             <Button
               icon="pi pi-play"
+              severity="success"
+              size="small"
               text
               rounded
-              severity="success"
-              @click.stop="handleActivate(row)"
-              v-tooltip.top="'Activate service'"
-              v-if="canActivate(row)"
+              v-tooltip.top="'Activate for Customer'"
+              @click.stop="handleActivateService(row.id)"
             />
             <Button
-              icon="pi pi-cog"
+              icon="pi pi-trash"
+              severity="danger"
+              size="small"
               text
               rounded
-              severity="info"
-              @click.stop="handleConfigure(row)"
-              v-tooltip.top="'Configure'"
-              v-if="canConfigure(row)"
+              v-tooltip.top="'Delete'"
+              @click.stop="handleDeleteService(row.id)"
             />
-          </div>
-        </template>
-
-        <!-- Empty state -->
-        <template #empty>
-          <div class="empty-state">
-            <i class="pi pi-cog empty-state__icon"></i>
-            <h3 class="empty-state__title">No services found</h3>
-            <p class="empty-state__description">
-              {{ searchTerm || serviceTypeFilter || categoryFilter || statusFilter ?
-                'Try adjusting your search criteria' :
-                'No services are available at this time'
-              }}
-            </p>
           </div>
         </template>
       </AppTable>
     </div>
 
-    <!-- Toast for notifications -->
+    <!-- Empty State -->
+    <div v-if="!loading && services.length === 0" class="empty-state">
+      <div class="empty-state__icon">
+        <i class="pi pi-cog"></i>
+      </div>
+      <h3 class="empty-state__title">No services found</h3>
+      <p class="empty-state__description">
+        {{ searchTerm || typeFilter || categoryFilter || statusFilter || technologyFilter
+          ? 'Try adjusting your filters or search terms'
+          : 'Get started by adding your first service' }}
+      </p>
+      <div class="empty-state__actions">
+        <NuxtLink to="/services/create">
+          <Button label="Add Service" icon="pi pi-plus" severity="primary" />
+        </NuxtLink>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      modal
+      header="Confirm Delete"
+      :style="{ width: '450px' }"
+    >
+      <div class="confirmation-content">
+        <i class="pi pi-exclamation-triangle confirmation-icon" />
+        <p>Are you sure you want to delete this service?</p>
+      </div>
+      <template #footer>
+        <Button
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          @click="showDeleteDialog = false"
+        />
+        <Button
+          label="Delete"
+          icon="pi pi-trash"
+          severity="danger"
+          :loading="loading"
+          @click="confirmDelete"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Toast Messages -->
     <Toast />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useServiceStore } from '~/stores/service'
+import { useToast } from 'primevue/usetoast'
+import type { ServiceType, ServiceStatus, ServiceCategory, ServiceTechnology } from '~/schemas/service'
 
-// Page meta
+// Meta
 definePageMeta({
-  title: 'Services'
+  title: 'Service Catalog'
 })
 
-// Store
+// Stores & Composables
 const serviceStore = useServiceStore()
-const { showToast } = useToast()
-const route = useRoute()
+const router = useRouter()
+const toast = useToast()
 
-// Reactive state
+// Reactive State
 const searchTerm = ref('')
-const serviceTypeFilter = ref('')
-const categoryFilter = ref('')
-const statusFilter = ref('')
-const sortOption = ref('serviceName,asc')
+const typeFilter = ref<ServiceType | ''>('')
+const categoryFilter = ref<ServiceCategory | ''>('')
+const statusFilter = ref<ServiceStatus | ''>('')
+const technologyFilter = ref<ServiceTechnology | ''>('')
+const sortOption = ref('createdAt,desc')
+const showDeleteDialog = ref(false)
+const serviceToDelete = ref<string | null>(null)
 
-// Table columns configuration
-const tableColumns = [
-  {
-    key: 'serviceCode',
-    label: 'Code',
-    sortable: true,
-    style: 'width: 12%'
-  },
-  {
-    key: 'serviceName',
-    label: 'Service Name',
-    sortable: true,
-    style: 'width: 25%'
-  },
-  {
-    key: 'category',
-    label: 'Category',
-    sortable: true,
-    style: 'width: 15%'
-  },
-  {
-    key: 'status',
-    label: 'Status',
-    sortable: true,
-    style: 'width: 12%'
-  },
-  {
-    key: 'provisioningTime',
-    label: 'Provisioning Time',
-    sortable: true,
-    style: 'width: 15%'
-  },
-  {
-    key: 'activations',
-    label: 'Activations',
-    sortable: true,
-    style: 'width: 10%',
-    align: 'center'
-  },
-  {
-    key: 'actions',
-    label: 'Actions',
-    sortable: false,
-    style: 'width: 11%'
-  }
-]
+// Computed
+const services = computed(() => serviceStore.services)
+const loading = computed(() => serviceStore.loading)
 
-// Filter options
-const serviceTypeOptions = [
+const activeServices = computed(() => serviceStore.activeServices)
+const plannedServices = computed(() => serviceStore.plannedServices)
+const averagePrice = computed(() => serviceStore.averagePrice)
+const totalRevenue = computed(() => serviceStore.totalRevenue)
+const totalCustomers = computed(() =>
+  services.value.reduce((acc, s) => acc + s.activeCustomerCount, 0)
+)
+
+const paginationProps = computed(() => serviceStore.pagination)
+
+// Filter Options
+const typeOptions = [
   { label: 'All Types', value: '' },
   { label: 'Internet', value: 'INTERNET' },
-  { label: 'Telephony', value: 'TELEPHONY' },
+  { label: 'Voice', value: 'VOICE' },
   { label: 'Television', value: 'TELEVISION' },
   { label: 'Mobile', value: 'MOBILE' },
-  { label: 'Cloud', value: 'CLOUD' }
+  { label: 'Cloud Services', value: 'CLOUD_SERVICES' },
+  { label: 'IoT', value: 'IoT' },
+  { label: 'VPN', value: 'VPN' },
+  { label: 'CDN', value: 'CDN' },
+  { label: 'Security', value: 'SECURITY' },
+  { label: 'Consulting', value: 'CONSULTING' }
 ]
 
 const categoryOptions = [
   { label: 'All Categories', value: '' },
-  { label: 'Connectivity', value: 'CONNECTIVITY' },
-  { label: 'Communication', value: 'COMMUNICATION' },
-  { label: 'Entertainment', value: 'ENTERTAINMENT' },
-  { label: 'Cloud Services', value: 'CLOUD_SERVICES' }
+  { label: 'Broadband', value: 'BROADBAND' },
+  { label: 'Voice', value: 'VOICE' },
+  { label: 'Video', value: 'VIDEO' },
+  { label: 'Mobile', value: 'MOBILE' },
+  { label: 'Cloud', value: 'CLOUD' },
+  { label: 'Enterprise', value: 'ENTERPRISE' },
+  { label: 'Emerging', value: 'EMERGING' }
 ]
 
 const statusOptions = [
-  { label: 'All Statuses', value: '' },
+  { label: 'All Status', value: '' },
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Inactive', value: 'INACTIVE' },
+  { label: 'Planned', value: 'PLANNED' },
   { label: 'Deprecated', value: 'DEPRECATED' },
-  { label: 'Planned', value: 'PLANNED' }
+  { label: 'Suspended', value: 'SUSPENDED' }
+]
+
+const technologyOptions = [
+  { label: 'All Technologies', value: '' },
+  { label: 'DSL', value: 'DSL' },
+  { label: 'Fiber', value: 'FIBER' },
+  { label: 'Cable', value: 'CABLE' },
+  { label: '4G', value: '4G' },
+  { label: '5G', value: '5G' },
+  { label: 'WiFi', value: 'WIFI' },
+  { label: 'Satellite', value: 'SATELLITE' },
+  { label: 'Ethernet', value: 'ETHERNET' },
+  { label: 'VoIP', value: 'VOIP' },
+  { label: 'Cloud Native', value: 'CLOUD_NATIVE' }
 ]
 
 const sortOptions = [
-  { label: 'Name A-Z', value: 'serviceName,asc' },
-  { label: 'Name Z-A', value: 'serviceName,desc' },
-  { label: 'Category', value: 'category,asc' },
-  { label: 'Provisioning Time', value: 'provisioningTime,asc' }
+  { label: 'Newest First', value: 'createdAt,desc' },
+  { label: 'Oldest First', value: 'createdAt,asc' },
+  { label: 'Name A-Z', value: 'name,asc' },
+  { label: 'Name Z-A', value: 'name,desc' },
+  { label: 'Price Low-High', value: 'price,asc' },
+  { label: 'Price High-Low', value: 'price,desc' },
+  { label: 'Popularity', value: 'activeCustomerCount,desc' }
 ]
 
-// Computed
-const services = computed(() => serviceStore.services)
-const activeCount = computed(() => services.value.filter(s => s.status === 'ACTIVE').length)
-const totalActivations = computed(() => serviceStore.totalActivations)
-const pendingActivations = computed(() => serviceStore.pendingActivations.length)
-const paginationProps = computed(() => ({
-  page: serviceStore.pagination.page,
-  size: serviceStore.pagination.size,
-  total: serviceStore.pagination.totalElements
-}))
+// Table Columns
+const tableColumns = [
+  { key: 'name', label: 'Name', sortable: true, align: 'left', width: '200px' },
+  { key: 'code', label: 'Code', sortable: true, align: 'center', width: '120px' },
+  { key: 'type', label: 'Type', sortable: true, align: 'center', width: '130px' },
+  { key: 'category', label: 'Category', sortable: true, align: 'center', width: '120px' },
+  { key: 'status', label: 'Status', sortable: true, align: 'center', width: '120px' },
+  { key: 'technology', label: 'Tech', sortable: true, align: 'center', width: '120px' },
+  { key: 'price', label: 'Price', sortable: true, align: 'center', width: '130px' },
+  { key: 'dataLimit', label: 'Data', sortable: false, align: 'center', width: '120px' },
+  { key: 'speed', label: 'Speed', sortable: false, align: 'center', width: '100px' },
+  { key: 'activeCustomerCount', label: 'Customers', sortable: true, align: 'center', width: '110px' },
+  { key: 'actions', label: 'Actions', sortable: false, align: 'center', width: '160px' }
+]
 
-// Methods
-const handleSearch = useDebounceFn(async () => {
-  await serviceStore.fetchServices({
-    page: 0,
-    sort: sortOption.value,
-    serviceType: serviceTypeFilter.value || undefined,
-    category: categoryFilter.value || undefined,
-    status: statusFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined
-  })
-}, 300)
+// Helper Functions (import from schema)
+import {
+  getStatusVariant,
+  getTypeIcon,
+  formatPrice,
+  formatDataLimit,
+  formatSpeed,
+  getBillingCycleLabel
+} from '~/schemas/service'
 
-const handleServiceTypeFilter = async () => {
-  await serviceStore.fetchServices({
-    page: 0,
-    sort: sortOption.value,
-    category: categoryFilter.value || undefined,
-    status: statusFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined,
-    serviceType: serviceTypeFilter.value || undefined
-  })
+// Event Handlers
+let searchTimeout: NodeJS.Timeout | null = null
+
+const handleSearch = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  searchTimeout = setTimeout(async () => {
+    await fetchServices()
+  }, 300)
+}
+
+const handleTypeFilter = async () => {
+  await fetchServices()
 }
 
 const handleCategoryFilter = async () => {
-  await serviceStore.fetchServices({
-    page: 0,
-    sort: sortOption.value,
-    serviceType: serviceTypeFilter.value || undefined,
-    status: statusFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined,
-    category: categoryFilter.value || undefined
-  })
+  await fetchServices()
 }
 
 const handleStatusFilter = async () => {
-  await serviceStore.fetchServices({
-    page: 0,
-    sort: sortOption.value,
-    serviceType: serviceTypeFilter.value || undefined,
-    category: categoryFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined,
-    status: statusFilter.value || undefined
-  })
+  await fetchServices()
+}
+
+const handleTechnologyFilter = async () => {
+  await fetchServices()
 }
 
 const handleSortChange = async () => {
-  await serviceStore.fetchServices({
-    page: 0,
-    sort: sortOption.value,
-    serviceType: serviceTypeFilter.value || undefined,
-    category: categoryFilter.value || undefined,
-    status: statusFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined
-  })
+  await fetchServices()
 }
 
-const handleSort = async ({ field, order }: { field: string; order: number }) => {
-  await serviceStore.fetchServices({
-    page: serviceStore.pagination.page,
-    sort: `${field},${order === -1 ? 'desc' : 'asc'}`,
-    serviceType: serviceTypeFilter.value || undefined,
-    category: categoryFilter.value || undefined,
-    status: statusFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined
-  })
-}
-
-const handlePage = async ({ page, rows }: { page: number; rows: number }) => {
-  await serviceStore.fetchServices({
-    page,
-    size: rows,
-    sort: sortOption.value,
-    serviceType: serviceTypeFilter.value || undefined,
-    category: categoryFilter.value || undefined,
-    status: statusFilter.value || undefined,
-    searchTerm: searchTerm.value || undefined
-  })
-}
-
-const handleView = (row: any) => {
-  navigateTo(`/services/${row.id}`)
-}
-
-const handleActivate = async (row: any) => {
+async function fetchServices() {
   try {
-    showToast({
-      severity: 'success',
-      summary: 'Service Activation',
-      detail: `Service ${row.serviceName} activation initiated.`,
-      life: 3000
+    await serviceStore.fetchServices({
+      page: 0,
+      searchTerm: searchTerm.value || undefined,
+      type: typeFilter.value || undefined,
+      category: categoryFilter.value || undefined,
+      status: statusFilter.value || undefined,
+      technology: technologyFilter.value || undefined,
+      sort: sortOption.value
     })
-
   } catch (error: any) {
-    showToast({
+    toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: error.message || 'Failed to initiate activation',
+      detail: error.message || 'Failed to fetch services',
       life: 5000
     })
   }
 }
 
-const handleConfigure = async (row: any) => {
-  showToast({
-    severity: 'info',
-    summary: 'Configuration',
-    detail: `Service configuration for ${row.serviceName}.`,
-    life: 3000
-  })
+function handleRowClick(row: any) {
+  handleViewService(row.id)
 }
 
-const canActivate = (row: any) => {
-  return row.status === 'ACTIVE'
+function handleViewService(id: string) {
+  router.push(`/services/${id}`)
 }
 
-const canConfigure = (row: any) => {
-  return row.status === 'ACTIVE' || row.status === 'INACTIVE'
+function handleEditService(id: string) {
+  router.push(`/services/${id}?edit=true`)
 }
 
-// Utility functions
-const formatServiceType = (type: string): string => {
-  const types: Record<string, string> = {
-    INTERNET: 'Internet',
-    TELEPHONY: 'Telephony',
-    TELEVISION: 'Television',
-    MOBILE: 'Mobile',
-    CLOUD: 'Cloud'
+function handleActivateService(id: string) {
+  router.push(`/services/activate?serviceId=${id}`)
+}
+
+function handleDeleteService(id: string) {
+  serviceToDelete.value = id
+  showDeleteDialog.value = true
+}
+
+async function confirmDelete() {
+  if (!serviceToDelete.value) return
+
+  try {
+    await serviceStore.deleteService(serviceToDelete.value)
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Service deleted successfully',
+      life: 5000
+    })
+    showDeleteDialog.value = false
+    serviceToDelete.value = null
+
+    // Refresh the list
+    await fetchServices()
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.message || 'Failed to delete service',
+      life: 5000
+    })
   }
-  return types[type] || type
 }
 
-const formatCategory = (category: string): string => {
-  const categories: Record<string, string> = {
-    CONNECTIVITY: 'Connectivity',
-    COMMUNICATION: 'Communication',
-    ENTERTAINMENT: 'Entertainment',
-    CLOUD_SERVICES: 'Cloud Services'
-  }
-  return categories[category] || category
+async function handlePageChange({ page, size }: { page: number, size: number }) {
+  serviceStore.setPage(page)
+  serviceStore.setSize(size)
+  await fetchServices()
 }
 
 // Lifecycle
 onMounted(async () => {
-  await serviceStore.fetchServices()
-})
-
-// Watch for route changes to refresh data
-watch(() => route.fullPath, async () => {
-  await serviceStore.fetchServices()
+  await fetchServices()
 })
 </script>
 
@@ -519,67 +577,99 @@ watch(() => route.fullPath, async () => {
 
 .page-header__actions {
   flex-shrink: 0;
+  display: flex;
+  gap: var(--space-2);
 }
 
-/* Summary Cards */
-.summary-cards {
+/* Service Statistics */
+.service-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-4);
 }
 
-.summary-card {
-  display: flex;
-  gap: var(--space-3);
-  padding: var(--space-4);
+.stat-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
   align-items: center;
+  gap: var(--space-3);
 }
 
-.summary-card__icon {
+.stat-card--success {
+  border-color: var(--green-400);
+}
+
+.stat-card--warning {
+  border-color: var(--orange-400);
+}
+
+.stat-card--info {
+  border-color: var(--blue-400);
+}
+
+.stat-card--purple {
+  border-color: var(--purple-400);
+}
+
+.stat-card--neutral {
+  border-color: var(--color-border);
+}
+
+.stat-card__icon {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-lg);
-  background: var(--color-info-100);
-  color: var(--color-info-600);
+  background: var(--color-primary-100);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--color-primary);
   font-size: 1.5rem;
-  flex-shrink: 0;
 }
 
-.summary-card__icon.active {
-  background: var(--color-green-100);
-  color: var(--color-green-600);
+.stat-card--success .stat-card__icon {
+  background: var(--green-100);
+  color: var(--green-600);
 }
 
-.summary-card__icon.activation {
-  background: var(--color-blue-100);
-  color: var(--color-blue-600);
+.stat-card--warning .stat-card__icon {
+  background: var(--orange-100);
+  color: var(--orange-600);
 }
 
-.summary-card__icon.pending {
-  background: var(--color-orange-100);
-  color: var(--color-orange-600);
+.stat-card--info .stat-card__icon {
+  background: var(--blue-100);
+  color: var(--blue-600);
 }
 
-.summary-card__content {
+.stat-card--purple .stat-card__icon {
+  background: var(--purple-100);
+  color: var(--purple-600);
+}
+
+.stat-card--neutral .stat-card__icon {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.stat-card__content {
   flex: 1;
 }
 
-.summary-card__label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-1);
-}
-
-.summary-card__value {
+.stat-card__value {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.stat-card__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
 }
 
 /* Filters */
@@ -597,12 +687,8 @@ watch(() => route.fullPath, async () => {
   flex-wrap: wrap;
 }
 
-.filters-row > * {
-  flex-shrink: 0;
-}
-
-.filters-row .p-inputtext {
-  width: 100%;
+.search-input {
+  flex: 1;
   min-width: 250px;
 }
 
@@ -614,83 +700,69 @@ watch(() => route.fullPath, async () => {
   overflow: hidden;
 }
 
-/* Service Code Cell */
-.service-code__text {
-  font-family: monospace;
+.type-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.type-icon {
+  font-size: 1.2rem;
+  color: var(--color-primary);
+}
+
+.price-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.price-cell__main {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
-/* Service Name Cell */
-.service-name {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.price-cell__cycle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
-.service-name__text {
+.data-cell, .speed-cell {
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
 }
 
-.service-type {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-/* Category Cell */
-.category {
-  color: var(--color-text-primary);
-}
-
-/* Provisioning Time Cell */
-.provisioning-time {
+.customers-cell {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-primary);
-}
-
-/* Activations Cell */
-.activations {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   gap: var(--space-1);
+  font-weight: var(--font-weight-medium);
 }
 
-.activations-count {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+.customers-cell i {
+  color: var(--color-primary);
 }
 
-.activations-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-/* Actions */
-.service-actions {
+.action-buttons {
   display: flex;
   gap: var(--space-1);
-  align-items: center;
+  justify-content: center;
 }
 
 /* Empty State */
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-12);
   text-align: center;
+  padding: var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
 .empty-state__icon {
   font-size: 4rem;
-  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
   opacity: 0.5;
-  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
 }
 
 .empty-state__title {
@@ -703,7 +775,29 @@ watch(() => route.fullPath, async () => {
 .empty-state__description {
   margin: 0 0 var(--space-6) 0;
   color: var(--color-text-secondary);
-  max-width: 400px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-state__actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+/* Confirmation Dialog */
+.confirmation-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.confirmation-icon {
+  font-size: 3rem;
+  color: var(--orange-500);
 }
 
 /* Mobile Responsive */
@@ -711,37 +805,22 @@ watch(() => route.fullPath, async () => {
   .page-header {
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-4);
   }
 
   .page-header__actions {
-    align-self: flex-start;
+    width: 100%;
   }
 
-  .summary-cards {
+  .service-stats {
     grid-template-columns: 1fr;
   }
 
   .filters-row {
     flex-direction: column;
-    gap: var(--space-3);
   }
 
-  .filters-row .p-inputtext {
-    min-width: unset;
+  .search-input {
     width: 100%;
-  }
-
-  .filters-row > * {
-    width: 100%;
-  }
-}
-
-/* Tablet adjustments */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .summary-card {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 </style>

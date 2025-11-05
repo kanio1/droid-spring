@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Keycloak Cache Configuration for Redis Session Storage
+  This configuration enables distributed session management using Redis
+-->
+<infinispan
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="urn:infinispan:config:15.0 http://www.infinispan.org/schemas/infinispan-config-15.0.xsd"
+        xmlns="urn:infinispan:config:15.0">
+
+    <cache-container name="keycloak">
+        <transport lock-timeout="60000"/>
+
+        <!-- Session cache using Redis -->
+        <distributed-cache name="sessions"
+                          owners="1"
+                          mode="ASYNC">
+            <persistence>
+                <redis-store
+                    xmlns="urn:infinispan:store:redis:configuration:15.0"
+                    connection-pool="redis-connection-pool"
+                    key-prefix="bss:sessions:"
+                    shared="true">
+                    <redis-server
+                        host="${env.REDIS_HOST:redis}"
+                        port="${env.REDIS_PORT:6379}"
+                        database="${env.REDIS_SESSION_DB:1}"
+                        timeout="2000"
+                        password="${env.REDIS_PASSWORD:}"/>
+                </redis-store>
+            </persistence>
+        </distributed-cache>
+
+        <!-- Authentication sessions cache -->
+        <distributed-cache name="authenticationSessions"
+                          owners="1"
+                          mode="ASYNC">
+            <persistence>
+                <redis-store
+                    xmlns="urn:infinispan:store:redis:configuration:15.0"
+                    connection-pool="redis-connection-pool"
+                    key-prefix="bss:auth-sessions:"
+                    shared="true">
+                    <redis-server
+                        host="${env.REDIS_HOST:redis}"
+                        port="${env.REDIS_PORT:6379}"
+                        database="${env.REDIS_SESSION_DB:1}"
+                        timeout="2000"
+                        password="${env.REDIS_PASSWORD:}"/>
+                </redis-store>
+            </persistence>
+        </distributed-cache>
+
+        <!-- Offline sessions cache -->
+        <distributed-cache name="offlineSessions"
+                          owners="1"
+                          mode="ASYNC">
+            <persistence>
+                <redis-store
+                    xmlns="urn:infinispan:store:redis:configuration:15.0"
+                    connection-pool="redis-connection-pool"
+                    key-prefix="bss:offline-sessions:"
+                    shared="true">
+                    <redis-server
+                        host="${env.REDIS_HOST:redis}"
+                        port="${env.REDIS_PORT:6379}"
+                        database="${env.REDIS_SESSION_DB:1}"
+                        timeout="2000"
+                        password="${env.REDIS_PASSWORD:}"/>
+                </redis-store>
+            </persistence>
+        </distributed-cache>
+
+        <!-- Client sessions cache -->
+        <distributed-cache name="clientSessions"
+                          owners="1"
+                          mode="ASYNC">
+            <persistence>
+                <redis-store
+                    xmlns="urn:infinispan:store:redis:configuration:15.0"
+                    connection-pool="redis-connection-pool"
+                    key-prefix="bss:client-sessions:"
+                    shared="true">
+                    <redis-server
+                        host="${env.REDIS_HOST:redis}"
+                        port="${env.REDIS_PORT:6379}"
+                        database="${env.REDIS_SESSION_DB:1}"
+                        timeout="2000"
+                        password="${env.REDIS_PASSWORD:}"/>
+                </redis-store>
+            </persistence>
+        </distributed-cache>
+
+        <!-- Login failures cache -->
+        <distributed-cache name="loginFailures"
+                          owners="1"
+                          mode="ASYNC">
+            <expiration
+                max-idle="300000"/>
+        </distributed-cache>
+
+        <!-- Work cache (non-persistent) -->
+        <distributed-cache name="work"
+                          owners="1"
+                          mode="ASYNC"/>
+    </cache-container>
+
+    <!-- Redis connection pool configuration -->
+    <connection-pools>
+        <redis-connection-pool
+            max-connections="100"
+            min-idle-connections="8"
+            max-idle-time="1800000"
+            max-life-time="1800000"
+            timeout="2000"/>
+    </connection-pools>
+
+</infinispan>

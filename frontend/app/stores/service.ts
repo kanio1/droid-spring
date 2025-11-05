@@ -2,20 +2,24 @@ import { defineStore } from 'pinia'
 import { ref, computed, reactive } from 'vue'
 import type {
   Service,
-  ServiceActivation,
-  CreateServiceActivationCommand,
-  ServiceActivationSearchParams,
-  ServiceActivationListResponse,
+  CreateServiceCommand,
+  UpdateServiceCommand,
+  ChangeServiceStatusCommand,
+  ActivateServiceCommand,
+  DeactivateServiceCommand,
   ServiceSearchParams,
-  ServiceListResponse
+  ServiceListResponse,
+  ServiceStatus,
+  ServiceType,
+  ServiceCategory,
+  ServiceTechnology,
+  ServiceStatistics
 } from '~/schemas/service'
 
 export const useServiceStore = defineStore('service', () => {
   // State
   const services = ref<Service[]>([])
-  const serviceActivations = ref<ServiceActivation[]>([])
   const currentService = ref<Service | null>(null)
-  const currentActivation = ref<ServiceActivation | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const pagination = reactive({
@@ -30,39 +34,73 @@ export const useServiceStore = defineStore('service', () => {
   })
 
   // Getters
+  const serviceCount = computed(() => services.value.length)
   const activeServices = computed(() => services.value.filter(s => s.status === 'ACTIVE'))
   const inactiveServices = computed(() => services.value.filter(s => s.status === 'INACTIVE'))
-  const internetServices = computed(() => services.value.filter(s => s.category === 'INTERNET'))
-  const telephonyServices = computed(() => services.value.filter(s => s.category === 'TELEPHONY'))
-  const televisionServices = computed(() => services.value.filter(s => s.category === 'TELEVISION'))
-  const mobileServices = computed(() => services.value.filter(s => s.category === 'MOBILE'))
-  const cloudServices = computed(() => services.value.filter(s => s.category === 'CLOUD'))
+  const plannedServices = computed(() => services.value.filter(s => s.status === 'PLANNED'))
+  const deprecatedServices = computed(() => services.value.filter(s => s.status === 'DEPRECATED'))
+  const suspendedServices = computed(() => services.value.filter(s => s.status === 'SUSPENDED'))
 
-  const pendingActivations = computed(() => serviceActivations.value.filter(a => a.status === 'PENDING'))
-  const scheduledActivations = computed(() => serviceActivations.value.filter(a => a.status === 'SCHEDULED'))
-  const provisioningActivations = computed(() => serviceActivations.value.filter(a => a.status === 'PROVISIONING'))
-  const activeActivations = computed(() => serviceActivations.value.filter(a => a.status === 'ACTIVE'))
-  const failedActivations = computed(() => serviceActivations.value.filter(a => a.status === 'FAILED'))
-  const cancelledActivations = computed(() => serviceActivations.value.filter(a => a.status === 'CANCELLED'))
-
-  const getActivationsByCustomer = (customerId: string) => computed(() =>
-    serviceActivations.value.filter(a => a.customerId === customerId)
+  const servicesByType = computed(() => (type: ServiceType) =>
+    services.value.filter(s => s.type === type)
   )
 
-  const getActivationsByService = (serviceCode: string) => computed(() =>
-    serviceActivations.value.filter(a => a.serviceCode === serviceCode)
-  )
-
-  const getPendingActivationsByService = (serviceCode: string) => computed(() =>
-    serviceActivations.value.filter(a => a.serviceCode === serviceCode && a.status === 'PENDING')
-  )
-
-  const servicesByCategory = (category: string) => computed(() =>
+  const servicesByCategory = computed(() => (category: ServiceCategory) =>
     services.value.filter(s => s.category === category)
   )
 
-  const servicesByType = (type: string) => computed(() =>
-    services.value.filter(s => s.serviceType === type)
+  const servicesByTechnology = computed(() => (tech: ServiceTechnology) =>
+    services.value.filter(s => s.technology === tech)
+  )
+
+  const servicesByStatus = computed(() => (status: ServiceStatus) =>
+    services.value.filter(s => s.status === status)
+  )
+
+  const averagePrice = computed(() => {
+    if (services.value.length === 0) return 0
+    const sum = services.value.reduce((acc, s) => acc + s.price, 0)
+    return Math.round(sum / services.value.length * 100) / 100
+  })
+
+  const totalRevenue = computed(() => {
+    return services.value.reduce((acc, s) => acc + (s.price * s.activeCustomerCount), 0)
+  })
+
+  const popularServices = computed(() => {
+    return [...services.value]
+      .sort((a, b) => b.activeCustomerCount - a.activeCustomerCount)
+      .slice(0, 10)
+  })
+
+  const topRevenueServices = computed(() => {
+    return [...services.value]
+      .sort((a, b) => (b.price * b.activeCustomerCount) - (a.price * a.activeCustomerCount))
+      .slice(0, 10)
+  })
+
+  const servicesWithDataLimit = computed(() =>
+    services.value.filter(s => s.dataLimit !== undefined && s.dataLimit > 0)
+  )
+
+  const servicesWithSpeed = computed(() =>
+    services.value.filter(s => s.speed !== undefined && s.speed > 0)
+  )
+
+  const servicesWithVoice = computed(() =>
+    services.value.filter(s => s.voiceMinutes !== undefined && s.voiceMinutes > 0)
+  )
+
+  const servicesWithSms = computed(() =>
+    services.value.filter(s => s.smsCount !== undefined && s.smsCount > 0)
+  )
+
+  const unlimitedDataServices = computed(() =>
+    services.value.filter(s => !s.dataLimit || s.dataLimit === 0)
+  )
+
+  const getServiceById = (id: string) => computed(() =>
+    services.value.find(s => s.id === id)
   )
 
   // Actions
@@ -73,138 +111,19 @@ export const useServiceStore = defineStore('service', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const query = {
-        page: params.page ?? pagination.page,
-        size: params.size ?? pagination.size,
-        sort: params.sort ?? 'serviceName,asc',
-        ...(params.category && { category: params.category }),
-        ...(params.type && { type: params.type })
-      }
 
-      const response = await get<ServiceListResponse>('/services', { query })
-      services.value = response.data.content
+      // Backend API: GET /api/services
+      const response = await get<Service[]>('/services')
 
-      pagination.page = response.data.page
-      pagination.size = response.data.size
-      pagination.totalElements = response.data.totalElements
-      pagination.totalPages = response.data.totalPages
-      pagination.first = response.data.first
-      pagination.last = response.data.last
-      pagination.numberOfElements = response.data.numberOfElements
-      pagination.empty = response.data.empty
+      services.value = response.data
+
+      pagination.totalElements = response.data.length
+      pagination.totalPages = Math.ceil(response.data.length / pagination.size)
+      pagination.empty = response.data.length === 0
 
       return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch services'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function fetchServiceActivations(params: Partial<ServiceActivationSearchParams> = {}) {
-    loading.value = true
-    error.value = null
-
-    try {
-      const { useApi } = await import('~/composables/useApi')
-      const { get } = useApi()
-      const query = {
-        page: params.page ?? pagination.page,
-        size: params.size ?? pagination.size,
-        sort: params.sort ?? 'createdAt,desc',
-        ...(params.customerId && { customerId: params.customerId }),
-        ...(params.status && { status: params.status }),
-        ...(params.serviceCode && { serviceCode: params.serviceCode })
-      }
-
-      const response = await get<ServiceActivationListResponse>('/services/activations', { query })
-      serviceActivations.value = response.data.content
-
-      pagination.page = response.data.page
-      pagination.size = response.data.size
-      pagination.totalElements = response.data.totalElements
-      pagination.totalPages = response.data.totalPages
-      pagination.first = response.data.first
-      pagination.last = response.data.last
-      pagination.numberOfElements = response.data.numberOfElements
-      pagination.empty = response.data.empty
-
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch service activations'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function fetchServiceActivationById(id: string) {
-    loading.value = true
-    error.value = null
-
-    try {
-      const { useApi } = await import('~/composables/useApi')
-      const { get } = useApi()
-      const response = await get<ServiceActivation>(`/services/activations/${id}`)
-      currentActivation.value = response.data
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch service activation'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function createServiceActivation(data: CreateServiceActivationCommand) {
-    loading.value = true
-    error.value = null
-
-    try {
-      const { useApi } = await import('~/composables/useApi')
-      const { post } = useApi()
-      const response = await post<ServiceActivation>('/services/activations', data)
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to create service activation'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function deactivateService(id: string) {
-    loading.value = true
-    error.value = null
-
-    try {
-      const { useApi } = await import('~/composables/useApi')
-      const { post } = useApi()
-      const response = await post<ServiceActivation>(`/services/activations/${id}/deactivate`, {})
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to deactivate service'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function checkEligibility(serviceCode: string, customerId: string) {
-    loading.value = true
-    error.value = null
-
-    try {
-      const { useApi } = await import('~/composables/useApi')
-      const { post } = useApi()
-      const response = await post<{ eligible: boolean; reasons: string[] }>('/services/check-eligibility', {
-        serviceCode,
-        customerId
-      })
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to check eligibility'
       throw err
     } finally {
       loading.value = false
@@ -229,41 +148,286 @@ export const useServiceStore = defineStore('service', () => {
     }
   }
 
+  async function createService(data: CreateServiceCommand) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { post } = useApi()
+      const response = await post<Service>('/services', data)
+
+      // Add to list
+      services.value.unshift(response.data)
+      pagination.totalElements++
+
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to create service'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateService(data: UpdateServiceCommand) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { put } = useApi()
+      const response = await put<Service>(`/services/${data.id}`, data)
+
+      // Update in list
+      const index = services.value.findIndex(s => s.id === data.id)
+      if (index !== -1) {
+        services.value[index] = response.data
+      }
+
+      // Update current service if it's the same
+      if (currentService.value?.id === data.id) {
+        currentService.value = response.data
+      }
+
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to update service'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function changeServiceStatus(data: ChangeServiceStatusCommand) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { put } = useApi()
+      const response = await put<Service>(`/services/${data.id}/status`, data)
+
+      // Update in list
+      const index = services.value.findIndex(s => s.id === data.id)
+      if (index !== -1) {
+        services.value[index] = response.data
+      }
+
+      // Update current service if it's the same
+      if (currentService.value?.id === data.id) {
+        currentService.value = response.data
+      }
+
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to change service status'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function deleteService(id: string) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { del } = useApi()
+      await del(`/services/${id}`)
+
+      // Remove from list
+      const index = services.value.findIndex(s => s.id === id)
+      if (index !== -1) {
+        services.value.splice(index, 1)
+        pagination.totalElements--
+      }
+
+      // Clear current service if it's the same
+      if (currentService.value?.id === id) {
+        currentService.value = null
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Failed to delete service'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function activateServiceForCustomer(data: ActivateServiceCommand) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { post } = useApi()
+
+      // Backend API: POST /api/services/activations
+      const response = await post('/services/activations', {
+        serviceId: data.serviceId,
+        customerId: data.customerId,
+        startDate: data.startDate,
+        activationType: data.activationType,
+        notes: data.notes
+      })
+
+      // Update service customer count
+      const service = services.value.find(s => s.id === data.serviceId)
+      if (service) {
+        service.activeCustomerCount++
+      }
+
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to activate service for customer'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function deactivateServiceForCustomer(data: DeactivateServiceCommand) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { post } = useApi()
+
+      // Backend API: POST /api/services/activations/{activationId}/deactivate
+      const response = await post(`/services/activations/${data.activationId}/deactivate`, {
+        reason: data.reason
+      })
+
+      // Update service customer count
+      const service = services.value.find(s => s.id === data.serviceId)
+      if (service) {
+        service.activeCustomerCount = Math.max(0, service.activeCustomerCount - 1)
+      }
+
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to deactivate service for customer'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function searchServices(searchTerm: string, params: Partial<ServiceSearchParams> = {}) {
+    return fetchServices({ ...params, searchTerm })
+  }
+
+  async function getServicesByStatus(status: ServiceStatus, params: Partial<ServiceSearchParams> = {}) {
+    return fetchServices({ ...params, status })
+  }
+
+  async function getServicesByType(type: ServiceType, params: Partial<ServiceSearchParams> = {}) {
+    return fetchServices({ ...params, type })
+  }
+
+  async function getServicesByCategory(category: ServiceCategory, params: Partial<ServiceSearchParams> = {}) {
+    return fetchServices({ ...params, category })
+  }
+
+  async function getServicesByTechnology(technology: ServiceTechnology, params: Partial<ServiceSearchParams> = {}) {
+    return fetchServices({ ...params, technology })
+  }
+
+  async function getServicesByPriceRange(minPrice: number, maxPrice: number, params: Partial<ServiceSearchParams> = {}) {
+    return fetchServices({ ...params, minPrice, maxPrice })
+  }
+
+  async function getServiceStatistics(): Promise<ServiceStatistics> {
+    try {
+      const { useApi } = await import('~/composables/useApi')
+      const { get } = useApi()
+      const response = await get<ServiceStatistics>('/services/statistics')
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch service statistics'
+      throw err
+    }
+  }
+
+  function setPage(page: number) {
+    pagination.page = page
+  }
+
+  function setSize(size: number) {
+    pagination.size = size
+    pagination.page = 0
+  }
+
+  function setSort(sort: string) {
+    pagination.page = 0
+  }
+
+  function reset() {
+    services.value = []
+    currentService.value = null
+    error.value = null
+    pagination.page = 0
+    pagination.size = 20
+    pagination.totalElements = 0
+    pagination.totalPages = 0
+    pagination.first = true
+    pagination.last = false
+    pagination.numberOfElements = 0
+    pagination.empty = true
+  }
+
   return {
     // State
     services,
-    serviceActivations,
     currentService,
-    currentActivation,
     loading,
     error,
     pagination,
+
     // Getters
+    serviceCount,
     activeServices,
     inactiveServices,
-    internetServices,
-    telephonyServices,
-    televisionServices,
-    mobileServices,
-    cloudServices,
-    pendingActivations,
-    scheduledActivations,
-    provisioningActivations,
-    activeActivations,
-    failedActivations,
-    cancelledActivations,
-    getActivationsByCustomer,
-    getActivationsByService,
-    getPendingActivationsByService,
-    servicesByCategory,
+    plannedServices,
+    deprecatedServices,
+    suspendedServices,
     servicesByType,
+    servicesByCategory,
+    servicesByTechnology,
+    servicesByStatus,
+    averagePrice,
+    totalRevenue,
+    popularServices,
+    topRevenueServices,
+    servicesWithDataLimit,
+    servicesWithSpeed,
+    servicesWithVoice,
+    servicesWithSms,
+    unlimitedDataServices,
+    getServiceById,
+
     // Actions
     fetchServices,
-    fetchServiceActivations,
-    fetchServiceActivationById,
-    createServiceActivation,
-    deactivateService,
-    checkEligibility,
-    fetchServiceById
+    fetchServiceById,
+    createService,
+    updateService,
+    changeServiceStatus,
+    deleteService,
+    activateServiceForCustomer,
+    deactivateServiceForCustomer,
+    searchServices,
+    getServicesByStatus,
+    getServicesByType,
+    getServicesByCategory,
+    getServicesByTechnology,
+    getServicesByPriceRange,
+    getServiceStatistics,
+    setPage,
+    setSize,
+    setSort,
+    reset
   }
 })

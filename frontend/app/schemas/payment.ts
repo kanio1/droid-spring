@@ -139,3 +139,11 @@ export function canBeRefunded(payment: Payment): boolean {
 export function getStatusVariant(status: PaymentStatus): 'success' | 'danger' | 'warning' | 'info' | 'neutral' {
   return PAYMENT_STATUS_COLORS[status]
 }
+
+export function canRetryPayment(payment: Payment): boolean {
+  return payment.paymentStatus === 'FAILED' || payment.paymentStatus === 'CANCELLED'
+}
+
+export function canCancelPayment(payment: Payment): boolean {
+  return payment.paymentStatus === 'PENDING' || payment.paymentStatus === 'PROCESSING'
+}

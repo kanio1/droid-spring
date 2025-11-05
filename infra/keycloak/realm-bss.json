@@ -105,5 +105,52 @@
     }
   ],
   "identityProviders": [],
-  "components": {}
+  "components": {
+    "org.keycloak.services.ui.theme": [
+      {
+        "name": "base",
+        "providerId": "base"
+      }
+    ]
+  },
+  "sessions": {
+    "rememberMe": false,
+    "SSOIdleTimeout": 1800,
+    "SSO_max_lifespan": 36000,
+    "SSOSessionIdleTimeout": 1800,
+    "SSOSessionMaxLifespan": 36000,
+    "offlineSessionIdleTimeout": 0,
+    "revokeRefreshToken": false,
+    "accessTokenLifespan": 300,
+    "accessTokenLifespanForImplicitFlow": 900,
+    "accountTheme": "",
+    "adminTheme": "",
+    "emailTheme": "",
+    "realmTheme": "",
+    "loginWithEmailAllowed": true,
+    "resetPasswordAllowed": false,
+    "registrationAllowed": false,
+    "registrationEmailAsUsername": false,
+    "adminEventsEnabled": false,
+    "adminEventsDetailsEnabled": false,
+    "eventsEnabled": false,
+    "eventsListeners": ["jboss-logging"],
+    "enabledEventTypes": [],
+    "eventsExpiration": 0,
+    "enabledLocales": [],
+    "registrationFlow": "registration",
+    "directGrantFlow": "direct-grant",
+    "resetCredentialsFlow": "reset-credentials",
+    "clientAuthenticationFlow": "clients",
+    "dockerAuthenticationFlow": "docker-http-basic-authenticator",
+    "otpPolicyCounter": 0,
+    "otpPolicyWindow": 1,
+    "otpPolicyPeriod": 30,
+    "otpPolicyDigits": 6,
+    "otpPolicyAlg": "HmacSHA1",
+    "otpPolicyType": "totp",
+    "sasl": {
+      " групп": []
+    }
+  }
 }

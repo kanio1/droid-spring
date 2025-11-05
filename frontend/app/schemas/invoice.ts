@@ -169,3 +169,21 @@ export function isInvoiceOverdue(invoice: Invoice): boolean {
 export function getStatusVariant(status: InvoiceStatus): 'success' | 'danger' | 'info' | 'neutral' {
   return INVOICE_STATUS_COLORS[status]
 }
+
+export function canSendInvoice(invoice: Invoice): boolean {
+  return invoice.status === 'DRAFT' || invoice.status === 'SENT'
+}
+
+export function canCancelInvoice(invoice: Invoice): boolean {
+  return invoice.status === 'DRAFT' || invoice.status === 'SENT'
+}
+
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return '---'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'PLN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount)
+}

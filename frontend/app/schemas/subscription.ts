@@ -147,3 +147,11 @@ export function getSubscriptionDaysRemaining(subscription: Subscription): number
 export function getStatusVariant(status: SubscriptionStatus): 'success' | 'danger' | 'warning' | 'neutral' {
   return SUBSCRIPTION_STATUS_COLORS[status]
 }
+
+export function canRenewSubscription(subscription: Subscription): boolean {
+  return subscription.status === 'ACTIVE' || subscription.status === 'EXPIRING_SOON'
+}
+
+export function canCancelSubscription(subscription: Subscription): boolean {
+  return subscription.status === 'ACTIVE' || subscription.status === 'PENDING'
+}

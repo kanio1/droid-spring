@@ -3,6 +3,7 @@ package com.droid.bss.application.command.service;
 import com.droid.bss.domain.service.*;
 import com.droid.bss.domain.customer.CustomerEntity;
 import com.droid.bss.domain.customer.CustomerRepository;
+import com.droid.bss.domain.service.event.ServiceEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,16 +23,19 @@ public class ServiceActivationService {
     private final ServiceActivationRepository activationRepository;
     private final ServiceActivationStepRepository stepRepository;
     private final CustomerRepository customerRepository;
+    private final ServiceEventPublisher eventPublisher;
 
     public ServiceActivationService(
             ServiceRepository serviceRepository,
             ServiceActivationRepository activationRepository,
             ServiceActivationStepRepository stepRepository,
-            CustomerRepository customerRepository) {
+            CustomerRepository customerRepository,
+            ServiceEventPublisher eventPublisher) {
         this.serviceRepository = serviceRepository;
         this.activationRepository = activationRepository;
         this.stepRepository = stepRepository;
         this.customerRepository = customerRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -120,5 +124,74 @@ public class ServiceActivationService {
                     return Integer.compare(deps1, deps2);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Update activation status and publish event
+     */
+    @Transactional
+    public void updateActivationStatus(String activationId, ActivationStatus newStatus, String errorMessage) {
+        ServiceActivationEntity activation = activationRepository.findById(activationId)
+                .orElseThrow(() -> new RuntimeException("Activation not found: " + activationId));
+
+        ActivationStatus previousStatus = activation.getStatus();
+        activation.setStatus(newStatus);
+
+        // Publish status change event
+        eventPublisher.publishServiceActivationStatusChanged(
+                activation.getService(),
+                activation,
+                previousStatus
+        );
+
+        // Handle specific status events
+        switch (newStatus) {
+            case ACTIVE:
+                activation.setActivationDate(LocalDateTime.now());
+                eventPublisher.publishServiceActivationCompleted(activation.getService(), activation);
+                break;
+            case FAILED:
+                eventPublisher.publishServiceActivationFailed(activation.getService(), activation, errorMessage);
+                break;
+            case PROVISIONING:
+                eventPublisher.publishServiceActivated(activation.getService(), activation);
+                break;
+            case INACTIVE:
+                eventPublisher.publishServiceDeactivated(
+                        activation.getService(),
+                        activation.getCustomer().getId(),
+                        "Service deactivated"
+                );
+                break;
+        }
+
+        activationRepository.save(activation);
+    }
+
+    /**
+     * Retry failed activation
+     */
+    @Transactional
+    public void retryActivation(String activationId) {
+        ServiceActivationEntity activation = activationRepository.findById(activationId)
+                .orElseThrow(() -> new RuntimeException("Activation not found: " + activationId));
+
+        if (activation.getRetryCount() >= activation.getMaxRetries()) {
+            throw new IllegalStateException("Maximum retries reached for activation: " + activationId);
+        }
+
+        // Reset steps
+        activation.getSteps().forEach(step -> {
+            step.setStatus(ServiceActivationStepStatus.PENDING);
+            step.setStartedAt(null);
+            step.setCompletedAt(null);
+            step.setErrorMessage(null);
+        });
+
+        // Increment retry count
+        activation.setRetryCount(activation.getRetryCount() + 1);
+        activation.setStatus(ActivationStatus.PENDING);
+
+        activationRepository.save(activation);
     }
 }

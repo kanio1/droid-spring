@@ -1,442 +1,574 @@
 <template>
-  <div class="service-detail-page">
+  <div class="service-details-page page-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb-nav">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <NuxtLink to="/services" class="breadcrumb-link">
+            <i class="pi pi-cog"></i>
+            Services
+          </NuxtLink>
+        </li>
+        <li class="breadcrumb-item breadcrumb-item--active">
+          <span>{{ service?.name || 'Loading...' }}</span>
+        </li>
+      </ol>
+    </nav>
+
     <!-- Page Header -->
     <div class="page-header">
-      <NuxtLink to="/services" class="back-link">
-        ← Back to Services
-      </NuxtLink>
       <div class="page-header__content">
-        <div class="title-row">
-          <h1 class="page-title">Service {{ service?.serviceName || '...' }}</h1>
-          <StatusBadge v-if="service" :status="service.status" type="service" size="large" />
+        <div class="service-title">
+          <i :class="service ? getTypeIcon(service.type) : 'pi pi-cog'" class="service-icon"></i>
+          <div>
+            <h1 class="page-title">{{ service?.name || 'Loading...' }}</h1>
+            <p class="service-code">{{ service?.code }}</p>
+          </div>
         </div>
-        <p class="page-subtitle" v-if="service">
-          {{ formatServiceType(service.serviceType) }} - {{ service.serviceCode }}
-        </p>
       </div>
       <div class="page-header__actions">
+        <NuxtLink :to="`/services/${route.params.id}?edit=true`">
+          <Button
+            label="Edit"
+            icon="pi pi-pencil"
+            severity="info"
+          />
+        </NuxtLink>
+        <NuxtLink :to="`/services/activate?serviceId=${route.params.id}`">
+          <Button
+            label="Activate"
+            icon="pi pi-play"
+            severity="success"
+          />
+        </NuxtLink>
         <Button
-          v-if="canActivate"
-          label="Activate"
-          icon="pi pi-play"
-          severity="success"
-          @click="handleActivate"
+          label="Delete"
+          icon="pi pi-trash"
+          severity="danger"
+          @click="handleDeleteClick"
+        />
+      </div>
+    </div>
+
+    <!-- Service Statistics -->
+    <div class="service-stats">
+      <div class="stat-card stat-card--price">
+        <div class="stat-card__icon">
+          <i class="pi pi-dollar"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">
+            {{ service ? formatPrice(service.price, service.currency) : '---' }}
+          </div>
+          <div class="stat-card__label">Price / {{ service ? getBillingCycleLabel(service.billingCycle) : '---' }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--customers">
+        <div class="stat-card__icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ service?.activeCustomerCount || 0 }}</div>
+          <div class="stat-card__label">Active Customers</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--data">
+        <div class="stat-card__icon">
+          <i class="pi pi-download"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">
+            {{ service ? formatDataLimit(service.dataLimit) : '---' }}
+          </div>
+          <div class="stat-card__label">Data Limit</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--speed">
+        <div class="stat-card__icon">
+          <i class="pi pi-bolt"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">
+            {{ service ? formatSpeed(service.speed) : '---' }}
+          </div>
+          <div class="stat-card__label">Speed</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--sla">
+        <div class="stat-card__icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ service?.slaUptime || 0 }}%</div>
+          <div class="stat-card__label">SLA Uptime</div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card--support">
+        <div class="stat-card__icon">
+          <i class="pi pi-headphones"></i>
+        </div>
+        <div class="stat-card__content">
+          <div class="stat-card__value">{{ service?.supportLevel || '---' }}</div>
+          <div class="stat-card__label">Support Level</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Information -->
+    <div class="service-info">
+      <div class="info-card">
+        <div class="info-card__header">
+          <h2 class="info-card__title">
+            <i class="pi pi-info-circle"></i>
+            Service Information
+          </h2>
+        </div>
+        <div class="info-card__body">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-item__label">Name</span>
+              <span class="info-item__value">{{ service?.name }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Code</span>
+              <span class="info-item__value">{{ service?.code }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Type</span>
+              <span class="info-item__value">
+                <Tag :value="service?.type" severity="secondary" />
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Category</span>
+              <span class="info-item__value">
+                <Tag :value="service?.category" severity="info" />
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Status</span>
+              <span class="info-item__value">
+                <Tag :value="service?.status" :severity="service ? getStatusVariant(service.status) : 'secondary'" />
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Technology</span>
+              <span class="info-item__value">
+                <Tag :value="service?.technology" severity="success" />
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Created</span>
+              <span class="info-item__value">{{ formatDate(service?.createdAt) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Last Updated</span>
+              <span class="info-item__value">{{ formatDate(service?.updatedAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card__header">
+          <h2 class="info-card__title">
+            <i class="pi pi-list"></i>
+            Service Details
+          </h2>
+        </div>
+        <div class="info-card__body">
+          <div class="info-grid">
+            <div class="info-item info-item--full">
+              <span class="info-item__label">Description</span>
+              <p class="info-item__value">{{ service?.description || 'No description provided' }}</p>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Data Limit</span>
+              <span class="info-item__value">
+                {{ service ? formatDataLimit(service.dataLimit) : '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Speed</span>
+              <span class="info-item__value">
+                {{ service ? formatSpeed(service.speed) : '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Voice Minutes</span>
+              <span class="info-item__value">
+                {{ service?.voiceMinutes ? formatVoiceMinutes(service.voiceMinutes) : '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">SMS Count</span>
+              <span class="info-item__value">
+                {{ service?.smsCount || '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Bandwidth</span>
+              <span class="info-item__value">
+                {{ service?.bandwidth || '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Latency</span>
+              <span class="info-item__value">
+                {{ service?.latency || '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Max Customers</span>
+              <span class="info-item__value">{{ service?.maxCustomerCount || '---' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card__header">
+          <h2 class="info-card__title">
+            <i class="pi pi-dollar"></i>
+            Pricing Information
+          </h2>
+        </div>
+        <div class="info-card__body">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-item__label">Price</span>
+              <span class="info-item__value price-highlight">
+                {{ service ? formatPrice(service.price, service.currency) : '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Currency</span>
+              <span class="info-item__value">{{ service?.currency }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Billing Cycle</span>
+              <span class="info-item__value">
+                {{ service ? getBillingCycleLabel(service.billingCycle) : '---' }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">Annual Cost</span>
+              <span class="info-item__value">
+                {{ service ? formatPrice(calculateAnnualPrice(service), service.currency) : '---' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Features -->
+    <div class="service-features" v-if="service?.features && service.features.length > 0">
+      <div class="features-card">
+        <div class="features-card__header">
+          <h2 class="features-card__title">
+            <i class="pi pi-check-circle"></i>
+            Service Features
+          </h2>
+        </div>
+        <div class="features-card__body">
+          <ul class="features-list">
+            <li v-for="(feature, index) in service.features" :key="index" class="feature-item">
+              <i class="pi pi-check"></i>
+              <span>{{ feature }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coverage Requirements -->
+    <div class="coverage-section" v-if="service?.requiredCoverageNodes && service.requiredCoverageNodes.length > 0">
+      <div class="coverage-card">
+        <div class="coverage-card__header">
+          <h2 class="coverage-card__title">
+            <i class="pi pi-map"></i>
+            Coverage Requirements
+          </h2>
+        </div>
+        <div class="coverage-card__body">
+          <div class="coverage-nodes">
+            <Tag
+              v-for="(node, index) in service.requiredCoverageNodes"
+              :key="index"
+              :value="`Node ${node}`"
+              severity="warning"
+            />
+          </div>
+          <p class="coverage-description">
+            This service requires coverage in {{ service.requiredCoverageNodes.length }} node(s)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Related Information -->
+    <div class="related-info">
+      <div class="related-card">
+        <div class="related-card__icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="related-card__content">
+          <h3 class="related-card__title">Activated Customers</h3>
+          <p class="related-card__description">
+            View and manage customers using this service
+          </p>
+          <NuxtLink to="/customers">
+            <Button label="View Customers" icon="pi pi-arrow-right" severity="secondary" size="small" outlined />
+          </NuxtLink>
+        </div>
+      </div>
+
+      <div class="related-card">
+        <div class="related-card__icon">
+          <i class="pi pi-star"></i>
+        </div>
+        <div class="related-card__content">
+          <h3 class="related-card__title">Similar Services</h3>
+          <p class="related-card__description">
+            Find services with similar features and pricing
+          </p>
+          <NuxtLink to="/services">
+            <Button label="Browse Services" icon="pi pi-arrow-right" severity="secondary" size="small" outlined />
+          </NuxtLink>
+        </div>
+      </div>
+
+      <div class="related-card">
+        <div class="related-card__icon">
+          <i class="pi pi-chart-line"></i>
+        </div>
+        <div class="related-card__content">
+          <h3 class="related-card__title">Service Analytics</h3>
+          <p class="related-card__description">
+            View performance metrics and usage statistics
+          </p>
+          <Button label="View Analytics" icon="pi pi-arrow-right" severity="secondary" size="small" outlined />
+        </div>
+      </div>
+
+      <div class="related-card">
+        <div class="related-card__icon">
+          <i class="pi pi-cog"></i>
+        </div>
+        <div class="related-card__content">
+          <h3 class="related-card__title">Service Management</h3>
+          <p class="related-card__description">
+            Configure and manage service settings
+          </p>
+          <Button label="Manage Service" icon="pi pi-arrow-right" severity="secondary" size="small" outlined />
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      modal
+      header="Confirm Delete"
+      :style="{ width: '450px' }"
+    >
+      <div class="confirmation-content">
+        <i class="pi pi-exclamation-triangle confirmation-icon" />
+        <p>Are you sure you want to delete this service?</p>
+        <p class="confirmation-warning">
+          This action cannot be undone. All customers using this service will be affected.
+        </p>
+      </div>
+      <template #footer>
+        <Button
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          @click="showDeleteDialog = false"
         />
         <Button
-          v-if="canConfigure"
-          label="Configure"
-          icon="pi pi-cog"
-          severity="info"
-          @click="handleConfigure"
+          label="Delete"
+          icon="pi pi-trash"
+          severity="danger"
+          :loading="loading"
+          @click="confirmDelete"
         />
-        <Button
-          v-if="canEdit"
-          label="Edit"
-          icon="pi pi-pencil"
-          severity="primary"
-          @click="handleEdit"
-        />
-      </div>
-    </div>
+      </template>
+    </Dialog>
 
-    <div v-if="loading" class="loading-state">
-      <ProgressSpinner />
-      <p>Loading service details...</p>
-    </div>
-
-    <div v-else-if="error" class="error-state">
-      <i class="pi pi-exclamation-triangle"></i>
-      <p>{{ error }}</p>
-      <Button label="Retry" @click="fetchService" />
-    </div>
-
-    <div v-else-if="service" class="service-content">
-      <!-- Service Summary Card -->
-      <div class="card service-summary">
-        <div class="card-header">
-          <h2>Service Summary</h2>
-        </div>
-        <div class="card-body">
-          <div class="summary-grid">
-            <div class="summary-item">
-              <label>Service Code</label>
-              <span>{{ service.serviceCode }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Service Name</label>
-              <span>{{ service.serviceName }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Type</label>
-              <span>{{ formatServiceType(service.serviceType) }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Category</label>
-              <span>{{ formatCategory(service.category) }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Provisioning Time</label>
-              <span>{{ service.provisioningTime }} minutes</span>
-            </div>
-            <div class="summary-item">
-              <label>Auto Provision</label>
-              <div class="auto-provision">
-                <i :class="service.autoProvision ? 'pi pi-check-circle text-success' : 'pi pi-times-circle text-muted'"></i>
-                <span class="ml-2">{{ service.autoProvision ? 'Enabled' : 'Disabled' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Service Dependencies -->
-      <div v-if="service.dependencies && service.dependencies.length > 0" class="card service-dependencies">
-        <div class="card-header">
-          <h2>Service Dependencies</h2>
-        </div>
-        <div class="card-body">
-          <div class="dependencies-list">
-            <div v-for="(dep, index) in service.dependencies" :key="index" class="dependency-item">
-              <i class="pi pi-link dependency-icon"></i>
-              <div class="dependency-info">
-                <div class="dependency-code">{{ dep.serviceCode }}</div>
-                <div class="dependency-name">{{ dep.serviceName }}</div>
-              </div>
-              <StatusBadge :status="dep.status" type="service" size="small" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Service Features -->
-      <div v-if="service.features && service.features.length > 0" class="card service-features">
-        <div class="card-header">
-          <h2>Service Features</h2>
-        </div>
-        <div class="card-body">
-          <div class="features-list">
-            <div v-for="(feature, index) in service.features" :key="index" class="feature-item">
-              <i class="pi pi-check-circle text-success"></i>
-              <span>{{ feature.name }}</span>
-              <span v-if="feature.description" class="feature-description">- {{ feature.description }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Activation History -->
-      <div class="card activation-history">
-        <div class="card-header">
-          <h2>Activation History</h2>
-        </div>
-        <div class="card-body">
-          <AppTable :columns="activationColumns" :data="service.activations || []" :show-pagination="false">
-            <template #cell-customerName="{ row }">
-              <div v-if="row.customerName" class="customer-name">
-                <div class="customer-avatar small">
-                  {{ getCustomerInitials(row.customerName) }}
-                </div>
-                <div>
-                  <div class="customer-name__text">{{ row.customerName }}</div>
-                  <div class="customer-id">{{ row.customerId }}</div>
-                </div>
-              </div>
-              <span v-else>—</span>
-            </template>
-            <template #cell-activationDate="{ row }">
-              {{ formatDateTime(row.activationDate) }}
-            </template>
-            <template #cell-status="{ row }">
-              <StatusBadge :status="row.status" type="activation-status" size="small" />
-            </template>
-            <template #cell-actions="{ row }">
-              <Button
-                icon="pi pi-eye"
-                text
-                rounded
-                @click="handleViewActivation(row)"
-                v-tooltip.top="'View activation'"
-              />
-            </template>
-            <template #empty>
-              <div class="empty-history">No activation history</div>
-            </template>
-          </AppTable>
-        </div>
-      </div>
-
-      <!-- Pricing Information -->
-      <div v-if="service.pricing" class="card pricing-info">
-        <div class="card-header">
-          <h2>Pricing Information</h2>
-        </div>
-        <div class="card-body">
-          <div class="pricing-grid">
-            <div class="pricing-item" v-if="service.pricing.monthlyFee">
-              <label>Monthly Fee</label>
-              <span class="price">{{ formatCurrency(service.pricing.monthlyFee, service.pricing.currency) }}</span>
-            </div>
-            <div class="pricing-item" v-if="service.pricing.setupFee">
-              <label>Setup Fee</label>
-              <span class="price">{{ formatCurrency(service.pricing.setupFee, service.pricing.currency) }}</span>
-            </div>
-            <div class="pricing-item" v-if="service.pricing.usageRate">
-              <label>Usage Rate</label>
-              <span class="price">{{ service.pricing.usageRate }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Provisioning Configuration -->
-      <div v-if="service.provisioningConfig" class="card provisioning-config">
-        <div class="card-header">
-          <h2>Provisioning Configuration</h2>
-        </div>
-        <div class="card-body">
-          <div class="config-grid">
-            <div v-if="service.provisioningConfig.script" class="config-item">
-              <label>Provisioning Script</label>
-              <code class="script">{{ service.provisioningConfig.script }}</code>
-            </div>
-            <div v-if="service.provisioningConfig.apiEndpoint" class="config-item">
-              <label>API Endpoint</label>
-              <code class="endpoint">{{ service.provisioningConfig.apiEndpoint }}</code>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Notes -->
-      <div v-if="service.notes" class="card service-notes">
-        <div class="card-header">
-          <h2>Notes</h2>
-        </div>
-        <div class="card-body">
-          <p>{{ service.notes }}</p>
-        </div>
-      </div>
-
-      <!-- Metadata -->
-      <div class="card service-metadata">
-        <div class="card-header">
-          <h2>Metadata</h2>
-        </div>
-        <div class="card-body">
-          <div class="metadata-grid">
-            <div class="metadata-item">
-              <label>Created</label>
-              <span>{{ formatDateTime(service.createdAt) }}</span>
-            </div>
-            <div class="metadata-item">
-              <label>Last Updated</label>
-              <span>{{ formatDateTime(service.updatedAt) }}</span>
-            </div>
-            <div class="metadata-item">
-              <label>Version</label>
-              <span>{{ service.version }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Toast for notifications -->
+    <!-- Toast Messages -->
     <Toast />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useServiceStore } from '~/stores/service'
+import { useToast } from 'primevue/usetoast'
+import type { Service } from '~/schemas/service'
+import {
+  getStatusVariant,
+  getTypeIcon,
+  formatPrice,
+  formatDataLimit,
+  formatSpeed,
+  formatVoiceMinutes,
+  getBillingCycleLabel,
+  calculateAnnualPrice
+} from '~/schemas/service'
 
-// Page meta
+// Meta
 definePageMeta({
   title: 'Service Details'
 })
 
-// Route params
+// Stores & Composables
 const route = useRoute()
-const serviceId = route.params.id as string
-
-// Store
 const serviceStore = useServiceStore()
-const { showToast } = useToast()
+const toast = useToast()
 
-// Reactive state
-const loading = ref(true)
-const error = ref<string | null>(null)
+// Reactive State
+const loading = ref(false)
+const showDeleteDialog = ref(false)
 
 // Computed
-const service = computed(() => serviceStore.currentService)
-const canActivate = computed(() => service.value && service.value.status === 'ACTIVE')
-const canConfigure = computed(() => service.value && (service.value.status === 'ACTIVE' || service.value.status === 'INACTIVE'))
-const canEdit = computed(() => service.value && service.value.status !== 'DEPRECATED')
+const service = computed<Service | null>(() => serviceStore.currentService)
 
-// Table columns
-const activationColumns = [
-  { key: 'customerName', label: 'Customer', style: 'width: 25%' },
-  { key: 'activationDate', label: 'Date', style: 'width: 20%' },
-  { key: 'status', label: 'Status', style: 'width: 15%' },
-  { key: 'actions', label: 'Actions', style: 'width: 10%' }
-]
+// Helper Functions
+function formatDate(date?: string | Date | null): string {
+  if (!date) return '---'
+  const d = new Date(date)
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
 
-// Methods
-const fetchService = async () => {
+// Event Handlers
+function handleDeleteClick() {
+  showDeleteDialog.value = true
+}
+
+async function confirmDelete() {
+  if (!service.value) return
+
   try {
     loading.value = true
-    error.value = null
-    await serviceStore.fetchServiceById(serviceId)
-  } catch (err: any) {
-    error.value = err.message || 'Failed to load service'
+    await serviceStore.deleteService(service.value.id)
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Service deleted successfully',
+      life: 5000
+    })
+    showDeleteDialog.value = false
+    navigateTo('/services')
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.message || 'Failed to delete service',
+      life: 5000
+    })
   } finally {
     loading.value = false
   }
 }
 
-const handleEdit = () => {
-  navigateTo(`/services/${serviceId}/edit`)
-}
-
-const handleActivate = async () => {
-  if (!service.value) return
-
-  const confirmed = confirm(`Are you sure you want to activate service ${service.value.serviceName}?`)
-
-  if (confirmed) {
-    try {
-      showToast({
-        severity: 'success',
-        summary: 'Service Activation',
-        detail: `Service ${service.value.serviceName} activation initiated.`,
-        life: 3000
-      })
-
-    } catch (error: any) {
-      showToast({
-        severity: 'error',
-        summary: 'Error',
-        detail: error.message || 'Failed to activate service',
-        life: 5000
-      })
-    }
-  }
-}
-
-const handleConfigure = async () => {
-  if (!service.value) return
-
-  showToast({
-    severity: 'info',
-    summary: 'Configuration',
-    detail: `Service configuration for ${service.value.serviceName}.`,
-    life: 3000
-  })
-}
-
-const handleViewActivation = (row: any) => {
-  navigateTo(`/services/activations/${row.id}`)
-}
-
-// Utility functions
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
-const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency
-  }).format(amount)
-}
-
-const formatServiceType = (type: string): string => {
-  const types: Record<string, string> = {
-    INTERNET: 'Internet',
-    TELEPHONY: 'Telephony',
-    TELEVISION: 'Television',
-    MOBILE: 'Mobile',
-    CLOUD: 'Cloud'
-  }
-  return types[type] || type
-}
-
-const formatCategory = (category: string): string => {
-  const categories: Record<string, string> = {
-    CONNECTIVITY: 'Connectivity',
-    COMMUNICATION: 'Communication',
-    ENTERTAINMENT: 'Entertainment',
-    CLOUD_SERVICES: 'Cloud Services'
-  }
-  return categories[category] || category
-}
-
-const getCustomerInitials = (name: string): string => {
-  if (!name) return 'N/A'
-  const names = name.split(' ')
-  if (names.length >= 2) {
-    return `${names[0][0]}${names[1][0]}`.toUpperCase()
-  }
-  return name.substring(0, 2).toUpperCase()
-}
-
 // Lifecycle
 onMounted(async () => {
-  await fetchService()
+  try {
+    loading.value = true
+    await serviceStore.fetchServiceById(route.params.id as string)
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.message || 'Failed to load service',
+      life: 5000
+    })
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
 <style scoped>
-.service-detail-page {
+.service-details-page {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
 
+/* Breadcrumb */
+.breadcrumb-nav {
+  margin-bottom: var(--space-2);
+}
+
+.breadcrumb {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.breadcrumb-item:not(.breadcrumb-item--active)::after {
+  content: '/';
+  margin-left: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  transition: color 0.2s;
+}
+
+.breadcrumb-link:hover {
+  color: var(--color-primary-hover);
+}
+
+.breadcrumb-item--active {
+  color: var(--color-text-secondary);
+}
+
 /* Page Header */
 .page-header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
-}
-
-.back-link {
-  color: var(--color-primary);
-  text-decoration: none;
-  font-size: var(--font-size-sm);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.back-link:hover {
-  text-decoration: underline;
 }
 
 .page-header__content {
   flex: 1;
 }
 
-.title-row {
+.service-title {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-1);
+}
+
+.service-icon {
+  font-size: 2rem;
+  color: var(--color-primary);
 }
 
 .page-title {
@@ -446,74 +578,146 @@ onMounted(async () => {
   color: var(--color-text-primary);
 }
 
-.page-subtitle {
-  margin: 0;
+.service-code {
+  margin: var(--space-1) 0 0 0;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .page-header__actions {
+  flex-shrink: 0;
   display: flex;
   gap: var(--space-2);
-  align-self: flex-start;
 }
 
-/* Loading and Error States */
-.loading-state,
-.error-state {
+/* Service Statistics */
+.service-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.stat-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-100);
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12);
-  text-align: center;
+  color: var(--color-primary);
+  font-size: 1.5rem;
 }
 
-.error-state i {
-  font-size: 3rem;
-  color: var(--color-red-500);
-  margin-bottom: var(--space-4);
+.stat-card--price .stat-card__icon {
+  background: var(--green-100);
+  color: var(--green-600);
 }
 
-/* Cards */
-.card {
+.stat-card--customers .stat-card__icon {
+  background: var(--blue-100);
+  color: var(--blue-600);
+}
+
+.stat-card--data .stat-card__icon {
+  background: var(--purple-100);
+  color: var(--purple-600);
+}
+
+.stat-card--speed .stat-card__icon {
+  background: var(--orange-100);
+  color: var(--orange-600);
+}
+
+.stat-card--sla .stat-card__icon {
+  background: var(--green-100);
+  color: var(--green-600);
+}
+
+.stat-card--support .stat-card__icon {
+  background: var(--blue-100);
+  color: var(--blue-600);
+}
+
+.stat-card__content {
+  flex: 1;
+}
+
+.stat-card__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.stat-card__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+/* Service Information */
+.service-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--space-4);
+}
+
+.info-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
-.card-header {
-  padding: var(--space-4) var(--space-6);
+.info-card__header {
+  background: var(--color-background-secondary);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-secondary);
 }
 
-.card-header h2 {
+.info-card__title {
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.card-body {
-  padding: var(--space-6);
+.info-card__body {
+  padding: var(--space-4);
 }
 
-/* Service Summary */
-.summary-grid {
+.info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
 }
 
-.summary-item {
+.info-item {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.summary-item label {
+.info-item--full {
+  grid-column: 1 / -1;
+}
+
+.info-item__label {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
@@ -521,59 +725,62 @@ onMounted(async () => {
   letter-spacing: 0.05em;
 }
 
-.summary-item > span {
+.info-item__value {
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
 }
 
-.auto-provision {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
+.info-item__value p {
+  margin: 0;
+  line-height: 1.6;
 }
 
-/* Dependencies */
-.dependencies-list {
+.price-highlight {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--green-600);
+}
+
+/* Service Features */
+.service-features {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
-.dependency-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  background: var(--color-surface-secondary);
-  border-radius: var(--radius-md);
+.features-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.dependency-icon {
-  font-size: 1.25rem;
-  color: var(--color-primary);
+.features-card__header {
+  background: var(--color-background-secondary);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.dependency-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.dependency-code {
-  font-family: monospace;
+.features-card__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: var(--space-1);
-}
-
-.dependency-name {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-/* Features */
-.features-list {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.features-card__body {
+  padding: var(--space-4);
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-2);
 }
 
@@ -581,184 +788,170 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--color-text-primary);
-}
-
-.feature-description {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-/* Activation History */
-.empty-history {
-  text-align: center;
-  padding: var(--space-4);
-  color: var(--color-text-muted);
-}
-
-/* Customer in Activation */
-.customer-name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.customer-avatar {
-  width: 40px;
-  height: 40px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  flex-shrink: 0;
-}
-
-.customer-avatar.small {
-  width: 32px;
-  height: 32px;
-  font-size: var(--font-size-xs);
-}
-
-.customer-name__text {
+  padding: var(--space-2);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-1);
 }
 
-.customer-id {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+.feature-item i {
+  color: var(--green-500);
+  font-size: 0.9rem;
 }
 
-/* Pricing */
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4);
-}
-
-.pricing-item {
+/* Coverage Requirements */
+.coverage-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
-.pricing-item label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.coverage-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.price {
+.coverage-card__header {
+  background: var(--color-background-secondary);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.coverage-card__title {
+  margin: 0;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-/* Provisioning Configuration */
-.config-grid {
+.coverage-card__body {
+  padding: var(--space-4);
+}
+
+.coverage-nodes {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.coverage-description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Related Information */
+.related-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--space-4);
 }
 
-.config-item {
+.related-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  transition: all 0.2s;
+}
+
+.related-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.related-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.related-card__content {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.config-item label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-}
-
-code.script,
-code.endpoint {
-  font-family: 'Courier New', monospace;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-surface-secondary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-}
-
-/* Notes */
-.service-notes p {
+.related-card__title {
   margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  white-space: pre-wrap;
 }
 
-/* Metadata */
-.metadata-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4);
+.related-card__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  flex: 1;
 }
 
-.metadata-item {
+/* Confirmation Dialog */
+.confirmation-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
 }
 
-.metadata-item label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+.confirmation-icon {
+  font-size: 3rem;
+  color: var(--orange-500);
+}
+
+.confirmation-warning {
+  margin: 0;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.metadata-item > span {
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  text-align: center;
 }
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .page-header {
-    gap: var(--space-3);
-  }
-
-  .title-row {
     flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
+    align-items: stretch;
   }
 
   .page-header__actions {
     width: 100%;
-    flex-direction: column;
   }
 
-  .page-header__actions button {
-    width: 100%;
-  }
-
-  .summary-grid,
-  .pricing-grid,
-  .metadata-grid {
+  .service-stats {
     grid-template-columns: 1fr;
   }
 
-  .dependency-item {
-    flex-direction: column;
-    align-items: flex-start;
+  .service-info {
+    grid-template-columns: 1fr;
   }
 
-  .customer-name {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .features-list {
+    grid-template-columns: 1fr;
+  }
+
+  .related-info {
+    grid-template-columns: 1fr;
   }
 }
 </style>

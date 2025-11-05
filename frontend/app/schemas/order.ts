@@ -154,3 +154,13 @@ export function getStatusVariant(status: OrderStatus): 'success' | 'warning' | '
 export function getPriorityVariant(priority: OrderPriority): 'neutral' | 'info' | 'warning' | 'danger' {
   return ORDER_PRIORITY_COLORS[priority]
 }
+
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return '---'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'PLN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount)
+}

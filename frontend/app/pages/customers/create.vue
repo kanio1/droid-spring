@@ -114,17 +114,16 @@
 </template>
 
 <script setup lang="ts">
-import type { CreateCustomerCommand } from '~/types/customer'
+import type { CreateCustomerCommand } from '~/schemas/customer'
 
 // Page meta
 definePageMeta({
   title: 'Create Customer'
 })
 
-// Composables
-const { post } = useApi()
-const { showToast } = useToast()
-const { showLoading, hideLoading } = useModal()
+// Store
+const customerStore = useCustomerStore()
+const toast = useToast()
 
 // Reactive state
 const formData = ref<CreateCustomerCommand>({
@@ -237,10 +236,11 @@ const isFormValid = computed(() => {
 // Form submission
 const handleSubmit = async () => {
   if (!validateForm()) {
-    showToast({
-      type: 'error',
-      title: 'Validation Error',
-      message: 'Please fix the errors in the form before submitting.'
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'Please fix the errors in the form before submitting.',
+      life: 5000
     })
     return
   }
@@ -248,8 +248,6 @@ const handleSubmit = async () => {
   submitting.value = true
 
   try {
-    showLoading('Creating customer...')
-
     // Clean up the form data (remove empty strings for optional fields)
     const submitData: CreateCustomerCommand = {
       firstName: formData.value.firstName.trim(),
@@ -260,31 +258,28 @@ const handleSubmit = async () => {
       nip: formData.value.nip?.trim() || undefined
     }
 
-    const response = await post<any>('/customers', submitData)
+    const response = await customerStore.createCustomer(submitData)
 
-    hideLoading()
-    
-    showToast({
-      type: 'success',
-      title: 'Customer Created',
-      message: `${submitData.firstName} ${submitData.lastName} has been successfully created.`
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `${submitData.firstName} ${submitData.lastName} has been successfully created.`,
+      life: 5000
     })
 
     // Redirect to the new customer page
-    navigateTo(`/customers/${response.data.id}`)
+    navigateTo(`/customers/${response.id}`)
 
   } catch (error: any) {
-    hideLoading()
-    
     // Check if it's a validation error from the server
     if (error.data?.errors) {
       Object.keys(error.data.errors).forEach(field => {
         errors.value[field] = error.data.errors[field]
       })
     }
-    
+
     console.error('Failed to create customer:', error)
-    // Error handling is done in useApi composable
+    // Error handling is done in customerStore
   } finally {
     submitting.value = false
   }
