@@ -69,6 +69,132 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
+  # Jaeger Metrics
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Elasticsearch Metrics
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    metrics_path: '/_prometheus/metrics'
+    scrape_interval: 30s
+
+  # PgBouncer Metrics
+  - job_name: 'pgbouncer'
+    static_configs:
+      - targets: ['pgbouncer:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PgHero Metrics
+  - job_name: 'pghero'
+    static_configs:
+      - targets: ['pghero:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Kafka Metrics
+  - job_name: 'kafka-1'
+    static_configs:
+      - targets: ['kafka-1:9092']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Zookeeper Metrics
+  - job_name: 'zookeeper'
+    static_configs:
+      - targets: ['zookeeper:2181']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Kong Metrics
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Redis Cluster Metrics
+  - job_name: 'redis-cluster'
+    static_configs:
+      - targets: ['redis-cluster:7000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Envoy Metrics
+  - job_name: 'envoy'
+    static_configs:
+      - targets: ['envoy:15000']
+    metrics_path: '/stats/prometheus'
+    scrape_interval: 30s
+
+  # HAProxy Metrics
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['haproxy:8084']
+    metrics_path: '/stats'
+    scrape_interval: 30s
+
+  # AlertManager Metrics
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Node Exporter Metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL Monitoring Metrics
+  - job_name: 'pgmonitor'
+    static_configs:
+      - targets: ['pgmonitor:9187']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Citus Coordinator Metrics
+  - job_name: 'citus-coordinator'
+    static_configs:
+      - targets: ['citus-coordinator:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Citus Worker 1 Metrics
+  - job_name: 'citus-worker-1'
+    static_configs:
+      - targets: ['citus-worker-1:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Citus Worker 2 Metrics
+  - job_name: 'citus-worker-2'
+    static_configs:
+      - targets: ['citus-worker-2:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Citus Worker 3 Metrics
+  - job_name: 'citus-worker-3'
+    static_configs:
+      - targets: ['citus-worker-3:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Flink JobManager Metrics
+  - job_name: 'flink-jobmanager'
+    static_configs:
+      - targets: ['flink-jobmanager:8081']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
 # Alertmanager configuration
 alerting:
   alertmanagers:

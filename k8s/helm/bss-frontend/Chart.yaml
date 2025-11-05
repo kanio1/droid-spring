@@ -1,0 +1,14 @@
+apiVersion: v2
+name: bss-frontend
+description: BSS Frontend - Nuxt 3 Application
+type: application
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - nuxt3
+  - vue
+  - bss
+  - frontend
+home: https://github.com/kanio1/droid-spring
+sources:
+  - https://github.com/kanio1/droid-spring

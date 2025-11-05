@@ -1,0 +1,8 @@
+# PgBouncer user list
+# Format: "username" "md5_encoded_password"
+#
+# Generate MD5 hash with:
+# echo -n "passwordusername" | md5sum
+#
+# Example:
+# "bss_user" "md5a0b3c9d4e5f6g7h8i9j0k1l2m3n4o5p6"

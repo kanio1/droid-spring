@@ -1,0 +1,217 @@
+# Kong API Gateway Configuration
+# This file configures routes and services for the BSS system
+
+_format_version: "3.0"
+
+# ==========================================
+# SERVICES
+# ==========================================
+
+services:
+  # Backend API Service
+  - name: bss-backend-service
+    url: http://backend:8080
+    routes:
+      - name: backend-route
+        paths:
+          - /api
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10
+      - name: rate-limiting
+        config:
+          minute: 1000
+          hour: 10000
+      - name: correlation-id
+        config:
+          header_name: X-Correlation-ID
+          echo_downstream: true
+    retries: 3
+    read_timeout: 60000
+    write_timeout: 60000
+    connect_timeout: 60000
+
+  # Grafana Service
+  - name: grafana-service
+    url: http://grafana:3000
+    routes:
+      - name: grafana-route
+        paths:
+          - /grafana
+        strip_path: true
+    plugins:
+      - name: cors
+    host_header: localhost:3001
+
+  # Prometheus Service
+  - name: prometheus-service
+    url: http://prometheus:9090
+    routes:
+      - name: prometheus-route
+        paths:
+          - /prometheus
+        strip_path: true
+    plugins:
+      - name: cors
+
+  # Jaeger Service
+  - name: jaeger-service
+    url: http://jaeger:16686
+    routes:
+      - name: jaeger-route
+        paths:
+          - /jaeger
+        strip_path: true
+    plugins:
+      - name: cors
+
+  # PgHero Service
+  - name: pghero-service
+    url: http://pghero:3000
+    routes:
+      - name: pghero-route
+        paths:
+          - /pghero
+        strip_path: true
+    plugins:
+      - name: cors
+
+  # AKHQ Service
+  - name: akhq-service
+    url: http://akhq:8080
+    routes:
+      - name: akhq-route
+        paths:
+          - /akhq
+        strip_path: true
+    plugins:
+      - name: cors
+
+# ==========================================
+# CONSUMERS (API Keys)
+# ==========================================
+
+consumers:
+  - username: bss-frontend
+    keyauth_credentials:
+      - key: frontend_api_key_123
+    tags:
+      - frontend
+      - internal
+
+  - username: bss-mobile
+    keyauth_credentials:
+      - key: mobile_api_key_456
+    tags:
+      - mobile
+      - external
+
+  - username: bss-partner
+    keyauth_credentials:
+      - key: partner_api_key_789
+    tags:
+      - partner
+      - external
+
+# ==========================================
+# PLUGINS (Global)
+# ==========================================
+
+plugins:
+  # Enable Prometheus metrics
+  - name: prometheus
+    config:
+      per_consumer: true
+      status_code_metrics: true
+      latency_metrics: true
+      bandwidth_metrics: true
+      upstream_health_metrics: true
+
+  # Enable logging
+  - name: http-log
+    config:
+      http_endpoint: http://loki:3100/loki/api/v1/push
+      method: POST
+      content_type: application/json
+      json_payload:
+        timestamp: "@timestamp"
+        level: "info"
+        gateway: "kong"
+        route: "{{route.name}}"
+        service: "{{service.name}}"
+        method: "{{request.method}}"
+        uri: "{{request.uri}}"
+        status: "{{response.status}}"
+        request_size: "{{request.size}}"
+        response_size: "{{response.size}}"
+        latency: "{{latencies.request}}"
+
+  # Security headers
+  - name: response-transformer
+    config:
+      add:
+        headers:
+          - "X-Content-Type-Options:nosniff"
+          - "X-Frame-Options:DENY"
+          - "X-XSS-Protection:1; mode=block"
+          - "Strict-Transport-Security:max-age=31536000; includeSubDomains"
+
+  # IP whitelist for admin endpoints
+  - name: ip-restriction
+    route:
+      _path_: /grafana/*
+    config:
+      allow:
+        - 127.0.0.1
+        - ::1
+        - 172.16.0.0/12  # Docker networks
+
+# ==========================================
+# UPSTREAMS (Load Balancing)
+# ==========================================
+
+upstreams:
+  - name: backend-upstream
+    targets:
+      - target: backend:8080
+        weight: 100
+    healthchecks:
+      active:
+        http_path: "/actuator/health"
+        healthy:
+          interval: 5
+      passive:
+        healthy:
+          successes: 3
+    hash_on: header
+    hash_fallback: none
+
+# ==========================================
+# CERTIFICATES (for HTTPS)
+# ==========================================
+
+certificates:
+  - id: bss-ssl-cert
+    cert: |
+      -----BEGIN CERTIFICATE-----
+      # SSL certificate would be placed here
+      -----END CERTIFICATE-----
+    key: |
+      -----BEGIN PRIVATE KEY-----
+      # SSL private key would be placed here
+      -----END PRIVATE KEY-----
+    snis:
+      - name: bss.local
+        cert: bss-ssl-cert
+
+# ==========================================
+# PARAMETERS
+# ==========================================
+
+_parameters:
+  - name: api_version
+    default: v1
+    description: API version prefix

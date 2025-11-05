@@ -2,10 +2,26 @@ spring:
   application:
     name: bss-backend
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:bss}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:6432}/${POSTGRES_DB:bss}
     username: ${POSTGRES_USER:bss_app}
     password: ${POSTGRES_PASSWORD:placeholder_password}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # PgBouncer optimization settings
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_MIN_IDLE:5}
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+      pool-name: bss-hikari-pool
+      # Transaction pooling mode
+      data-source-properties:
+        prepareThreshold: 1
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -14,6 +30,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # PgBouncer transaction mode compatibility
+        jdbc:
+          batch_size: 20
+          order_inserts: true
+          order_updates: true
     defer-datasource-initialization: false
   flyway:
     locations: classpath:db/migration
@@ -51,23 +72,36 @@ spring:
 
   # Kafka configuration for CloudEvents
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-1:9092,kafka-2:9092,kafka-3:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 3
+      batch-size: 16384
+      linger-ms: 5
+      buffer-memory: 33554432
       properties:
         enable.idempotence: true
         max.in.flight.requests.per.connection: 1
+        compression.type: snappy
+        request.timeout.ms: 30000
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP_ID:bss-backend}
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
       properties:
         spring.json.trusted.packages: "com.droid.bss.domain.*"
+        fetch.min.bytes: 1024
+        fetch.max.wait.ms: 500
+        max.partition.fetch.bytes: 1048576
     template:
       default-topic: ${KAFKA_DEFAULT_TOPIC:bss.events}
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 3
 
 security:
   oauth2:
