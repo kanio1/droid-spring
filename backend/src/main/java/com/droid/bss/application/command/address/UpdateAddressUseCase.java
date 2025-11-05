@@ -3,7 +3,8 @@ package com.droid.bss.application.command.address;
 import com.droid.bss.application.dto.address.AddressResponse;
 import com.droid.bss.application.dto.address.UpdateAddressCommand;
 import com.droid.bss.domain.address.*;
-import com.droid.bss.domain.customer.CustomerEntity;
+import com.droid.bss.domain.customer.Customer;
+import com.droid.bss.domain.customer.CustomerId;
 import com.droid.bss.domain.customer.CustomerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +39,8 @@ public class UpdateAddressUseCase {
         }
 
         // Validate customer exists
-        UUID customerId = UUID.fromString(command.customerId());
-        CustomerEntity customer = customerRepository.findById(customerId)
+        CustomerId customerId = CustomerId.of(command.customerId());
+        Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + command.customerId()));
 
         // Parse enums
@@ -48,7 +49,8 @@ public class UpdateAddressUseCase {
 
         // Check if primary address constraint would be violated
         if (command.isPrimary()) {
-            addressRepository.findByCustomerIdAndTypeAndIsPrimaryTrueAndDeletedAtIsNull(customerId, type)
+            addressRepository.findByCustomerIdAndTypeAndIsPrimaryTrueAndDeletedAtIsNull(
+                    customerId.value(), type)
                     .filter(existing -> !existing.getId().equals(addressId))
                     .ifPresent(existing -> {
                         throw new IllegalStateException(
@@ -58,7 +60,7 @@ public class UpdateAddressUseCase {
         }
 
         // Update address fields
-        address.setCustomer(customer);
+        address.setCustomer(com.droid.bss.domain.customer.CustomerEntity.from(customer));
         address.setType(type);
         address.setStreet(command.street());
         address.setHouseNumber(command.getHouseNumber().orElse(null));

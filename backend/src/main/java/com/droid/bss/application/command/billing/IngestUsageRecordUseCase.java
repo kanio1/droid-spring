@@ -2,6 +2,7 @@ package com.droid.bss.application.command.billing;
 
 import com.droid.bss.application.dto.billing.IngestUsageRecordCommand;
 import com.droid.bss.application.dto.billing.UsageRecordResponse;
+import com.droid.bss.application.command.billing.RatingEngine;
 import com.droid.bss.domain.billing.*;
 import com.droid.bss.domain.subscription.SubscriptionEntity;
 import com.droid.bss.domain.subscription.SubscriptionRepository;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * Use case for ingesting usage records (CDRs)
@@ -38,7 +40,8 @@ public class IngestUsageRecordUseCase {
     @Transactional
     public UsageRecordResponse handle(IngestUsageRecordCommand command) {
         // Get subscription
-        SubscriptionEntity subscription = subscriptionRepository.findById(command.subscriptionId())
+        SubscriptionEntity subscription = subscriptionRepository.findById(
+                        UUID.fromString(command.subscriptionId()))
                 .orElseThrow(() -> new RuntimeException("Subscription not found: " + command.subscriptionId()));
 
         // Create usage record

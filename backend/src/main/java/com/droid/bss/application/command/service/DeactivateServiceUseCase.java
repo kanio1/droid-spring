@@ -4,7 +4,10 @@ import com.droid.bss.application.dto.service.DeactivateServiceCommand;
 import com.droid.bss.application.dto.service.ServiceActivationResponse;
 import com.droid.bss.domain.service.ActivationStatus;
 import com.droid.bss.domain.service.ServiceActivationEntity;
+import com.droid.bss.domain.service.ServiceActivationRepository;
 import com.droid.bss.domain.service.ServiceActivationStepEntity;
+import com.droid.bss.domain.service.ServiceActivationStepRepository;
+import com.droid.bss.domain.service.ServiceActivationStepStatus;
 import com.droid.bss.domain.service.event.ServiceEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +49,7 @@ public class DeactivateServiceUseCase {
         eventPublisher.publishServiceDeactivated(
                 activation.getService(),
                 activation.getCustomer().getId(),
-                command.reason() != null ? command.reason() : "Service deactivated by user"
+                command.deactivationNotes() != null ? command.deactivationNotes() : "Service deactivated by user"
         );
 
         // Update status to deprovisioning

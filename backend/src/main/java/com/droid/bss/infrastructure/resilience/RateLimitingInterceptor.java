@@ -30,7 +30,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
         RateLimitingService.RateLimitResult result = rateLimitingService.checkRateLimit(request);
 
         if (result.isRateLimited()) {
-            response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
+            response.setStatus(429); // HTTP 429 Too Many Requests
             response.setHeader("X-Rate-Limit-Limited", "true");
             response.getWriter().write("{\"error\": \"Rate limit exceeded\", \"retry_after\": 60}");
             return false;

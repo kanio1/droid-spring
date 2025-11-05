@@ -1,0 +1,308 @@
+name: Visual Regression Testing
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/app/**'
+      - 'frontend/components/**'
+      - 'frontend/pages/**'
+      - 'frontend/tests/**/*.spec.ts'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  setup-baseline:
+    name: Setup Visual Baseline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Start application
+        run: pnpm run preview &
+          sleep 30
+
+      - name: Generate baseline screenshots
+        run: pnpm exec playwright test --project=chromium --grep="@visual:baseline"
+
+      - name: Upload baseline screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline
+          path: frontend/test-results/baseline/
+          retention-days: 365
+
+  visual-regression-tests:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+    needs: setup-baseline
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: [mobile, tablet, desktop]
+        theme: [light, dark]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Download baseline screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-baseline
+          path: frontend/test-results/baseline/
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Start application
+        run: pnpm run preview &
+          sleep 30
+
+      - name: Run visual regression tests - ${{ matrix.viewport }} / ${{ matrix.theme }}
+        run: pnpm exec playwright test --project=chromium --grep="@visual:${{ matrix.viewport }}"
+        env:
+          THEME: ${{ matrix.theme }}
+          VIEWPORT: ${{ matrix.viewport }}
+
+      - name: Upload visual diffs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-diffs-${{ matrix.viewport }}-${{ matrix.theme }}
+          path: |
+            frontend/test-results/visual-diffs/
+            frontend/test-results/test-output/
+          retention-days: 30
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots-${{ matrix.viewport }}-${{ matrix.theme }}
+          path: frontend/test-results/**/*.png
+          retention-days: 30
+
+  component-visual-tests:
+    name: Component Visual Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [Button, Input, Card, Modal, Table]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Start application
+        run: pnpm run preview &
+          sleep 30
+
+      - name: Run component visual tests - ${{ matrix.component }}
+        run: pnpm exec playwright test --project=chromium --grep="@visual:component:${{ matrix.component }}"
+
+      - name: Upload component visual diffs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: component-visual-diffs-${{ matrix.component }}
+          path: frontend/test-results/visual-diffs/
+          retention-days: 30
+
+  theme-visual-tests:
+    name: Theme Visual Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Start application
+        run: pnpm run preview &
+          sleep 30
+
+      - name: Test light theme
+        run: pnpm exec playwright test --project=chromium --grep="@visual:theme:light"
+
+      - name: Test dark theme
+        run: pnpm exec playwright test --project=chromium --grep="@visual:theme:dark"
+
+      - name: Upload theme visual diffs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: theme-visual-diffs
+          path: frontend/test-results/visual-diffs/
+          retention-days: 30
+
+  compare-baselines:
+    name: Compare Visual Baselines
+    runs-on: ubuntu-latest
+    needs: [visual-regression-tests, component-visual-tests, theme-visual-tests]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Start application
+        run: pnpm run preview &
+          sleep 30
+
+      - name: Download current PR screenshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'screenshots-*'
+          path: frontend/test-results/current/
+
+      - name: Download baseline screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-baseline
+          path: frontend/test-results/baseline/
+
+      - name: Compare screenshots
+        run: |
+          npx playwright test --project=chromium --grep="@visual:compare"
+
+      - name: Generate visual regression report
+        run: |
+          mkdir -p reports
+          echo "# Visual Regression Report" > reports/visual-report.md
+          echo "" >> reports/visual-report.md
+          echo "## Changed Components" >> reports/visual-report.md
+          ls -la frontend/test-results/visual-diffs/ >> reports/visual-report.md
+
+      - name: Upload visual regression report
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-report
+          path: reports/
+          retention-days: 30
+
+  visual-test-summary:
+    name: Visual Test Summary
+    runs-on: ubuntu-latest
+    needs: [visual-regression-tests, component-visual-tests, theme-visual-tests, compare-baselines]
+    if: always()
+    steps:
+      - name: Display summary
+        run: |
+          echo "## Visual Regression Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Viewport Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Mobile: ${{ needs.visual-regression-tests.outputs.mobile-result || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tablet: ${{ needs.visual-regression-tests.outputs.tablet-result || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Desktop: ${{ needs.visual-regression-tests.outputs.desktop-result || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Component Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.component-visual-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Theme Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.theme-visual-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Baseline Comparison" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.compare-baselines.result }}" >> $GITHUB_STEP_SUMMARY

@@ -182,6 +182,14 @@ public class ServiceEntity extends BaseEntity {
         this.provisioningScript = provisioningScript;
     }
 
+    /**
+     * Alias for getName() - returns the service name.
+     * @return the service name
+     */
+    public String getServiceName() {
+        return getName();
+    }
+
     // Business methods
     public void addDependency(String serviceCode) {
         this.dependsOnServiceCodes.add(serviceCode);

@@ -1,7 +1,8 @@
 package com.droid.bss.application.command.service;
 
 import com.droid.bss.domain.service.*;
-import com.droid.bss.domain.customer.CustomerEntity;
+import com.droid.bss.domain.customer.Customer;
+import com.droid.bss.domain.customer.CustomerId;
 import com.droid.bss.domain.customer.CustomerRepository;
 import com.droid.bss.domain.service.event.ServiceEventPublisher;
 import org.springframework.stereotype.Service;
@@ -63,7 +64,7 @@ public class ServiceActivationService {
      * Get active service activations for a customer
      */
     public List<ServiceActivationEntity> getCustomerActiveActivations(String customerId) {
-        CustomerEntity customer = customerRepository.findById(customerId)
+        Customer customer = customerRepository.findById(CustomerId.of(customerId))
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + customerId));
         return activationRepository.findActiveByCustomer(customer);
     }
@@ -72,7 +73,7 @@ public class ServiceActivationService {
      * Get service activation by ID
      */
     public Optional<ServiceActivationEntity> getServiceActivation(String activationId) {
-        return activationRepository.findById(activationId);
+        return activationRepository.findById(java.util.UUID.fromString(activationId));
     }
 
     /**
@@ -80,7 +81,7 @@ public class ServiceActivationService {
      * (checks dependencies and conflicts)
      */
     public ActivationEligibility checkActivationEligibility(String customerId, String serviceCode) {
-        CustomerEntity customer = customerRepository.findById(customerId)
+        Customer customer = customerRepository.findById(CustomerId.of(customerId))
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + customerId));
 
         ServiceEntity service = serviceRepository.findActiveByServiceCode(serviceCode)
@@ -131,7 +132,7 @@ public class ServiceActivationService {
      */
     @Transactional
     public void updateActivationStatus(String activationId, ActivationStatus newStatus, String errorMessage) {
-        ServiceActivationEntity activation = activationRepository.findById(activationId)
+        ServiceActivationEntity activation = activationRepository.findById(java.util.UUID.fromString(activationId))
                 .orElseThrow(() -> new RuntimeException("Activation not found: " + activationId));
 
         ActivationStatus previousStatus = activation.getStatus();
@@ -173,7 +174,7 @@ public class ServiceActivationService {
      */
     @Transactional
     public void retryActivation(String activationId) {
-        ServiceActivationEntity activation = activationRepository.findById(activationId)
+        ServiceActivationEntity activation = activationRepository.findById(java.util.UUID.fromString(activationId))
                 .orElseThrow(() -> new RuntimeException("Activation not found: " + activationId));
 
         if (activation.getRetryCount() >= activation.getMaxRetries()) {

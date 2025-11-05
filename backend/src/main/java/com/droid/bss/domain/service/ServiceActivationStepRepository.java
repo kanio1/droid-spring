@@ -6,12 +6,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Repository for ServiceActivationStepEntity
  */
 @Repository
-public interface ServiceActivationStepRepository extends JpaRepository<ServiceActivationStepEntity, String> {
+public interface ServiceActivationStepRepository extends JpaRepository<ServiceActivationStepEntity, UUID> {
 
     /**
      * Find steps for an activation ordered by step order

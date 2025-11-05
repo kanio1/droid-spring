@@ -2,6 +2,7 @@ package com.droid.bss.domain.billing;
 
 import com.droid.bss.domain.common.BaseEntity;
 import com.droid.bss.domain.customer.CustomerEntity;
+import com.droid.bss.domain.invoice.InvoiceEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 

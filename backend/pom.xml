@@ -47,6 +47,11 @@
             <artifactId>opentelemetry-exporter-otlp</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-instrumentation-annotations</artifactId>
+            <version>2.8.0</version>
+        </dependency>
+        <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
@@ -62,6 +67,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- TODO: Add spring-session-redis dependency - version not managed by Spring Boot 3.4 -->
+        <!--
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-redis</artifactId>
+        </dependency>
+        -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -130,6 +142,42 @@
             <artifactId>kafka</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Resilience4j for Circuit Breaker, Retry, TimeLimiter -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-retry</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-timelimiter</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
+        <!-- Apache Kafka Client (for DLQ and advanced features) -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>3.6.1</version>
+        </dependency>
+
+        <!-- Vavr for functional programming -->
+        <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+            <version>0.10.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -148,6 +196,81 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <release>${java.version}</release>
+                </configuration>
+            </plugin>
+
+            <!-- JaCoCo Code Coverage -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.11</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*Application.class</exclude>
+                        <exclude>**/config/*.class</exclude>
+                        <exclude>**/infrastructure/**</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.90</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.85</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Surefire Plugin Configuration -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/TestConfiguration.java</exclude>
+                    </excludes>
+                    <systemPropertyVariables>
+                        <java.awt.headless>true</java.awt.headless>
+                    </systemPropertyVariables>
+                    <argLine>
+                        @{jacocoArgLine}
+                    </argLine>
                 </configuration>
             </plugin>
         </plugins>

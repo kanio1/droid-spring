@@ -67,8 +67,4 @@ public record CreateAddressCommand(
     public Optional<Double> getLongitude() {
         return Optional.ofNullable(longitude);
     }
-
-    public boolean isPrimary() {
-        return isPrimary != null && isPrimary;
-    }
 }

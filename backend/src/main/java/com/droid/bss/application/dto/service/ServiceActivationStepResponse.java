@@ -3,12 +3,13 @@ package com.droid.bss.application.dto.service;
 import com.droid.bss.domain.service.ServiceActivationStepEntity;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Response DTO for Service Activation Step
  */
 public record ServiceActivationStepResponse(
-        String id,
+        UUID id,
         Integer stepOrder,
         String stepName,
         String stepDescription,

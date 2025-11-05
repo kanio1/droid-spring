@@ -1,0 +1,139 @@
+# Traefik Services - Kubernetes CRD
+# This file contains all service definitions for Traefik
+
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: bss-backend
+
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: bss-frontend
+
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: grafana
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: grafana
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: prometheus
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: prometheus
+
+---
+# Jaeger Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: jaeger
+spec:
+  type: ClusterIP
+  ports:
+    - port: 16686
+      targetPort: 16686
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: jaeger
+
+---
+# PgHero Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pghero
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: pghero
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: pghero
+
+---
+# AKHQ Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: akhq
+  namespace: bss-system
+  labels:
+    app.kubernetes.io/name: akhq
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: akhq
+
+---

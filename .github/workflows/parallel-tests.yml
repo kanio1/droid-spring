@@ -1,0 +1,94 @@
+name: Parallel Tests
+
+on:
+  workflow_call:
+    inputs:
+      shard-index:
+        description: 'Shard index (0-based)'
+        required: true
+        type: number
+      shard-total:
+        description: 'Total number of shards'
+        required: true
+        type: number
+      test-suite:
+        description: 'Test suite to run'
+        required: true
+        type: string
+        enum: [e2e, integration, accessibility, mobile, performance, visual]
+
+jobs:
+  parallel-test:
+    name: ${{ inputs.test-suite }} - Shard ${{ inputs.shard-index }}/${{ inputs.shard-total }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Start application
+        run: pnpm run preview &
+          sleep 30
+
+      - name: Run E2E tests (sharded)
+        if: inputs.test-suite == 'e2e'
+        run: pnpm exec playwright test --shard=${{ inputs.shard-index }}/${{ inputs.shard-total }} --project=chromium
+
+      - name: Run integration tests
+        if: inputs.test-suite == 'integration'
+        run: pnpm run test:unit -- stores/integration.spec.ts --run --no-color --shard=${{ inputs.shard-index }}/${{ inputs.shard-total }}
+
+      - name: Run accessibility tests
+        if: inputs.test-suite == 'accessibility'
+        run: pnpm exec playwright test --project=chromium --grep="@a11y"
+
+      - name: Run mobile tests
+        if: inputs.test-suite == 'mobile'
+        run: pnpm exec playwright test --project=chromium --grep="@mobile"
+
+      - name: Run performance tests
+        if: inputs.test-suite == 'performance'
+        run: pnpm exec playwright test --project=chromium --grep="@performance"
+
+      - name: Run visual regression tests
+        if: inputs.test-suite == 'visual'
+        run: pnpm exec playwright test --project=chromium --grep="@visual"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ inputs.test-suite }}-shard-${{ inputs.shard-index }}
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+            frontend/coverage/
+          retention-days: 30
+
+      - name: Upload coverage
+        if: inputs.test-suite == 'integration'
+        uses: codecov/codecov-action@v4
+        with:
+          file: frontend/coverage/lcov.info
+          flags: ${{ inputs.test-suite }}

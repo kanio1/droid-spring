@@ -32,7 +32,7 @@ public record OrderResponse(
         type = "string",
         format = "uuid"
     )
-    String customerId,
+    UUID customerId,
 
     @Schema(
         description = "Customer name",

@@ -1,5 +1,6 @@
 package com.droid.bss.domain.service;
 
+import com.droid.bss.domain.customer.Customer;
 import com.droid.bss.domain.customer.CustomerEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,31 +10,32 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for ServiceActivationEntity
  */
 @Repository
-public interface ServiceActivationRepository extends JpaRepository<ServiceActivationEntity, String> {
+public interface ServiceActivationRepository extends JpaRepository<ServiceActivationEntity, UUID> {
 
     /**
      * Find active activations for a customer
      */
     @Query("SELECT sa FROM ServiceActivationEntity sa WHERE sa.customer = :customer AND sa.status = 'ACTIVE'")
-    List<ServiceActivationEntity> findActiveByCustomer(@Param("customer") CustomerEntity customer);
+    List<ServiceActivationEntity> findActiveByCustomer(@Param("customer") Customer customer);
 
     /**
      * Find pending activations for a customer
      */
     @Query("SELECT sa FROM ServiceActivationEntity sa WHERE sa.customer = :customer AND sa.status IN ('PENDING', 'SCHEDULED')")
-    List<ServiceActivationEntity> findPendingByCustomer(@Param("customer") CustomerEntity customer);
+    List<ServiceActivationEntity> findPendingByCustomer(@Param("customer") Customer customer);
 
     /**
      * Find activation by customer and service
      */
     @Query("SELECT sa FROM ServiceActivationEntity sa WHERE sa.customer = :customer AND sa.service = :service ORDER BY sa.createdAt DESC")
     Optional<ServiceActivationEntity> findByCustomerAndService(
-            @Param("customer") CustomerEntity customer,
+            @Param("customer") Customer customer,
             @Param("service") ServiceEntity service);
 
     /**

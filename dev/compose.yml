@@ -117,6 +117,20 @@ services:
     volumes:
       - ./certs/server:/etc/ssl/certs:ro
       - ./certs/ca:/etc/ssl/ca:ro
+    labels:
+      - "traefik.enable=true"
+      # Backend API - All routes
+      - "traefik.http.routers.backend-api.rule=Host(`api.bss.local`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend-api.entrypoints=websecure"
+      - "traefik.http.routers.backend-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-api.service=backend"
+      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      - "traefik.http.routers.backend-api.middlewares=cors-header,security-headers,rate-limit-standard"
+      # Health check endpoint
+      - "traefik.http.routers.health.rule=Host(`api.bss.local`) && Path(`/health`)"
+      - "traefik.http.routers.health.entrypoints=websecure"
+      - "traefik.http.routers.health.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.health.service=backend"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep UP"]
       interval: 15s
@@ -144,6 +158,15 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    labels:
+      - "traefik.enable=true"
+      # Frontend
+      - "traefik.http.routers.frontend.rule=Host(`bss.local`) || Host(`www.bss.local`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.frontend.middlewares=security-headers"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 15s
@@ -269,6 +292,17 @@ services:
       - loki
     ports:
       - "3001:3000"
+    labels:
+      - "traefik.enable=true"
+      # Grafana
+      - "traefik.http.routers.grafana.rule=Host(`grafana.bss.local`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana.service=grafana"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.middlewares=security-headers"
+      - "traefik.http.middlewares.grafana-redirect.redirectregex.regex=^https://grafana.bss.local/$$"
+      - "traefik.http.middlewares.grafana-redirect.redirectregex.replacement=https://grafana.bss.local/d"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 15s
@@ -296,6 +330,15 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      # Prometheus
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.bss.local`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prometheus.service=prometheus"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.middlewares=security-headers"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
       interval: 15s
@@ -323,6 +366,15 @@ services:
       - "16686:16686"  # Jaeger UI
       - "14268:14268"  # HTTP collector
       - "14250:14250"  # gRPC collector
+    labels:
+      - "traefik.enable=true"
+      # Jaeger
+      - "traefik.http.routers.jaeger.rule=Host(`jaeger.bss.local`)"
+      - "traefik.http.routers.jaeger.entrypoints=websecure"
+      - "traefik.http.routers.jaeger.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jaeger.service=jaeger"
+      - "traefik.http.services.jaeger.loadbalancer.server.port=16686"
+      - "traefik.http.routers.jaeger.middlewares=security-headers"
     networks:
       - bss-net
 
@@ -406,6 +458,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # PgHero
+      - "traefik.http.routers.pghero.rule=Host(`pghero.bss.local`)"
+      - "traefik.http.routers.pghero.entrypoints=websecure"
+      - "traefik.http.routers.pghero.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pghero.service=pghero"
+      - "traefik.http.services.pghero.loadbalancer.server.port=3000"
+      - "traefik.http.routers.pghero.middlewares=security-headers"
     networks:
       - bss-net
 
@@ -572,6 +633,15 @@ services:
         condition: service_healthy
       kafka-3:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # AKHQ
+      - "traefik.http.routers.akhq.rule=Host(`akhq.bss.local`)"
+      - "traefik.http.routers.akhq.entrypoints=websecure"
+      - "traefik.http.routers.akhq.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.akhq.service=akhq"
+      - "traefik.http.services.akhq.loadbalancer.server.port=8080"
+      - "traefik.http.routers.akhq.middlewares=security-headers"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 15s
@@ -602,79 +672,36 @@ services:
         condition: service_healthy
 
   # ================================
-  # Kong API Gateway
   # ================================
-  kong-db:
-    image: postgres:18-alpine
-    container_name: bss-kong-db
+  # Traefik API Gateway
+  # ================================
+  traefik:
+    image: traefik:v3.0
+    container_name: bss-traefik
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: kong
-      POSTGRES_USER: kong
-      POSTGRES_PASSWORD: kong_password
-    volumes:
-      - kong-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kong"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - bss-net
-
-  kong-migrations:
-    image: kong:3.5
-    container_name: bss-kong-migrations
-    restart: "no"
-    depends_on:
-      kong-db:
-        condition: service_healthy
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-db
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong_password
-      KONG_PG_DATABASE: kong
-    command: ["kong", "migrations", "bootstrap"]
-    networks:
-      - bss-net
-
-  kong:
-    image: kong:3.5
-    container_name: bss-kong
-    restart: unless-stopped
-    depends_on:
-      - kong-migrations
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-db
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong_password
-      KONG_PG_DATABASE: kong
-      KONG_PROXY_ACCESS_LOG: /dev/stdout
-      KONG_ADMIN_ACCESS_LOG: /dev/stdout
-      KONG_PROXY_ERROR_LOG: /dev/stderr
-      KONG_ADMIN_ERROR_LOG: /dev/stderr
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
-      KONG_PROXY_LISTEN: 0.0.0.0:8000
-      KONG_PROXY_LISTEN_SSL: 0.0.0.0:8443
-      # mTLS Configuration
-      KONG_SSL_CERT: /etc/kong/certs/kong-cert.pem
-      KONG_SSL_CERT_KEY: /etc/kong/certs/kong-key.pem
-      KONG_LUA_SSL_TRUSTED_CERTIFICATE: /etc/kong/certs/ca-cert.pem
-      KONG_LUA_SSL_VERIFY_DEPTH: 5
-      KONG_SSL_ECC: "true"
+    command:
+      - --configFile=/etc/traefik/traefik.yml
     ports:
-      - "8000:8000"   # Proxy HTTP
-      - "8443:8443"   # Proxy HTTPS
-      - "8001:8001"   # Admin API
-      - "8444:8444"   # Admin API HTTPS
+      - "8000:8000"   # HTTP (redirected to HTTPS)
+      - "8443:8443"   # HTTPS
+      - "8080:8080"   # Traefik Dashboard
     volumes:
-      - ./kong/kong.yml:/usr/local/kong/kong.yml:ro
-      - ./certs/server:/etc/kong/certs:ro
-      - ./certs/ca:/etc/kong/ca:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - traefik-data:/etc/traefik/acme
+    labels:
+      - "traefik.enable=true"
+      # Dashboard
+      - "traefik.http.routers.traefik.rule=Host(`traefik.bss.local`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth"
+    environment:
+      - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -1192,7 +1219,7 @@ volumes:
   kafka-2-data:
   kafka-3-data:
   redis-cluster-data:
-  kong-db-data:
+  traefik-data:
   # Phase 3 volumes
   postgres-replica-1-data:
   postgres-replica-2-data:

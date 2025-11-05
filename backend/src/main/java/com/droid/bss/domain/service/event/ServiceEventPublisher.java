@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**

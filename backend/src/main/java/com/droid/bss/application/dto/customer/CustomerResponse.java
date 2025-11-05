@@ -8,13 +8,14 @@ import com.droid.bss.domain.customer.CustomerStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Response DTO for Customer entity
  */
 @Schema(name = "CustomerResponse", description = "Customer response with full details")
 public record CustomerResponse(
-    String id,
+    UUID id,
     String firstName,
     String lastName,
     String pesel,
@@ -33,9 +34,9 @@ public record CustomerResponse(
         ContactInfo contactInfo = customer.getContactInfo();
         CustomerId customerId = customer.getId();
         CustomerStatus status = customer.getStatus();
-        
+
         return new CustomerResponse(
-            customerId.toString(),
+            customerId.value(),
             personalInfo.firstName(),
             personalInfo.lastName(),
             personalInfo.pesel(),

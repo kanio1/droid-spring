@@ -3,14 +3,15 @@ package com.droid.bss.infrastructure.resilience;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.timelimiter.TimeLimiter;
-import io.vavr.control.Try;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
  * Utility class for decorating methods with resilience patterns
+ * Updated for Resilience4j 2.x API
  */
 public class ResilienceDecorators {
 
@@ -21,34 +22,20 @@ public class ResilienceDecorators {
             Supplier<T> supplier,
             CircuitBreaker circuitBreaker,
             Retry retry,
-            TimeLimiter timeLimiter) {
+            TimeLimiter timeLimiter,
+            ScheduledExecutorService scheduledExecutorService) {
 
         return () -> {
-            Try.CheckedSupplier<T> decoratedSupplier = CircuitBreaker.decorateCheckedSupplier(
-                    circuitBreaker,
-                    Retry.decorateCheckedSupplier(retry, supplier)
-            );
+            // In Resilience4j 2.x, use the instance methods for decoration
+            // Chain circuit breaker and retry
+            Supplier<T> withCircuitBreaker = () -> circuitBreaker.executeSupplier(supplier);
+            Supplier<T> withRetry = () -> retry.executeSupplier(withCircuitBreaker);
 
-            return timeLimiter.executeSupplier(decoratedSupplier);
-        };
-    }
-
-    /**
-     * Decorate a runnable with circuit breaker, retry, and time limiter
-     */
-    public static Runnable decorateWithResilience(
-            Runnable runnable,
-            CircuitBreaker circuitBreaker,
-            Retry retry,
-            TimeLimiter timeLimiter) {
-
-        return () -> {
-            Try.CheckedRunnable decoratedRunnable = CircuitBreaker.decorateCheckedRunnable(
-                    circuitBreaker,
-                    Retry.decorateCheckedRunnable(retry, runnable)
-            );
-
-            timeLimiter.executeRunnable(decoratedRunnable);
+            // TimeLimiter 2.x uses executeCompletionStage with ScheduledExecutorService
+            CompletableFuture<T> future = CompletableFuture.supplyAsync(withRetry);
+            return timeLimiter.executeCompletionStage(scheduledExecutorService, () ->
+                future.toCompletableFuture()
+            ).toCompletableFuture().join();
         };
     }
 
@@ -77,9 +64,12 @@ public class ResilienceDecorators {
      */
     public static <T> T executeWithTimeLimiter(
             Supplier<T> supplier,
-            TimeLimiter timeLimiter) {
+            TimeLimiter timeLimiter,
+            ScheduledExecutorService scheduledExecutorService) {
 
-        return timeLimiter.executeSupplier(supplier);
+        return timeLimiter.executeCompletionStage(scheduledExecutorService, () ->
+            CompletableFuture.supplyAsync(supplier)
+        ).toCompletableFuture().join();
     }
 
     /**
@@ -89,11 +79,14 @@ public class ResilienceDecorators {
             Supplier<CompletableFuture<T>> supplier,
             CircuitBreaker circuitBreaker,
             TimeLimiter timeLimiter,
-            Executor executor) {
+            ScheduledExecutorService scheduledExecutorService) {
 
-        return timeLimiter.executeCompletionStage(
-                executor,
-                () -> circuitBreaker.executeCompletionStage(supplier)
+        // In Resilience4j 2.x, circuit breaker executeCompletionStage was refactored
+        // Use direct execution with circuit breaker and then wrap with time limiter
+        return timeLimiter.executeCompletionStage(scheduledExecutorService, () ->
+            CompletableFuture.supplyAsync(() ->
+                circuitBreaker.executeSupplier(() -> supplier.get().join())
+            )
         ).toCompletableFuture();
     }
 
@@ -105,23 +98,27 @@ public class ResilienceDecorators {
     }
 
     /**
-     * Get circuit breaker state
+     * Check if circuit breaker is half-open
      */
-    public static String getCircuitState(CircuitBreaker circuitBreaker) {
+    public static boolean isCircuitHalfOpen(CircuitBreaker circuitBreaker) {
+        return circuitBreaker.getState() == CircuitBreaker.State.HALF_OPEN;
+    }
+
+    /**
+     * Get circuit breaker state name
+     */
+    public static String getCircuitBreakerState(CircuitBreaker circuitBreaker) {
         return circuitBreaker.getState().name();
     }
 
     /**
-     * Get failure rate
+     * Get current metrics snapshot
      */
-    public static float getFailureRate(CircuitBreaker circuitBreaker) {
-        return circuitBreaker.getMetrics().getFailureRate();
-    }
-
-    /**
-     * Get call duration (P50, P95, P99)
-     */
-    public static CircuitBreaker.Metrics getMetrics(CircuitBreaker circuitBreaker) {
-        return circuitBreaker.getMetrics();
+    public static String getCircuitBreakerMetrics(CircuitBreaker circuitBreaker) {
+        return String.format("State: %s, Success calls: %d, Failure calls: %d",
+            circuitBreaker.getState().name(),
+            circuitBreaker.getMetrics().getNumberOfSuccessfulCalls(),
+            circuitBreaker.getMetrics().getNumberOfFailedCalls()
+        );
     }
 }

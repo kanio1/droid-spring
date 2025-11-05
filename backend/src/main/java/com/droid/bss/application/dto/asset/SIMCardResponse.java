@@ -3,12 +3,13 @@ package com.droid.bss.application.dto.asset;
 import com.droid.bss.domain.asset.SIMCardEntity;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Response DTO for SIM card data
  */
 public record SIMCardResponse(
-        String id,
+        UUID id,
         String iccid,
         String msisdn,
         String imsi,
@@ -32,7 +33,7 @@ public record SIMCardResponse(
 
     public static SIMCardResponse from(SIMCardEntity sim) {
         return new SIMCardResponse(
-                sim.getId(),
+                sim.getId() != null ? sim.getId() : null,
                 sim.getIccid(),
                 sim.getMsisdn(),
                 sim.getImsi(),

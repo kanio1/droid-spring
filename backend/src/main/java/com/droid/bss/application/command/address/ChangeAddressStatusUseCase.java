@@ -1,6 +1,7 @@
 package com.droid.bss.application.command.address;
 
 import com.droid.bss.application.dto.address.AddressResponse;
+import com.droid.bss.application.dto.address.ChangeAddressStatusCommand;
 import com.droid.bss.domain.address.AddressEntity;
 import com.droid.bss.domain.address.AddressRepository;
 import com.droid.bss.domain.address.AddressStatus;

@@ -123,14 +123,16 @@ public class OrderQueryService {
      */
     private OrderResponse toOrderResponse(OrderEntity order) {
         String customerName = null;
+        java.util.UUID customerId = null;
         if (order.getCustomer() != null) {
             customerName = order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName();
+            customerId = order.getCustomer().getId();
         }
 
         return new OrderResponse(
             order.getId(),
             order.getOrderNumber(),
-            order.getCustomer() != null ? order.getCustomer().getId().toString() : null,
+            customerId,
             customerName,
             order.getOrderType() != null ? order.getOrderType().name() : null,
             order.getOrderType() != null ? order.getOrderType().name() : null, // Display name would need enum method

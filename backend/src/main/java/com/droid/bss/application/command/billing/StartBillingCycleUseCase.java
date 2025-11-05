@@ -4,7 +4,9 @@ import com.droid.bss.application.dto.billing.StartBillingCycleCommand;
 import com.droid.bss.domain.billing.BillingCycleEntity;
 import com.droid.bss.domain.billing.BillingCycleRepository;
 import com.droid.bss.domain.billing.BillingCycleType;
+import com.droid.bss.domain.customer.Customer;
 import com.droid.bss.domain.customer.CustomerEntity;
+import com.droid.bss.domain.customer.CustomerId;
 import com.droid.bss.domain.customer.CustomerRepository;
 import com.droid.bss.infrastructure.metrics.BusinessMetrics;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,7 @@ public class StartBillingCycleUseCase {
     @Transactional
     public BillingCycleEntity handle(StartBillingCycleCommand command) {
         // Get customer
-        CustomerEntity customer = customerRepository.findById(command.customerId())
+        Customer customer = customerRepository.findById(CustomerId.of(command.customerId()))
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + command.customerId()));
 
         // Check for overlapping cycles
@@ -43,7 +45,7 @@ public class StartBillingCycleUseCase {
 
         // Create billing cycle
         BillingCycleEntity billingCycle = new BillingCycleEntity(
-                customer,
+                CustomerEntity.from(customer),
                 command.cycleStart(),
                 command.cycleEnd(),
                 command.billingDate(),

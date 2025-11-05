@@ -5,13 +5,14 @@ import com.droid.bss.domain.billing.UsageRecordEntity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * Response DTO for Usage Record
  */
 public record UsageRecordResponse(
-        String id,
-        String subscriptionId,
+        UUID id,
+        UUID subscriptionId,
         String usageType,
         String usageUnit,
         BigDecimal usageAmount,
@@ -33,12 +34,12 @@ public record UsageRecordResponse(
         String source,
         String sourceFile,
         Boolean processed,
-        String invoiceId
+        UUID invoiceId
 ) {
     public static UsageRecordResponse from(UsageRecordEntity entity) {
         return new UsageRecordResponse(
                 entity.getId(),
-                entity.getSubscription().getId(),
+                entity.getSubscription().getId() != null ? entity.getSubscription().getId() : null,
                 entity.getUsageType().name(),
                 entity.getUsageUnit().name(),
                 entity.getUsageAmount(),

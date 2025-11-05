@@ -3,7 +3,9 @@ package com.droid.bss.application.command.service;
 import com.droid.bss.application.dto.service.CreateServiceActivationCommand;
 import com.droid.bss.application.dto.service.ServiceActivationResponse;
 import com.droid.bss.domain.service.*;
+import com.droid.bss.domain.customer.Customer;
 import com.droid.bss.domain.customer.CustomerEntity;
+import com.droid.bss.domain.customer.CustomerId;
 import com.droid.bss.domain.customer.CustomerRepository;
 import com.droid.bss.domain.service.ServiceActivationStepEntity;
 import com.droid.bss.domain.service.event.ServiceEventPublisher;
@@ -44,7 +46,7 @@ public class CreateServiceActivationUseCase {
     @Transactional
     public ServiceActivationResponse handle(CreateServiceActivationCommand command) {
         // Get customer and service
-        CustomerEntity customer = customerRepository.findById(command.customerId())
+        Customer customer = customerRepository.findById(CustomerId.of(command.customerId()))
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + command.customerId()));
 
         ServiceEntity serviceEntity = serviceRepository.findActiveByServiceCode(command.serviceCode())
@@ -58,7 +60,7 @@ public class CreateServiceActivationUseCase {
 
         // Create activation
         ServiceActivationEntity activation = new ServiceActivationEntity(
-                customer,
+                CustomerEntity.from(customer),
                 serviceEntity,
                 command.scheduledDate() != null ? ActivationStatus.SCHEDULED : ActivationStatus.PENDING
         );

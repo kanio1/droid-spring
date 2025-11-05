@@ -4,6 +4,7 @@ import com.droid.bss.domain.common.BaseEntity;
 import com.droid.bss.domain.customer.CustomerEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

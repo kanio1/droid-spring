@@ -1,9 +1,11 @@
 package com.droid.bss.domain.address;
 
 import com.droid.bss.domain.common.BaseEntity;
+import com.droid.bss.domain.customer.Customer;
 import com.droid.bss.domain.customer.CustomerEntity;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -66,7 +68,7 @@ public class AddressEntity extends BaseEntity {
     public AddressEntity() {}
 
     public AddressEntity(
-            CustomerEntity customer,
+            Customer customer,
             AddressType type,
             AddressStatus status,
             String street,
@@ -74,7 +76,7 @@ public class AddressEntity extends BaseEntity {
             String city,
             Country country
     ) {
-        this.customer = customer;
+        this.customer = CustomerEntity.from(customer);
         this.type = type;
         this.status = status != null ? status : AddressStatus.ACTIVE;
         this.street = street;

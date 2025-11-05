@@ -4,12 +4,13 @@ import com.droid.bss.domain.asset.NetworkElementEntity;
 import com.droid.bss.domain.asset.NetworkElementType;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Response DTO for network element data
  */
 public record NetworkElementResponse(
-        String id,
+        UUID id,
         String elementId,
         String elementType,
         String name,
@@ -30,7 +31,7 @@ public record NetworkElementResponse(
 
     public static NetworkElementResponse from(NetworkElementEntity element) {
         return new NetworkElementResponse(
-                element.getId(),
+                element.getId() != null ? element.getId() : null,
                 element.getElementId(),
                 element.getElementType().name(),
                 element.getName(),

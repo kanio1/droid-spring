@@ -71,8 +71,4 @@ public record UpdateAddressCommand(
     public java.util.Optional<Double> getLongitude() {
         return java.util.Optional.ofNullable(longitude);
     }
-
-    public boolean isPrimary() {
-        return isPrimary != null && isPrimary;
-    }
 }

@@ -1,5 +1,7 @@
 package com.droid.bss.domain.address;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,9 +28,19 @@ public interface AddressRepository extends JpaRepository<AddressEntity, UUID> {
     List<AddressEntity> findByCustomerIdAndStatusAndDeletedAtIsNull(UUID customerId, AddressStatus status);
 
     /**
+     * Find active addresses for a customer (with pagination)
+     */
+    Page<AddressEntity> findByCustomerIdAndStatusAndDeletedAtIsNull(UUID customerId, AddressStatus status, Pageable pageable);
+
+    /**
      * Find addresses by type for a customer
      */
     List<AddressEntity> findByCustomerIdAndTypeAndDeletedAtIsNull(UUID customerId, AddressType type);
+
+    /**
+     * Find addresses by type for a customer (with pagination)
+     */
+    Page<AddressEntity> findByCustomerIdAndTypeAndDeletedAtIsNull(UUID customerId, AddressType type, Pageable pageable);
 
     /**
      * Find primary address for a customer and type
@@ -80,6 +92,11 @@ public interface AddressRepository extends JpaRepository<AddressEntity, UUID> {
      * Find addresses by type and status
      */
     List<AddressEntity> findByTypeAndStatusAndDeletedAtIsNull(AddressType type, AddressStatus status);
+
+    /**
+     * Find addresses by type and status (with pagination)
+     */
+    Page<AddressEntity> findByTypeAndStatusAndDeletedAtIsNull(AddressType type, AddressStatus status, Pageable pageable);
 
     /**
      * Check if customer has any active addresses

@@ -113,7 +113,7 @@ public class ProcessBillingCycleUseCase {
                 item.setDescription(usage.getUsageType().getDescription() + " - " + usage.getUsageDate());
                 item.setQuantity(BigDecimal.ONE);
                 item.setUnitPrice(usage.getTotalAmount() != null ? usage.getTotalAmount() : BigDecimal.ZERO);
-                item.setTotalPrice(usage.getTotalAmount() != null ? usage.getTotalAmount() : BigDecimal.ZERO);
+                // Note: totalPrice is calculated automatically as unitPrice * quantity
 
                 invoice.getItems().add(item);
             }

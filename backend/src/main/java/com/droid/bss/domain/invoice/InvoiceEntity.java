@@ -61,6 +61,12 @@ public class InvoiceEntity extends BaseEntity {
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
+    @Column(name = "billing_date")
+    private LocalDate billingDate;
+
+    @Column(name = "total_with_tax", precision = 12, scale = 2)
+    private BigDecimal totalWithTax;
+
     @Column(name = "currency", length = 3)
     private String currency = "PLN";
 
@@ -87,6 +93,10 @@ public class InvoiceEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<InvoiceItemEntity> items = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "billing_cycle_id")
+    private com.droid.bss.domain.billing.BillingCycleEntity billingCycle;
 
     // Constructors
     public InvoiceEntity() {}
@@ -374,5 +384,29 @@ public class InvoiceEntity extends BaseEntity {
 
     public void setItems(List<InvoiceItemEntity> items) {
         this.items = items;
+    }
+
+    public LocalDate getBillingDate() {
+        return billingDate;
+    }
+
+    public void setBillingDate(LocalDate billingDate) {
+        this.billingDate = billingDate;
+    }
+
+    public BigDecimal getTotalWithTax() {
+        return totalWithTax;
+    }
+
+    public void setTotalWithTax(BigDecimal totalWithTax) {
+        this.totalWithTax = totalWithTax;
+    }
+
+    public com.droid.bss.domain.billing.BillingCycleEntity getBillingCycle() {
+        return billingCycle;
+    }
+
+    public void setBillingCycle(com.droid.bss.domain.billing.BillingCycleEntity billingCycle) {
+        this.billingCycle = billingCycle;
     }
 }

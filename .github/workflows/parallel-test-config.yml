@@ -1,0 +1,171 @@
+# Parallel Test Execution Configuration
+# This file documents how parallel tests are executed in CI
+
+parallel-execution:
+  # E2E tests are parallelized by test files
+  e2e:
+    workers: 4
+    timeout: 60000
+    retries: 2
+    shards: 4
+
+  # Store tests run in parallel
+  unit-tests:
+    workers: 8
+    timeout: 30000
+    retries: 1
+
+  # Integration tests run sequentially for consistency
+  integration:
+    workers: 1
+    timeout: 60000
+    retries: 1
+
+  # Mobile tests use less parallelism
+  mobile:
+    workers: 2
+    timeout: 90000
+    retries: 2
+
+  # Accessibility tests run sequentially
+  accessibility:
+    workers: 1
+    timeout: 60000
+    retries: 0
+
+  # Performance tests run sequentially
+  performance:
+    workers: 1
+    timeout: 120000
+    retries: 0
+
+# Test distribution strategies
+test-files:
+  # E2E flow tests - distributed by module
+  flow-tests:
+    - "addresses-flow.spec.ts"
+    - "coverage-nodes-flow.spec.ts"
+    - "settings-flow.spec.ts"
+
+  # Page tests - distributed by page
+  page-tests:
+    - "dashboard.spec.ts"
+    - "products.spec.ts"
+    - "customers.spec.ts"
+    - "orders.spec.ts"
+    - "invoices.spec.ts"
+
+  # Store tests - run all in parallel
+  store-tests:
+    - "auth-store.spec.ts"
+    - "customer-store.spec.ts"
+    - "order-store.spec.ts"
+    - "invoice-store.spec.ts"
+    - "settings-store.spec.ts"
+
+# Shard configuration for CI
+ci-sharding:
+  # Split E2E tests into 4 shards
+  e2e-shards: 4
+
+  # Each shard runs on separate CI job
+  shard-assignment:
+    shard-1:
+      - "**/addresses-flow.spec.ts"
+      - "**/dashboard.spec.ts"
+    shard-2:
+      - "**/coverage-nodes-flow.spec.ts"
+      - "**/products.spec.ts"
+    shard-3:
+      - "**/settings-flow.spec.ts"
+      - "**/customers.spec.ts"
+    shard-4:
+      - "**/orders.spec.ts"
+      - "**/invoices.spec.ts"
+
+# Retry strategies
+retry-policies:
+  # Flaky tests can be retried up to 3 times
+  flaky-tests:
+    max-retries: 3
+    retry-conditions:
+      - "timeout"
+      - "net error"
+      - "browser crash"
+
+  # Critical tests have stricter retry policies
+  critical-tests:
+    max-retries: 1
+    retry-conditions:
+      - "timeout"
+
+  # Visual regression tests should never be retried
+  visual-tests:
+    max-retries: 0
+    retry-conditions: []
+
+# Test prioritization
+test-priority:
+  # Run first - fastest feedback
+  fast-tests:
+    - "lint-and-typecheck"
+    - "unit-tests"
+    - "store-tests"
+
+  # Run in parallel with E2E
+  medium-tests:
+    - "integration-tests"
+    - "accessibility-tests"
+
+  # Run last - longest running
+  slow-tests:
+    - "e2e-tests"
+    - "mobile-tests"
+    - "performance-tests"
+    - "visual-regression-tests"
+
+# Resource allocation
+resources:
+  # CPU and memory recommendations
+  e2e-tests:
+    cpu: "2 cores"
+    memory: "4GB"
+    parallelism: 4
+
+  performance-tests:
+    cpu: "4 cores"
+    memory: "8GB"
+    parallelism: 1
+
+  default:
+    cpu: "2 cores"
+    memory: "4GB"
+
+# Test artifact retention
+artifacts:
+  # Test results retention period
+  retention-days: 30
+
+  # Screenshots and videos for failed tests
+  screenshots: true
+  videos: true
+
+  # Coverage reports
+  coverage: true
+
+  # Lighthouse reports
+  lighthouse: true
+
+# Parallel execution optimization
+optimization:
+  # Reuse browser instances
+  reuse-browser: true
+
+  # Cache test dependencies
+  cache-dependencies: true
+
+  # Parallel file serving
+  parallel-serve: true
+
+  # Optimize database connections
+  pool-connections: true

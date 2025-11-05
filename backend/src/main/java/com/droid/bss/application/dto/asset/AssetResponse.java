@@ -5,12 +5,13 @@ import com.droid.bss.domain.asset.AssetStatus;
 import com.droid.bss.domain.asset.AssetType;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Response DTO for asset data
  */
 public record AssetResponse(
-        String id,
+        UUID id,
         String assetTag,
         String assetType,
         String name,
@@ -32,7 +33,7 @@ public record AssetResponse(
 
     public static AssetResponse from(AssetEntity asset) {
         return new AssetResponse(
-                asset.getId(),
+                asset.getId() != null ? asset.getId() : null,
                 asset.getAssetTag(),
                 asset.getAssetType().name(),
                 asset.getName(),

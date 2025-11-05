@@ -4,14 +4,15 @@ import com.droid.bss.domain.service.ServiceActivationEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * Response DTO for Service Activation
  */
 public record ServiceActivationResponse(
-        String id,
-        String customerId,
+        UUID id,
+        UUID customerId,
         String serviceCode,
         String serviceName,
         String status,

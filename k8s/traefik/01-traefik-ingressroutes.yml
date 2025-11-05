@@ -1,0 +1,195 @@
+# Traefik IngressRoutes - Kubernetes CRD
+# This file contains all ingress route definitions for Traefik
+
+---
+# Backend API IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: backend-api
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`api.bss.local`) && PathPrefix(`/api`)"
+      kind: Rule
+      services:
+        - name: backend
+          port: 8080
+      middlewares:
+        - name: cors-header
+          namespace: bss-system
+        - name: security-headers
+          namespace: bss-system
+        - name: rate-limit-standard
+          namespace: bss-system
+    - match: "Host(`api.bss.local`) && Path(`/health`)"
+      kind: Rule
+      services:
+        - name: backend
+          port: 8080
+  tls:
+    secretName: bss-tls-secret
+
+---
+# Frontend IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: frontend
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`bss.local`) || Host(`www.bss.local`)"
+      kind: Rule
+      services:
+        - name: frontend
+          port: 3000
+      middlewares:
+        - name: security-headers
+          namespace: bss-system
+  tls:
+    secretName: bss-tls-secret
+
+---
+# Grafana IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`grafana.bss.local`)"
+      kind: Rule
+      services:
+        - name: grafana
+          port: 3000
+      middlewares:
+        - name: security-headers
+          namespace: bss-system
+        - name: rate-limit-restricted
+          namespace: bss-system
+  tls:
+    secretName: bss-tls-secret
+
+---
+# Prometheus IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: prometheus
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`prometheus.bss.local`)"
+      kind: Rule
+      services:
+        - name: prometheus
+          port: 9090
+      middlewares:
+        - name: security-headers
+          namespace: bss-system
+        - name: rate-limit-restricted
+          namespace: bss-system
+  tls:
+    secretName: bss-tls-secret
+
+---
+# Jaeger IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jaeger
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`jaeger.bss.local`)"
+      kind: Rule
+      services:
+        - name: jaeger
+          port: 16686
+      middlewares:
+        - name: security-headers
+          namespace: bss-system
+        - name: rate-limit-restricted
+          namespace: bss-system
+  tls:
+    secretName: bss-tls-secret
+
+---
+# PgHero IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pghero
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`pghero.bss.local`)"
+      kind: Rule
+      services:
+        - name: pghero
+          port: 3000
+      middlewares:
+        - name: security-headers
+          namespace: bss-system
+        - name: rate-limit-restricted
+          namespace: bss-system
+  tls:
+    secretName: bss-tls-secret
+
+---
+# AKHQ IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: akhq
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`akhq.bss.local`)"
+      kind: Rule
+      services:
+        - name: akhq
+          port: 8080
+      middlewares:
+        - name: security-headers
+          namespace: bss-system
+        - name: rate-limit-restricted
+          namespace: bss-system
+  tls:
+    secretName: bss-tls-secret
+
+---
+# Traefik Dashboard IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: bss-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`traefik.bss.local`)"
+      kind: Rule
+      services:
+        - name: api@internal
+  tls:
+    secretName: bss-tls-secret
+
+---

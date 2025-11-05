@@ -1,0 +1,86 @@
+# Traefik Static Configuration
+# Global configuration
+api:
+  dashboard: true
+  insecure: true
+  # Debug mode
+  debug: true
+
+# Entry points definition
+entryPoints:
+  web:
+    address: ":8000"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":8443"
+
+  admin:
+    address: ":8080"
+
+# API Gateway configuration
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: bss-net
+
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+  kubernetesCRD:
+    ingressClass: traefik
+    namespaces:
+      - default
+      - bss-system
+      - bss-infra
+
+# Logging
+log:
+  level: INFO
+  filePath: "/var/log/traefik/traefik.log"
+
+# Access log
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+
+# Metrics
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+
+# Certificates
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@bss.local
+      storage: /etc/traefik/acme/acme.json
+      httpChallenge:
+        entryPoint: web
+
+# Health check
+ping:
+  entryPoint: admin
+
+# Transport configuration
+serversTransport:
+  insecureSkipVerify: false
+  maxIdleConnsPerHost: 10
+
+# Experimental features
+experimental:
+  kubernetesCRD: true
+
+# Enable Pilot (optional)
+# pilot:
+#   token: "your-token"
+
+---
