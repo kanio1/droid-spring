@@ -1,0 +1,6 @@
+firstName,lastName,email,phone,status
+Emma,Davis,emma.davis@example.com,+1-555-0201,active
+Michael,Chen,michael.chen@example.com,+1-555-0202,active
+Sarah,Martinez,sarah.martinez@example.com,+1-555-0203,pending
+David,Taylor,david.taylor@example.com,+1-555-0204,active
+Lisa,Anderson,lisa.anderson@example.com,+1-555-0205,inactive

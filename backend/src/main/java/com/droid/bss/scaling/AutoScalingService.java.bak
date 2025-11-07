@@ -1,0 +1,357 @@
+package com.droid.bss.scaling;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Auto-Scaling Service
+ * Monitors system metrics and automatically scales resources
+ */
+@Service
+public class AutoScalingService {
+
+    private static final Logger log = LoggerFactory.getLogger(AutoScalingService.class);
+
+    private final Map<String, ResourceMetrics> resourceMetrics = new ConcurrentHashMap<>();
+    private final List<ScalingAction> scalingHistory = new ArrayList<>();
+    private final Map<String, ScalingPolicy> scalingPolicies = new ConcurrentHashMap<>();
+
+    // Current replica counts
+    private final Map<String, Integer> currentReplicas = new ConcurrentHashMap<>();
+
+    // System configuration
+    private static final int MIN_REPLICAS = 1;
+    private static final int MAX_REPLICAS = 20;
+    private static final double SCALE_UP_THRESHOLD = 80.0;
+    private static final double SCALE_DOWN_THRESHOLD = 30.0;
+    private static final long SCALE_COOLDOWN_SECONDS = 300; // 5 minutes
+
+    public AutoScalingService() {
+        initializePolicies();
+    }
+
+    /**
+     * Record resource metrics
+     */
+    public void recordMetrics(String resourceType, double cpuUsage, double memoryUsage, int activeConnections, long requestRate) {
+        ResourceMetrics metrics = new ResourceMetrics(
+            resourceType,
+            Instant.now(),
+            cpuUsage,
+            memoryUsage,
+            activeConnections,
+            requestRate
+        );
+
+        resourceMetrics.put(resourceType, metrics);
+        log.debug("Recorded metrics for {}: CPU={}%, Memory={}%, Connections={}, Rate={}/sec",
+            resourceType, cpuUsage, memoryUsage, activeConnections, requestRate);
+    }
+
+    /**
+     * Get current resource status
+     */
+    public Map<String, Object> getResourceStatus(String resourceType) {
+        ResourceMetrics metrics = resourceMetrics.get(resourceType);
+        Integer replicas = currentReplicas.get(resourceType);
+
+        Map<String, Object> status = new HashMap<>();
+        status.put("resourceType", resourceType);
+        status.put("replicas", replicas != null ? replicas : MIN_REPLICAS);
+        status.put("timestamp", metrics != null ? metrics.timestamp().toString() : null);
+
+        if (metrics != null) {
+            status.put("cpuUsage", metrics.cpuUsage());
+            status.put("memoryUsage", metrics.memoryUsage());
+            status.put("activeConnections", metrics.activeConnections());
+            status.put("requestRate", metrics.requestRate());
+            status.put("loadPerReplica", metrics.requestRate() / (replicas != null ? replicas : 1.0));
+        }
+
+        return status;
+    }
+
+    /**
+     * Manual scale up
+     */
+    public void scaleUp(String resourceType, int additionalReplicas) {
+        int current = currentReplicas.getOrDefault(resourceType, MIN_REPLICAS);
+        int target = Math.min(current + additionalReplicas, MAX_REPLICAS);
+
+        if (target > current) {
+            performScaling(resourceType, current, target, "MANUAL");
+        }
+    }
+
+    /**
+     * Manual scale down
+     */
+    public void scaleDown(String resourceType, int fewerReplicas) {
+        int current = currentReplicas.getOrDefault(resourceType, MIN_REPLICAS);
+        int target = Math.max(current - fewerReplicas, MIN_REPLICAS);
+
+        if (target < current) {
+            performScaling(resourceType, current, target, "MANUAL");
+        }
+    }
+
+    /**
+     * Auto-scaling scheduler - runs every 30 seconds
+     */
+    @Scheduled(fixedDelay = 30000)
+    public void autoScale() {
+        log.debug("Running auto-scaling check");
+
+        for (String resourceType : scalingPolicies.keySet()) {
+            try {
+                checkAndScale(resourceType);
+            } catch (Exception e) {
+                log.error("Error in auto-scaling for resource: {}", resourceType, e);
+            }
+        }
+    }
+
+    /**
+     * Get scaling history
+     */
+    public List<ScalingAction> getScalingHistory(int limit) {
+        if (scalingHistory.size() <= limit) {
+            return new ArrayList<>(scalingHistory);
+        }
+        return scalingHistory.subList(scalingHistory.size() - limit, scalingHistory.size());
+    }
+
+    /**
+     * Get scaling policy
+     */
+    public ScalingPolicy getScalingPolicy(String resourceType) {
+        return scalingPolicies.get(resourceType);
+    }
+
+    /**
+     * Update scaling policy
+     */
+    public void updateScalingPolicy(String resourceType, ScalingPolicy policy) {
+        scalingPolicies.put(resourceType, policy);
+        log.info("Updated scaling policy for {}: min={}, max={}, scaleUp={}%, scaleDown={}%",
+            resourceType, policy.minReplicas(), policy.maxReplicas(),
+            policy.scaleUpThreshold(), policy.scaleDownThreshold());
+    }
+
+    private void checkAndScale(String resourceType) {
+        ResourceMetrics metrics = resourceMetrics.get(resourceType);
+        if (metrics == null) {
+            return;
+        }
+
+        ScalingPolicy policy = scalingPolicies.get(resourceType);
+        if (policy == null) {
+            return;
+        }
+
+        int current = currentReplicas.getOrDefault(resourceType, MIN_REPLICAS);
+
+        // Check if we can scale (respect cooldown)
+        ScalingAction lastAction = getLastScalingAction(resourceType);
+        if (lastAction != null && isInCooldown(lastAction)) {
+            return;
+        }
+
+        // Scale up logic
+        if (shouldScaleUp(metrics, policy, current)) {
+            int target = Math.min(current + policy.scaleUpStep(), policy.maxReplicas());
+            performScaling(resourceType, current, target, "AUTO_UP");
+            return;
+        }
+
+        // Scale down logic
+        if (shouldScaleDown(metrics, policy, current)) {
+            int target = Math.max(current - policy.scaleDownStep(), policy.minReplicas());
+            performScaling(resourceType, current, target, "AUTO_DOWN");
+        }
+    }
+
+    private boolean shouldScaleUp(ResourceMetrics metrics, ScalingPolicy policy, int currentReplicas) {
+        if (currentReplicas >= policy.maxReplicas()) {
+            return false;
+        }
+
+        // Check CPU
+        if (metrics.cpuUsage() > policy.scaleUpThreshold()) {
+            log.debug("Scaling up {}: CPU usage {}% exceeds threshold {}%",
+                metrics.resourceType(), metrics.cpuUsage(), policy.scaleUpThreshold());
+            return true;
+        }
+
+        // Check memory
+        if (metrics.memoryUsage() > policy.scaleUpThreshold()) {
+            log.debug("Scaling up {}: Memory usage {}% exceeds threshold {}%",
+                metrics.resourceType(), metrics.memoryUsage(), policy.scaleUpThreshold());
+            return true;
+        }
+
+        // Check load per replica
+        double loadPerReplica = metrics.requestRate() / currentReplicas;
+        if (loadPerReplica > policy.targetLoadPerReplica()) {
+            log.debug("Scaling up {}: Load per replica {} exceeds target {}",
+                metrics.resourceType(), loadPerReplica, policy.targetLoadPerReplica());
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean shouldScaleDown(ResourceMetrics metrics, ScalingPolicy policy, int currentReplicas) {
+        if (currentReplicas <= policy.minReplicas()) {
+            return false;
+        }
+
+        // Check CPU
+        if (metrics.cpuUsage() < policy.scaleDownThreshold()) {
+            log.debug("Scaling down {}: CPU usage {}% below threshold {}%",
+                metrics.resourceType(), metrics.cpuUsage(), policy.scaleDownThreshold());
+            return true;
+        }
+
+        // Check memory
+        if (metrics.memoryUsage() < policy.scaleDownThreshold()) {
+            log.debug("Scaling down {}: Memory usage {}% below threshold {}%",
+                metrics.resourceType(), metrics.memoryUsage(), policy.scaleDownThreshold());
+            return true;
+        }
+
+        // Check load per replica
+        double loadPerReplica = metrics.requestRate() / currentReplicas;
+        if (loadPerReplica < policy.targetLoadPerReplica() * 0.5) {
+            log.debug("Scaling down {}: Load per replica {} below target {}",
+                metrics.resourceType(), loadPerReplica, policy.targetLoadPerReplica() * 0.5);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void performScaling(String resourceType, int from, int to, String reason) {
+        log.info("Scaling {} from {} to {} replicas (reason: {})", resourceType, from, to, reason);
+
+        currentReplicas.put(resourceType, to);
+
+        ScalingAction action = new ScalingAction(
+            resourceType,
+            from,
+            to,
+            reason,
+            Instant.now(),
+            getCurrentMetricsSnapshot(resourceType)
+        );
+
+        scalingHistory.add(action);
+
+        // In production: trigger actual scaling via Kubernetes API, load balancer, etc.
+        triggerScalingAction(resourceType, to);
+    }
+
+    private void triggerScalingAction(String resourceType, int targetReplicas) {
+        // Placeholder for actual scaling implementation
+        // In production, this would interact with:
+        // - Kubernetes Deployment scaling
+        // - Load balancer configuration
+        // - Database read replica management
+        // - Kafka partition reassignment
+        log.info("Triggered scaling action: {} -> {} replicas", resourceType, targetReplicas);
+    }
+
+    private ScalingAction getLastScalingAction(String resourceType) {
+        for (int i = scalingHistory.size() - 1; i >= 0; i--) {
+            if (scalingHistory.get(i).resourceType().equals(resourceType)) {
+                return scalingHistory.get(i);
+            }
+        }
+        return null;
+    }
+
+    private boolean isInCooldown(ScalingAction lastAction) {
+        long secondsSinceLastAction = Instant.now().getEpochSecond() - lastAction.timestamp().getEpochSecond();
+        return secondsSinceLastAction < SCALE_COOLDOWN_SECONDS;
+    }
+
+    private ResourceMetrics getCurrentMetricsSnapshot(String resourceType) {
+        return resourceMetrics.get(resourceType);
+    }
+
+    private void initializePolicies() {
+        // Backend API scaling policy
+        scalingPolicies.put("backend-api", new ScalingPolicy(
+            "backend-api",
+            MIN_REPLICAS,
+            MAX_REPLICAS,
+            80.0,  // scale up at 80% CPU
+            30.0,  // scale down at 30% CPU
+            2,     // scale up by 2 replicas
+            1,     // scale down by 1 replica
+            100.0  // target 100 req/sec per replica
+        ));
+
+        // Database scaling policy
+        scalingPolicies.put("database", new ScalingPolicy(
+            "database",
+            1,
+            5,
+            85.0,
+            40.0,
+            1,
+            1,
+            500.0
+        ));
+
+        // Kafka consumer scaling policy
+        scalingPolicies.put("kafka-consumer", new ScalingPolicy(
+            "kafka-consumer",
+            2,
+            10,
+            75.0,
+            25.0,
+            2,
+            1,
+            1000.0
+        ));
+
+        log.info("Initialized {} scaling policies", scalingPolicies.size());
+    }
+
+    public record ResourceMetrics(
+        String resourceType,
+        Instant timestamp,
+        double cpuUsage,
+        double memoryUsage,
+        int activeConnections,
+        long requestRate
+    ) {}
+
+    public record ScalingPolicy(
+        String resourceType,
+        int minReplicas,
+        int maxReplicas,
+        double scaleUpThreshold,
+        double scaleDownThreshold,
+        int scaleUpStep,
+        int scaleDownStep,
+        double targetLoadPerReplica
+    ) {}
+
+    public record ScalingAction(
+        String resourceType,
+        int fromReplicas,
+        int toReplicas,
+        String reason,
+        Instant timestamp,
+        ResourceMetrics metrics
+    ) {}
+}

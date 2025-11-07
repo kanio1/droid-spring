@@ -1,0 +1,117 @@
+{
+  "enterprise_customer": {
+    "customer": {
+      "id": "cust-enterprise-001",
+      "firstName": "Enterprise",
+      "lastName": "Client",
+      "email": "enterprise@company.com",
+      "phone": "+1-555-9999",
+      "status": "active",
+      "metadata": {
+        "tier": "enterprise",
+        "accountManager": "john.doe@company.com",
+        "sla": "premium"
+      }
+    },
+    "order": {
+      "id": "order-enterprise-001",
+      "customerId": "cust-enterprise-001",
+      "items": [
+        {
+          "productId": "prod-003",
+          "productName": "Enterprise Service Plan",
+          "quantity": 10,
+          "unitPrice": 199.99,
+          "totalPrice": 1999.90
+        }
+      ],
+      "totalAmount": 1999.90,
+      "currency": "USD",
+      "status": "delivered"
+    },
+    "invoice": {
+      "id": "inv-enterprise-001",
+      "invoiceNumber": "INV-2024-ENT-001",
+      "customerId": "cust-enterprise-001",
+      "orderId": "order-enterprise-001",
+      "items": [
+        {
+          "description": "Enterprise Service Plan x10 - January 2024",
+          "quantity": 1,
+          "unitPrice": 1999.90,
+          "totalPrice": 1999.90
+        }
+      ],
+      "subtotal": 1999.90,
+      "tax": 160.00,
+      "total": 2159.90,
+      "currency": "USD",
+      "status": "paid"
+    },
+    "subscription": {
+      "id": "sub-enterprise-001",
+      "customerId": "cust-enterprise-001",
+      "productId": "prod-003",
+      "planName": "Enterprise Service Plan",
+      "status": "active",
+      "amount": 1999.90,
+      "currency": "USD",
+      "billingCycle": "monthly"
+    }
+  },
+  "failed_payment_scenario": {
+    "customer": {
+      "id": "cust-failed-001",
+      "firstName": "Failed",
+      "lastName": "Payment",
+      "email": "failed.payment@example.com",
+      "phone": "+1-555-0001",
+      "status": "active"
+    },
+    "order": {
+      "id": "order-failed-001",
+      "customerId": "cust-failed-001",
+      "items": [
+        {
+          "productId": "prod-002",
+          "productName": "Professional Service Plan",
+          "quantity": 1,
+          "unitPrice": 59.99,
+          "totalPrice": 59.99
+        }
+      ],
+      "totalAmount": 59.99,
+      "currency": "USD",
+      "status": "delivered"
+    },
+    "invoice": {
+      "id": "inv-failed-001",
+      "invoiceNumber": "INV-2024-FAIL-001",
+      "customerId": "cust-failed-001",
+      "orderId": "order-failed-001",
+      "items": [
+        {
+          "description": "Professional Service Plan - January 2024",
+          "quantity": 1,
+          "unitPrice": 59.99,
+          "totalPrice": 59.99
+        }
+      ],
+      "subtotal": 59.99,
+      "tax": 4.80,
+      "total": 64.79,
+      "currency": "USD",
+      "status": "unpaid"
+    },
+    "payment": {
+      "id": "pay-failed-001",
+      "invoiceId": "inv-failed-001",
+      "customerId": "cust-failed-001",
+      "amount": 64.79,
+      "currency": "USD",
+      "method": "credit_card",
+      "status": "failed",
+      "failureReason": "Insufficient funds"
+    }
+  }
+}

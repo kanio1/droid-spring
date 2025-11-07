@@ -1,6 +1,6 @@
 package com.droid.bss.infrastructure.config;
 
-import com.droid.bss.infrastructure.resilience.RateLimitingInterceptor;
+import com.droid.bss.infrastructure.resilience.ResilienceRateLimitingInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -11,9 +11,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    private final RateLimitingInterceptor rateLimitingInterceptor;
+    private final ResilienceRateLimitingInterceptor rateLimitingInterceptor;
 
-    public WebMvcConfig(RateLimitingInterceptor rateLimitingInterceptor) {
+    public WebMvcConfig(ResilienceRateLimitingInterceptor rateLimitingInterceptor) {
         this.rateLimitingInterceptor = rateLimitingInterceptor;
     }
 

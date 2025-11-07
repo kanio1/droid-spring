@@ -1,0 +1,253 @@
+server:
+  port: 8080
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+spring:
+  application:
+    name: bss-backend
+  profiles:
+    active: prod
+
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 100
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        format_sql: false
+        use_sql_comments: false
+    open-in-view: false
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/bss}
+    username: ${SPRING_DATASOURCE_USERNAME:bss_app}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+      leak-detection-threshold: 60000
+      pool-name: BSSPool
+      allow-pool-suspension: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    clean-disabled: true
+
+  redis:
+    host: ${SPRING_REDIS_HOST:redis}
+    port: ${SPRING_REDIS_PORT:6379}
+    password: ${SPRING_REDIS_PASSWORD:}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 50
+        max-idle: 20
+        min-idle: 5
+        max-wait: -1ms
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    producer:
+      acks: all
+      retries: 3
+      batch-size: 16384
+      buffer-memory: 33554432
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: bss-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.droid.bss.domain.events"
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+
+logging:
+  level:
+    com.droid.bss: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /app/logs/bss.log
+    max-size: 100MB
+    max-history: 30
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 3GB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,traces,env,configprops
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db,redis,kafka,keycloak
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+  info:
+    env:
+      enabled: true
+    git:
+      mode: full
+  tracing:
+    sampling:
+      probability: 0.1
+    propagation:
+      produce: B3
+    otlp:
+      endpoint: ${MANAGEMENT_OTLP_TRACING_ENDPOINT:http://tempo:4317}
+
+  observations:
+    key-values:
+      service: bss-backend
+      environment: production
+
+bss:
+  cors:
+    allowed-origins: https://bss.company.com
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+
+  metrics:
+    collection-interval: 60s
+    retention-period: 30d
+    aggregation-enabled: true
+
+  alerts:
+    notification-channels:
+      - email
+      - slack
+    escalation:
+      warning:
+        threshold-count: 3
+        time-window: 5m
+      critical:
+        threshold-count: 5
+        time-window: 3m
+
+  cost:
+    calculation-batch-size: 100
+    forecast-horizon-days: 90
+    anomaly-threshold: 0.15
+
+  performance:
+    cache:
+      ttl-seconds: 3600
+      warmup-enabled: true
+      batch-size: 50
+    query:
+      slow-query-threshold-ms: 1000
+      optimization-enabled: true
+    connection-pool:
+      scaling:
+        enabled: true
+        scale-up-threshold: 80
+        scale-down-threshold: 40
+        scale-up-increment: 5
+        scale-down-increment: 2
+
+keycloak:
+  issuer-uri: ${KEYCLOAK_ISSUER_URI}
+  jwks-uri: ${KEYCLOAK_JWKS_URI}
+  client-id: ${KEYCLOAK_CLIENT_ID:bss-backend}
+  realm: ${KEYCLOAK_REALM:bss}
+
+---
+# Monitoring and Observability
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      sla:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,1s,2s
+    tags:
+      application: ${spring.application.name}
+      environment: production
+
+# Performance tuning for production
+tomcat:
+  threads:
+    max: 400
+    min-spare: 50
+  max-connections: 8192
+  accept-count: 100
+  connection-timeout: 20000
+  keep-alive-timeout: 60000
+  max-keep-alive-requests: 100
+
+# Java Virtual Threads configuration
+spring.threads.virtual.enabled: true
+
+# Resilience
+resilience4j:
+  circuitbreaker:
+    instances:
+      backendCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+  retry:
+    instances:
+      backendRetry:
+        maxAttempts: 3
+        waitDuration: 200ms
+        retryExceptions:
+          - java.io.IOException
+  rateLimiter:
+    instances:
+      backendRateLimiter:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s

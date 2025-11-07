@@ -9,8 +9,10 @@ import com.droid.bss.application.dto.invoice.CreateInvoiceCommand;
 import com.droid.bss.application.dto.invoice.InvoiceResponse;
 import com.droid.bss.application.dto.invoice.UpdateInvoiceCommand;
 import com.droid.bss.application.query.invoice.InvoiceQueryService;
+import com.droid.bss.domain.audit.AuditAction;
 import com.droid.bss.domain.invoice.InvoiceStatus;
 import com.droid.bss.domain.invoice.InvoiceType;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,7 +33,7 @@ import java.util.UUID;
  * REST Controller for Invoice CRUD operations
  */
 @RestController
-@RequestMapping("/api/invoices")
+@RequestMapping("/api/v1/invoices")
 @Tag(name = "Invoice", description = "Invoice management API")
 public class InvoiceController {
 
@@ -67,6 +69,7 @@ public class InvoiceController {
     @ApiResponse(responseCode = "404", description = "Customer not found")
     @ApiResponse(responseCode = "409", description = "Invoice number already exists")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.INVOICE_CREATE, entityType = "Invoice", description = "Creating new invoice")
     public ResponseEntity<InvoiceResponse> createInvoice(
             @Valid @RequestBody CreateInvoiceCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -100,12 +103,12 @@ public class InvoiceController {
     }
 
     /**
-     * Get all invoices with pagination
+     * Get all invoices with pagination, search, and filters
      */
     @GetMapping
     @Operation(
         summary = "Get all invoices",
-        description = "Retrieves all invoices with pagination"
+        description = "Retrieves all invoices with optional search and filters"
     )
     @ApiResponse(responseCode = "200", description = "Invoices retrieved successfully")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
@@ -115,9 +118,55 @@ public class InvoiceController {
             @RequestParam(defaultValue = "0") int page,
 
             @Parameter(description = "Number of items per page")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+
+            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')")
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+
+            @Parameter(description = "Search term (invoice number, customer name, or notes)")
+            @RequestParam(required = false) String query,
+
+            @Parameter(description = "Filter by invoice status")
+            @RequestParam(required = false) InvoiceStatus status,
+
+            @Parameter(description = "Filter by invoice type")
+            @RequestParam(required = false) InvoiceType type,
+
+            @Parameter(description = "Filter by customer ID")
+            @RequestParam(required = false) String customerId,
+
+            @Parameter(description = "Filter by start date (YYYY-MM-DD)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+
+            @Parameter(description = "Filter by end date (YYYY-MM-DD)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+
+            @Parameter(description = "Filter to show only unpaid invoices")
+            @RequestParam(required = false) Boolean unpaid,
+
+            @Parameter(description = "Filter to show only overdue invoices")
+            @RequestParam(required = false) Boolean overdue
     ) {
-        var invoices = invoiceQueryService.findAll(page, size);
+        PageResponse<InvoiceResponse> invoices;
+
+        if (query != null && !query.isBlank()) {
+            invoices = invoiceQueryService.search(query, page, size);
+        } else if (status != null) {
+            invoices = invoiceQueryService.findByStatus(status, page, size);
+        } else if (type != null) {
+            invoices = invoiceQueryService.findByInvoiceType(type, page, size);
+        } else if (customerId != null) {
+            invoices = invoiceQueryService.findByCustomerId(customerId, page, size);
+        } else if (unpaid != null && unpaid) {
+            invoices = invoiceQueryService.findUnpaid(page, size);
+        } else if (overdue != null && overdue) {
+            invoices = invoiceQueryService.findOverdue(page, size);
+        } else if (startDate != null && endDate != null) {
+            invoices = invoiceQueryService.findByIssueDateBetween(startDate, endDate, page, size);
+        } else {
+            invoices = invoiceQueryService.findAll(page, size);
+        }
+
         return ResponseEntity.ok(invoices);
     }
 
@@ -348,6 +397,7 @@ public class InvoiceController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @ApiResponse(responseCode = "404", description = "Invoice not found")
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
+    @Audited(action = AuditAction.INVOICE_UPDATE, entityType = "Invoice", description = "Updating status for invoice {id}")
     public ResponseEntity<Void> updateInvoiceStatus(
             @Parameter(description = "Invoice ID", required = true)
             @PathVariable UUID id,
@@ -380,6 +430,7 @@ public class InvoiceController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @ApiResponse(responseCode = "404", description = "Invoice not found")
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
+    @Audited(action = AuditAction.INVOICE_UPDATE, entityType = "Invoice", description = "Updating invoice {id}")
     public ResponseEntity<InvoiceResponse> updateInvoice(
             @Parameter(description = "Invoice ID", required = true)
             @PathVariable UUID id,

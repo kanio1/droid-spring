@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Use case for creating a new address
@@ -48,36 +47,25 @@ public class CreateAddressUseCase {
                     });
         }
 
-        // Create address
-        AddressEntity address = new AddressEntity(
-                customer,
+        // Create address using immutable pattern
+        Address address = Address.create(
+                customerId,
                 type,
-                AddressStatus.ACTIVE,
                 command.street(),
+                command.houseNumber(),
+                command.apartmentNumber(),
                 command.postalCode(),
                 command.city(),
-                country
+                command.region(),
+                country,
+                command.latitude(),
+                command.longitude(),
+                command.isPrimary(),
+                command.notes()
         );
 
-        // Set optional fields
-        if (command.getHouseNumber().isPresent()) {
-            address.setHouseNumber(command.getHouseNumber().get());
-        }
-        if (command.getApartmentNumber().isPresent()) {
-            address.setApartmentNumber(command.getApartmentNumber().get());
-        }
-        if (command.getRegion().isPresent()) {
-            address.setRegion(command.getRegion().get());
-        }
-        if (command.getLatitude().isPresent()) {
-            address.setLatitude(command.getLatitude().get());
-        }
-        if (command.getLongitude().isPresent()) {
-            address.setLongitude(command.getLongitude().get());
-        }
-        address.setIsPrimary(command.isPrimary());
-
-        AddressEntity saved = addressRepository.save(address);
+        // Save and return
+        Address saved = addressRepository.save(address);
 
         return AddressResponse.from(saved);
     }

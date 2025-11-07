@@ -8,6 +8,8 @@ interface ApiOptions {
   skipAuth?: boolean
   skipErrorToast?: boolean
   skipLoading?: boolean
+  signal?: AbortSignal
+  timeout?: number
 }
 
 interface ApiResponse<T = any> {
@@ -37,6 +39,9 @@ export const useApi = () => {
   const loading = ref(false)
 
   const baseURL = config.public.apiBaseUrl || 'http://localhost:8080/api'
+
+  // Track active abort controllers for cancellation
+  const activeControllers = new Map<string, AbortController>()
 
   // Get auth headers
   const getAuthHeaders = (): Record<string, string> => {
@@ -82,7 +87,8 @@ export const useApi = () => {
   // Generic API request method
   const request = async <T = any>(
     endpoint: string,
-    options: ApiOptions = {}
+    options: ApiOptions = {},
+    requestId?: string
   ): Promise<ApiResponse<T>> => {
     const {
       method = 'GET',
@@ -91,17 +97,33 @@ export const useApi = () => {
       headers = {},
       skipAuth = false,
       skipErrorToast = false,
-      skipLoading = false
+      skipLoading = false,
+      signal: providedSignal,
+      timeout = 30000
     } = options
 
     if (!skipLoading) {
       loading.value = true
     }
 
+    // Create abort controller
+    const controller = new AbortController()
+    const signal = providedSignal || controller.signal
+
+    // Set up timeout
+    const timeoutId = setTimeout(() => {
+      controller.abort()
+    }, timeout)
+
+    // Register controller for cancellation
+    if (requestId) {
+      activeControllers.set(requestId, controller)
+    }
+
     try {
       // Build URL
       const url = buildUrl(endpoint, query)
-      
+
       // Prepare headers
       const authHeaders = skipAuth ? {} : getAuthHeaders()
       const requestHeaders = {
@@ -114,7 +136,8 @@ export const useApi = () => {
       // Prepare fetch options
       const fetchOptions: RequestInit = {
         method,
-        headers: requestHeaders
+        headers: requestHeaders,
+        signal
       }
 
       if (body && method !== 'GET') {
@@ -123,10 +146,13 @@ export const useApi = () => {
 
       // Make request
       const response = await fetch(url, fetchOptions)
-      
+
+      // Clear timeout
+      clearTimeout(timeoutId)
+
       // Handle response
       const responseData = await response.json().catch(() => null)
-      
+
       const apiResponse: ApiResponse<T> = {
         data: responseData,
         ok: response.ok,
@@ -145,7 +171,17 @@ export const useApi = () => {
 
       return apiResponse
 
-    } catch (error) {
+    } catch (error: any) {
+      // Clear timeout
+      clearTimeout(timeoutId)
+
+      // Handle abort error
+      if (error.name === 'AbortError') {
+        const abortError = new Error('Request was cancelled')
+        ;(abortError as any).cancelled = true
+        throw abortError
+      }
+
       // Network or other errors
       if (!skipErrorToast) {
         handleError(error, skipErrorToast)
@@ -154,6 +190,11 @@ export const useApi = () => {
     } finally {
       if (!skipLoading) {
         loading.value = false
+      }
+
+      // Clean up controller
+      if (requestId) {
+        activeControllers.delete(requestId)
       }
     }
   }
@@ -177,6 +218,28 @@ export const useApi = () => {
 
   const del = <T = any>(endpoint: string, options: Omit<ApiOptions, 'method'> = {}) => {
     return request<T>(endpoint, { ...options, method: 'DELETE' })
+  }
+
+  // Request cancellation methods
+  const cancelRequest = (requestId: string) => {
+    const controller = activeControllers.get(requestId)
+    if (controller) {
+      controller.abort()
+      activeControllers.delete(requestId)
+      return true
+    }
+    return false
+  }
+
+  const cancelAllRequests = () => {
+    activeControllers.forEach(controller => {
+      controller.abort()
+    })
+    activeControllers.clear()
+  }
+
+  const getActiveRequestCount = () => {
+    return activeControllers.size
   }
 
   // Specific methods for CRUD operations
@@ -230,7 +293,7 @@ export const useApi = () => {
   return {
     // State
     loading: readonly(loading),
-    
+
     // Core methods
     request,
     get,
@@ -238,16 +301,21 @@ export const useApi = () => {
     put,
     patch,
     delete: del,
-    
+
     // CRUD helpers
     create,
     read,
     update,
     remove,
-    
+
     // Pagination
     paginatedGet,
-    
+
+    // Request cancellation
+    cancelRequest,
+    cancelAllRequests,
+    getActiveRequestCount,
+
     // Utilities
     handleSuccess,
     buildUrl,

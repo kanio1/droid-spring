@@ -1,0 +1,378 @@
+package com.droid.bss.infrastructure.event;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Event Replay Service
+ * Provides time travel and event replay capabilities
+ * Allows reconstructing system state at any point in time
+ */
+@Service
+public class EventReplayService {
+
+    private static final Logger log = LoggerFactory.getLogger(EventReplayService.class);
+
+    private final KafkaOffsetManager offsetManager;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ExecutorService replayExecutor = Executors.newFixedThreadPool(4);
+
+    public EventReplayService(KafkaOffsetManager offsetManager, KafkaTemplate<String, Object> kafkaTemplate) {
+        this.offsetManager = offsetManager;
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    /**
+     * Replay events from time range
+     */
+    public CompletableFuture<ReplayResult> replayEvents(
+            String topic,
+            Instant startTime,
+            Instant endTime,
+            ReplayOptions options) {
+
+        log.info("Starting event replay: topic={}, start={}, end={}, options={}",
+                topic, startTime, endTime, options);
+
+        return CompletableFuture.supplyAsync(() -> {
+            ReplayResult result = new ReplayResult();
+            result.setStartTime(startTime);
+            result.setEndTime(endTime);
+            result.setTopic(topic);
+
+            try {
+                // Get offset range
+                Map<String, Long> offsetRange = offsetManager.getOffsetRange(topic);
+                long earliest = offsetRange.get("earliest");
+                long latest = offsetRange.get("latest");
+
+                log.info("Offset range: earliest={}, latest={}", earliest, latest);
+
+                // Calculate target offsets based on time range
+                Map<Integer, Long> startOffsets = calculateStartOffsets(topic, startTime);
+                Map<Integer, Long> endOffsets = calculateEndOffsets(topic, endTime);
+
+                // Execute replay
+                List<String> replayedEvents = executeReplay(topic, startOffsets, endOffsets, options);
+
+                result.setEventCount(replayedEvents.size());
+                result.setReplayedEvents(replayedEvents);
+                result.setStatus(ReplayStatus.COMPLETED);
+                result.setCompletionTime(Instant.now());
+
+                // Calculate duration
+                long durationMs = Duration.between(startTime, result.getCompletionTime()).toMillis();
+                result.setDurationMs(durationMs);
+
+                log.info("Replay completed: events={}, duration={}ms", result.getEventCount(), durationMs);
+
+            } catch (Exception e) {
+                log.error("Replay failed", e);
+                result.setStatus(ReplayStatus.FAILED);
+                result.setErrorMessage(e.getMessage());
+            }
+
+            return result;
+        }, replayExecutor);
+    }
+
+    /**
+     * Simulate event processing for time travel
+     */
+    public CompletableFuture<StateSnapshot> reconstructStateAtTime(
+            String topic,
+            Instant targetTime,
+            List<String> relatedTopics) {
+
+        log.info("Reconstructing state at: targetTime={}, topic={}, relatedTopics={}",
+                targetTime, topic, relatedTopics);
+
+        return CompletableFuture.supplyAsync(() -> {
+            StateSnapshot snapshot = new StateSnapshot();
+            snapshot.setTimestamp(targetTime);
+            snapshot.setTopic(topic);
+
+            Map<String, Map<String, Object>> state = new HashMap<>();
+
+            try {
+                // Reconstruct state from Kafka
+                for (String relatedTopic : relatedTopics) {
+                    Map<String, Object> topicState = reconstructTopicState(relatedTopic, targetTime);
+                    state.put(relatedTopic, topicState);
+                }
+
+                snapshot.setState(state);
+                snapshot.setStatus("COMPLETED");
+                snapshot.setReconstructionTime(Instant.now());
+
+                log.info("State reconstruction completed: {} topics processed", relatedTopics.size());
+
+            } catch (Exception e) {
+                log.error("State reconstruction failed", e);
+                snapshot.setStatus("FAILED");
+                snapshot.setErrorMessage(e.getMessage());
+            }
+
+            return snapshot;
+        }, replayExecutor);
+    }
+
+    /**
+     * Get event timeline for debugging
+     */
+    public List<EventTimeline> getEventTimeline(
+            String topic,
+            Instant startTime,
+            Instant endTime,
+            int maxEvents) {
+
+        log.info("Getting event timeline: topic={}, start={}, end={}, maxEvents={}",
+                topic, startTime, endTime, maxEvents);
+
+        List<EventTimeline> timeline = new ArrayList<>();
+
+        // In production, this would query Kafka or a time-series database
+        // For now, return empty list
+        log.debug("Returning empty timeline (not implemented)");
+
+        return timeline;
+    }
+
+    /**
+     * Create debug session for time travel
+     */
+    public DebugSession createDebugSession(
+            String sessionId,
+            Instant time,
+            Map<String, String> parameters) {
+
+        log.info("Creating debug session: sessionId={}, time={}, parameters={}",
+                sessionId, time, parameters);
+
+        DebugSession session = new DebugSession();
+        session.setSessionId(sessionId);
+        session.setTime(time);
+        session.setParameters(parameters);
+        session.setStatus("ACTIVE");
+        session.setCreatedAt(Instant.now());
+
+        return session;
+    }
+
+    /**
+     * Execute controlled replay with specific speed
+     */
+    public CompletableFuture<ReplayResult> controlledReplay(
+            String topic,
+            Instant startTime,
+            Instant endTime,
+            ReplaySpeed speed) {
+
+        log.info("Starting controlled replay: topic={}, speed={}", topic, speed);
+
+        ReplayOptions options = new ReplayOptions();
+        options.setSpeed(speed);
+        options.setIgnoreErrors(false);
+        options.setParallelProcessing(true);
+
+        return replayEvents(topic, startTime, endTime, options);
+    }
+
+    // Helper methods
+
+    private Map<Integer, Long> calculateStartOffsets(String topic, Instant startTime) {
+        Map<Integer, Long> offsets = new HashMap<>();
+        // Calculate start offsets for all partitions
+        for (int partition = 0; partition < getPartitionCount(topic); partition++) {
+            long offset = offsetManager.getOffsetForTimestamp(topic, partition, startTime);
+            offsets.put(partition, offset);
+        }
+        return offsets;
+    }
+
+    private Map<Integer, Long> calculateEndOffsets(String topic, Instant endTime) {
+        Map<Integer, Long> offsets = new HashMap<>();
+        // Calculate end offsets for all partitions
+        for (int partition = 0; partition < getPartitionCount(topic); partition++) {
+            long latestOffset = offsetManager.getLatestOffset(topic);
+            offsets.put(partition, latestOffset);
+        }
+        return offsets;
+    }
+
+    private List<String> executeReplay(
+            String topic,
+            Map<Integer, Long> startOffsets,
+            Map<Integer, Long> endOffsets,
+            ReplayOptions options) {
+
+        List<String> replayedEvents = new ArrayList<>();
+
+        log.info("Executing replay: startOffsets={}, endOffsets={}, options={}",
+                startOffsets, endOffsets, options);
+
+        // In production, this would:
+        // 1. Seek to start offsets
+        // 2. Read events in batches
+        // 3. Process them according to options
+        // 4. Record progress
+
+        return replayedEvents;
+    }
+
+    private Map<String, Object> reconstructTopicState(String topic, Instant time) {
+        Map<String, Object> state = new HashMap<>();
+        // In production, reconstruct state from events up to this time
+        log.debug("Reconstructing state for topic: {} at time: {}", topic, time);
+        return state;
+    }
+
+    private int getPartitionCount(String topic) {
+        // In production, get actual partition count from Kafka
+        return 100; // Default for cloud-events topic
+    }
+
+    // Inner classes for request/response objects
+
+    public static class ReplayResult {
+        private String topic;
+        private Instant startTime;
+        private Instant endTime;
+        private Instant completionTime;
+        private long eventCount;
+        private long durationMs;
+        private ReplayStatus status;
+        private String errorMessage;
+        private List<String> replayedEvents;
+
+        // Getters and setters
+        public String getTopic() { return topic; }
+        public void setTopic(String topic) { this.topic = topic; }
+        public Instant getStartTime() { return startTime; }
+        public void setStartTime(Instant startTime) { this.startTime = startTime; }
+        public Instant getEndTime() { return endTime; }
+        public void setEndTime(Instant endTime) { this.endTime = endTime; }
+        public Instant getCompletionTime() { return completionTime; }
+        public void setCompletionTime(Instant completionTime) { this.completionTime = completionTime; }
+        public long getEventCount() { return eventCount; }
+        public void setEventCount(long eventCount) { this.eventCount = eventCount; }
+        public long getDurationMs() { return durationMs; }
+        public void setDurationMs(long durationMs) { this.durationMs = durationMs; }
+        public ReplayStatus getStatus() { return status; }
+        public void setStatus(ReplayStatus status) { this.status = status; }
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+        public List<String> getReplayedEvents() { return replayedEvents; }
+        public void setReplayedEvents(List<String> replayedEvents) { this.replayedEvents = replayedEvents; }
+    }
+
+    public enum ReplayStatus {
+        PENDING, IN_PROGRESS, COMPLETED, FAILED, CANCELLED
+    }
+
+    public enum ReplaySpeed {
+        REAL_TIME, FAST, ULTRA_FAST, STEP_BY_STEP
+    }
+
+    public static class ReplayOptions {
+        private ReplaySpeed speed = ReplaySpeed.FAST;
+        private boolean ignoreErrors = false;
+        private boolean parallelProcessing = true;
+        private int maxConcurrentThreads = 4;
+        private boolean validateEvents = true;
+        private boolean replayToKafka = false;
+        private String targetTopic = null;
+
+        // Getters and setters
+        public ReplaySpeed getSpeed() { return speed; }
+        public void setSpeed(ReplaySpeed speed) { this.speed = speed; }
+        public boolean isIgnoreErrors() { return ignoreErrors; }
+        public void setIgnoreErrors(boolean ignoreErrors) { this.ignoreErrors = ignoreErrors; }
+        public boolean isParallelProcessing() { return parallelProcessing; }
+        public void setParallelProcessing(boolean parallelProcessing) { this.parallelProcessing = parallelProcessing; }
+        public int getMaxConcurrentThreads() { return maxConcurrentThreads; }
+        public void setMaxConcurrentThreads(int maxConcurrentThreads) { this.maxConcurrentThreads = maxConcurrentThreads; }
+        public boolean isValidateEvents() { return validateEvents; }
+        public void setValidateEvents(boolean validateEvents) { this.validateEvents = validateEvents; }
+        public boolean isReplayToKafka() { return replayToKafka; }
+        public void setReplayToKafka(boolean replayToKafka) { this.replayToKafka = replayToKafka; }
+        public String getTargetTopic() { return targetTopic; }
+        public void setTargetTopic(String targetTopic) { this.targetTopic = targetTopic; }
+    }
+
+    public static class StateSnapshot {
+        private String topic;
+        private Instant timestamp;
+        private Instant reconstructionTime;
+        private Map<String, Map<String, Object>> state;
+        private String status;
+        private String errorMessage;
+
+        // Getters and setters
+        public String getTopic() { return topic; }
+        public void setTopic(String topic) { this.topic = topic; }
+        public Instant getTimestamp() { return timestamp; }
+        public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+        public Instant getReconstructionTime() { return reconstructionTime; }
+        public void setReconstructionTime(Instant reconstructionTime) { this.reconstructionTime = reconstructionTime; }
+        public Map<String, Map<String, Object>> getState() { return state; }
+        public void setState(Map<String, Map<String, Object>> state) { this.state = state; }
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    }
+
+    public static class EventTimeline {
+        private Instant timestamp;
+        private String eventType;
+        private String source;
+        private String eventId;
+        private String tenantId;
+        private Map<String, Object> data;
+
+        // Getters and setters
+        public Instant getTimestamp() { return timestamp; }
+        public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+        public String getEventType() { return eventType; }
+        public void setEventType(String eventType) { this.eventType = eventType; }
+        public String getSource() { return source; }
+        public void setSource(String source) { this.source = source; }
+        public String getEventId() { return eventId; }
+        public void setEventId(String eventId) { this.eventId = eventId; }
+        public String getTenantId() { return tenantId; }
+        public void setTenantId(String tenantId) { this.tenantId = tenantId; }
+        public Map<String, Object> getData() { return data; }
+        public void setData(Map<String, Object> data) { this.data = data; }
+    }
+
+    public static class DebugSession {
+        private String sessionId;
+        private Instant time;
+        private Map<String, String> parameters;
+        private String status;
+        private Instant createdAt;
+
+        // Getters and setters
+        public String getSessionId() { return sessionId; }
+        public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+        public Instant getTime() { return time; }
+        public void setTime(Instant time) { this.time = time; }
+        public Map<String, String> getParameters() { return parameters; }
+        public void setParameters(Map<String, String> parameters) { this.parameters = parameters; }
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        public Instant getCreatedAt() { return createdAt; }
+        public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    }
+}

@@ -3,7 +3,7 @@
  *
  * @description Vue/Nuxt 3 FormInput component tests using Vitest and Vue Test Utils
  * @implNote This is a test scaffolding file. Full test implementation requires mentor-reviewer approval.
- *           All tests are currently disabled with test.todo() annotation.
+ *           All tests are currently disabled with it.todo() annotation.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "sub-001",
+    "customerId": "cust-001",
+    "productId": "prod-001",
+    "planName": "Basic Service Plan",
+    "status": "active",
+    "startDate": "2024-01-15T00:00:00Z",
+    "endDate": null,
+    "renewalDate": "2024-02-15T00:00:00Z",
+    "amount": 29.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "trialEndDate": null
+  },
+  {
+    "id": "sub-002",
+    "customerId": "cust-002",
+    "productId": "prod-002",
+    "planName": "Professional Service Plan",
+    "status": "active",
+    "startDate": "2024-01-16T00:00:00Z",
+    "endDate": null,
+    "renewalDate": "2024-02-16T00:00:00Z",
+    "amount": 59.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "trialEndDate": "2024-01-23T00:00:00Z"
+  },
+  {
+    "id": "sub-003",
+    "customerId": "cust-004",
+    "productId": "prod-003",
+    "planName": "Enterprise Service Plan",
+    "status": "trial",
+    "startDate": "2024-01-20T00:00:00Z",
+    "endDate": null,
+    "renewalDate": "2024-02-20T00:00:00Z",
+    "amount": 199.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "trialEndDate": "2024-01-27T00:00:00Z"
+  },
+  {
+    "id": "sub-004",
+    "customerId": "cust-005",
+    "productId": "prod-001",
+    "planName": "Basic Service Plan",
+    "status": "cancelled",
+    "startDate": "2024-01-05T00:00:00Z",
+    "endDate": "2024-01-10T00:00:00Z",
+    "renewalDate": "2024-02-05T00:00:00Z",
+    "amount": 29.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "trialEndDate": null
+  }
+]

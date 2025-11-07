@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar__header">
         <div class="sidebar__logo">
-          <span class="sidebar__logo-icon">🏢</span>
+          <Icon name="lucide:building-2" :size="24" class="sidebar__logo-icon" />
           <span class="sidebar__logo-text">BSS Portal</span>
         </div>
       </div>
@@ -13,26 +13,38 @@
         <ul class="sidebar__nav-list">
           <li class="sidebar__nav-item">
             <NuxtLink to="/" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
-              <span class="sidebar__nav-icon">📊</span>
+              <Icon name="lucide:bar-chart" :size="20" class="sidebar__nav-icon" />
               <span class="sidebar__nav-text">Dashboard</span>
             </NuxtLink>
           </li>
           <li class="sidebar__nav-item">
             <NuxtLink to="/customers" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
-              <span class="sidebar__nav-icon">👥</span>
+              <Icon name="lucide:users" :size="20" class="sidebar__nav-icon" />
               <span class="sidebar__nav-text">Customers</span>
             </NuxtLink>
           </li>
           <li class="sidebar__nav-item">
             <NuxtLink to="/addresses" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
-              <span class="sidebar__nav-icon">📍</span>
+              <Icon name="lucide:map-pin" :size="20" class="sidebar__nav-icon" />
               <span class="sidebar__nav-text">Addresses</span>
             </NuxtLink>
           </li>
           <li class="sidebar__nav-item">
             <NuxtLink to="/coverage-nodes" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
-              <span class="sidebar__nav-icon">🗺️</span>
+              <Icon name="lucide:map" :size="20" class="sidebar__nav-icon" />
               <span class="sidebar__nav-text">Coverage Nodes</span>
+            </NuxtLink>
+          </li>
+          <li class="sidebar__nav-item">
+            <NuxtLink to="/monitoring" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
+              <Icon name="lucide:activity" :size="20" class="sidebar__nav-icon" />
+              <span class="sidebar__nav-text">Monitoring</span>
+            </NuxtLink>
+          </li>
+          <li class="sidebar__nav-item">
+            <NuxtLink to="/monitoring/alerts" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
+              <Icon name="lucide:alert-triangle" :size="20" class="sidebar__nav-icon" />
+              <span class="sidebar__nav-text">Alerts</span>
             </NuxtLink>
           </li>
         </ul>
@@ -42,13 +54,13 @@
         <ul class="sidebar__nav-list">
           <li class="sidebar__nav-item">
             <NuxtLink to="/settings" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
-              <span class="sidebar__nav-icon">⚙️</span>
+              <Icon name="lucide:settings" :size="20" class="sidebar__nav-icon" />
               <span class="sidebar__nav-text">Settings</span>
             </NuxtLink>
           </li>
           <li class="sidebar__nav-item">
             <NuxtLink to="/profile" class="sidebar__nav-link" exact-active-class="sidebar__nav-link--active">
-              <span class="sidebar__nav-icon">👤</span>
+              <Icon name="lucide:user" :size="20" class="sidebar__nav-icon" />
               <span class="sidebar__nav-text">Profile</span>
             </NuxtLink>
           </li>
@@ -65,10 +77,15 @@
         </div>
         
         <div class="top-header__right">
+          <!-- Theme Toggle -->
+          <button class="top-header__theme-toggle" @click="toggleTheme" :title="`Switch to ${nextTheme} mode`">
+            <Icon :name="actualTheme === 'dark' ? 'lucide:moon' : 'lucide:sun'" :size="20" class="top-header__theme-icon" />
+          </button>
+
           <div class="top-header__user">
-            <span class="top-header__user-name">John Doe</span>
+            <span class="top-header__user-name">{{ userName }}</span>
             <button class="top-header__user-menu" @click="toggleUserMenu">
-              <span class="top-header__user-avatar">JD</span>
+              <span class="top-header__user-avatar">{{ userInitials }}</span>
             </button>
           </div>
         </div>
@@ -83,6 +100,36 @@
 </template>
 
 <script setup lang="ts">
+import Icon from '~/components/ui/Icon.vue'
+
+// Theme management
+const { actualTheme, toggleTheme } = useTheme()
+const nextTheme = computed(() => actualTheme.value === 'dark' ? 'light' : 'dark')
+
+// Authentication
+const { profile } = useAuth()
+
+// User info from auth profile
+const userName = computed(() => {
+  if (profile.value?.firstName && profile.value?.lastName) {
+    return `${profile.value.firstName} ${profile.value.lastName}`
+  }
+  if (profile.value?.username) {
+    return profile.value.username
+  }
+  return 'Anonymous User'
+})
+
+const userInitials = computed(() => {
+  if (profile.value?.firstName && profile.value?.lastName) {
+    return `${profile.value.firstName.charAt(0)}${profile.value.lastName.charAt(0)}`.toUpperCase()
+  }
+  if (profile.value?.username) {
+    return profile.value.username.substring(0, 2).toUpperCase()
+  }
+  return 'AU'
+})
+
 // Page title based on route
 const route = useRoute()
 const pageTitle = computed(() => {
@@ -91,6 +138,8 @@ const pageTitle = computed(() => {
     '/customers': 'Customers',
     '/addresses': 'Addresses',
     '/coverage-nodes': 'Coverage Nodes',
+    '/monitoring': 'Resource Monitoring',
+    '/monitoring/alerts': 'Alert Management',
     '/settings': 'Settings',
     '/profile': 'Profile'
   }

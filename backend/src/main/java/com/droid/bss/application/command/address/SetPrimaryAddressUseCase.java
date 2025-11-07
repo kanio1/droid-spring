@@ -2,9 +2,7 @@ package com.droid.bss.application.command.address;
 
 import com.droid.bss.application.dto.address.AddressResponse;
 import com.droid.bss.application.dto.address.SetPrimaryAddressCommand;
-import com.droid.bss.domain.address.AddressEntity;
-import com.droid.bss.domain.address.AddressRepository;
-import com.droid.bss.domain.address.AddressType;
+import com.droid.bss.domain.address.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +22,10 @@ public class SetPrimaryAddressUseCase {
 
     @Transactional
     public AddressResponse handle(SetPrimaryAddressCommand command) {
-        UUID addressId = UUID.fromString(command.addressId());
+        UUID addressIdUuid = UUID.fromString(command.addressId());
+        AddressId addressId = AddressId.of(addressIdUuid);
 
-        AddressEntity address = addressRepository.findById(addressId)
+        Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("Address not found: " + command.addressId()));
 
         // Check if address is active
@@ -36,17 +35,17 @@ public class SetPrimaryAddressUseCase {
 
         // Unset primary flag from existing primary address of same type
         addressRepository.findByCustomerIdAndTypeAndIsPrimaryTrueAndDeletedAtIsNull(
-                address.getCustomer().getId(),
+                address.getCustomerId().value(),
                 address.getType()
         ).ifPresent(existing -> {
-            existing.unmarkAsPrimary();
-            addressRepository.save(existing);
+            Address unmarked = existing.unmarkAsPrimary();
+            addressRepository.save(unmarked);
         });
 
         // Set this address as primary
-        address.markAsPrimary();
+        Address marked = address.markAsPrimary();
 
-        AddressEntity saved = addressRepository.save(address);
+        Address saved = addressRepository.save(marked);
 
         return AddressResponse.from(saved);
     }

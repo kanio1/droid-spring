@@ -259,4 +259,45 @@ public class OrderItemEntity extends BaseEntity {
     public void setConfiguration(Map<String, Object> configuration) {
         this.configuration = configuration;
     }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public OrderItem toDomain() {
+        return OrderItem.restore(
+            this.getId(),
+            this.product != null ? this.product.getId() : null,
+            this.itemType,
+            this.itemCode,
+            this.itemName,
+            this.quantity,
+            this.unitPrice,
+            this.discountAmount,
+            this.taxRate,
+            this.status,
+            this.activationDate,
+            this.expiryDate,
+            this.version != null ? this.version.intValue() : 0
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static OrderItemEntity from(OrderItem orderItem) {
+        OrderItemEntity entity = new OrderItemEntity();
+        entity.setId(orderItem.getId());
+        entity.setItemType(orderItem.getItemType());
+        entity.setItemCode(orderItem.getItemCode());
+        entity.setItemName(orderItem.getItemName());
+        entity.setQuantity(orderItem.getQuantity());
+        entity.setUnitPrice(orderItem.getUnitPrice());
+        entity.setDiscountAmount(orderItem.getDiscountAmount());
+        entity.setTaxRate(orderItem.getTaxRate());
+        entity.setStatus(orderItem.getStatus());
+        entity.setActivationDate(orderItem.getActivationDate());
+        entity.setExpiryDate(orderItem.getExpiryDate());
+        // Note: order and product relationships should be set by caller
+        return entity;
+    }
 }

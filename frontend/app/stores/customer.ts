@@ -54,7 +54,7 @@ export const useCustomerStore = defineStore('customer', () => {
         ...(params.status && { status: params.status })
       }
 
-      const response = await get<CustomerListResponse>('/customers', { query })
+      const response = await get<CustomerListResponse>('/api/v1/customers', { query })
       customers.value = response.data.content
 
       pagination.page = response.data.page
@@ -82,7 +82,7 @@ export const useCustomerStore = defineStore('customer', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const response = await get<Customer>(`/customers/${id}`)
+      const response = await get<Customer>(`/api/v1/customers/${id}`)
       currentCustomer.value = response.data
       return response.data
     } catch (err: any) {
@@ -100,7 +100,7 @@ export const useCustomerStore = defineStore('customer', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { post } = useApi()
-      const response = await post<Customer>('/customers', data)
+      const response = await post<Customer>('/api/v1/customers', data)
 
       // Add to list
       customers.value.unshift(response.data)
@@ -122,7 +122,7 @@ export const useCustomerStore = defineStore('customer', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { put } = useApi()
-      const response = await put<Customer>(`/customers/${data.id}`, data)
+      const response = await put<Customer>(`/api/v1/customers/${data.id}`, data)
 
       // Update in list
       const index = customers.value.findIndex(c => c.id === data.id)
@@ -151,7 +151,7 @@ export const useCustomerStore = defineStore('customer', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { put } = useApi()
-      const response = await put<Customer>(`/customers/${data.id}/status`, data)
+      const response = await put<Customer>(`/api/v1/customers/${data.id}/status`, data)
 
       // Update in list
       const index = customers.value.findIndex(c => c.id === data.id)
@@ -180,7 +180,7 @@ export const useCustomerStore = defineStore('customer', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { del } = useApi()
-      await del(`/customers/${id}`)
+      await del(`/api/v1/customers/${id}`)
 
       // Remove from list
       const index = customers.value.findIndex(c => c.id === id)

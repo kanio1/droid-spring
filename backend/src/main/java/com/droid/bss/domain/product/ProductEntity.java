@@ -214,4 +214,47 @@ public class ProductEntity extends BaseEntity {
     public void setFeatures(List<ProductFeatureEntity> features) {
         this.features = features;
     }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public Product toDomain() {
+        return Product.restore(
+            this.getId(),
+            this.productCode,
+            this.name,
+            this.description,
+            this.productType,
+            this.category,
+            this.price,
+            this.currency,
+            this.billingPeriod,
+            this.status,
+            this.validityStart,
+            this.validityEnd,
+            this.getCreatedAt(),
+            this.getUpdatedAt(),
+            this.version != null ? this.version.intValue() : 0
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static ProductEntity from(Product product) {
+        ProductEntity entity = new ProductEntity();
+        entity.setId(product.getId().value());
+        entity.setProductCode(product.getProductCode());
+        entity.setName(product.getName());
+        entity.setDescription(product.getDescription());
+        entity.setProductType(product.getProductType());
+        entity.setCategory(product.getCategory());
+        entity.setPrice(product.getPrice());
+        entity.setCurrency(product.getCurrency());
+        entity.setBillingPeriod(product.getBillingPeriod());
+        entity.setStatus(product.getStatus());
+        entity.setValidityStart(product.getValidityStart());
+        entity.setValidityEnd(product.getValidityEnd());
+        return entity;
+    }
 }

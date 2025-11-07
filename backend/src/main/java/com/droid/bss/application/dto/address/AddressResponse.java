@@ -1,5 +1,6 @@
 package com.droid.bss.application.dto.address;
 
+import com.droid.bss.domain.address.Address;
 import com.droid.bss.domain.address.AddressEntity;
 import com.droid.bss.domain.address.AddressStatus;
 import com.droid.bss.domain.address.AddressType;
@@ -63,6 +64,36 @@ public record AddressResponse(
                 address.getCreatedAt(),
                 address.getUpdatedAt(),
                 address.getVersion()
+        );
+    }
+
+    /**
+     * Create AddressResponse from Address aggregate
+     */
+    public static AddressResponse from(Address address) {
+        return new AddressResponse(
+                address.getId().toString(),
+                address.getCustomerId().value(),
+                null, // Customer name would need to be fetched separately if needed
+                address.getType().name(),
+                address.getType().getDescription(),
+                address.getStatus().name(),
+                address.getStatus().getDescription(),
+                address.getStreet(),
+                address.getHouseNumber(),
+                address.getApartmentNumber(),
+                address.getPostalCode(),
+                address.getCity(),
+                address.getRegion(),
+                address.getCountry().name(),
+                address.getCountry().getName(),
+                address.getLatitude(),
+                address.getLongitude(),
+                address.isPrimary(),
+                address.getNotes(),
+                address.getCreatedAt(),
+                address.getUpdatedAt(),
+                (long) address.getVersion()
         );
     }
 

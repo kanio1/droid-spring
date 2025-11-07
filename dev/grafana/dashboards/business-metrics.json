@@ -1,0 +1,266 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "BSS Business Metrics",
+    "tags": ["bss", "business", "metrics", "kpi"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "New Customers (Last 24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(bss_customers_created_total[24h])",
+            "refId": "A",
+            "legendFormat": "Total"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 100},
+                {"color": "green", "value": 500}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "New Orders (Last 24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(bss_orders_created_total[24h])",
+            "refId": "A",
+            "legendFormat": "Total"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "green", "value": 200}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Invoices Generated (Last 24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(bss_invoices_created_total[24h])",
+            "refId": "A",
+            "legendFormat": "Total"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 20},
+                {"color": "green", "value": 100}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Revenue (Last 24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(bss_payments_amount_total[24h])",
+            "refId": "A",
+            "legendFormat": "Total"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "currency",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 1000},
+                {"color": "green", "value": 10000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Customer Creation Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bss_customers_created_total[5m])",
+            "refId": "A",
+            "legendFormat": "per min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}
+      },
+      {
+        "id": 6,
+        "title": "Order Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bss_orders_created_total[5m])",
+            "refId": "A",
+            "legendFormat": "Created/min"
+          },
+          {
+            "expr": "rate(bss_orders_completed_total[5m])",
+            "refId": "B",
+            "legendFormat": "Completed/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6}
+      },
+      {
+        "id": 7,
+        "title": "Order Status Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "bss_orders_by_status",
+            "refId": "A",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14}
+      },
+      {
+        "id": 8,
+        "title": "Payment Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bss_payments_completed_total[5m]) / rate(bss_payments_created_total[5m]) * 100",
+            "refId": "A",
+            "legendFormat": "Success %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 80},
+                {"color": "green", "value": 95}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14}
+      },
+      {
+        "id": 9,
+        "title": "Subscription Growth",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(bss_subscriptions_created_total[1d])",
+            "refId": "A",
+            "legendFormat": "New/day"
+          },
+          {
+            "expr": "increase(bss_subscriptions_cancelled_total[1d])",
+            "refId": "B",
+            "legendFormat": "Cancelled/day"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22}
+      },
+      {
+        "id": 10,
+        "title": "Active Subscriptions by Type",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "bss_subscriptions_active_by_type",
+            "refId": "A",
+            "legendFormat": "{{type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22}
+      },
+      {
+        "id": 11,
+        "title": "Top Products by Revenue",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, increase(bss_product_revenue_total[24h]))",
+            "refId": "A",
+            "legendFormat": "{{product}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30}
+      },
+      {
+        "id": 12,
+        "title": "Churn Rate (Daily)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(bss_subscriptions_cancelled_total[1d]) / increase(bss_subscriptions_created_total[1d]) * 100",
+            "refId": "A",
+            "legendFormat": "Churn %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30}
+      }
+    ],
+    "templating": {
+      "list": []
+    }
+  }
+}

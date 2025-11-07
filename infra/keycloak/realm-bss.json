@@ -2,7 +2,7 @@
   "realm": "bss",
   "enabled": true,
   "displayName": "BSS",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
@@ -76,6 +76,42 @@
   "roles": {
     "realm": [
       {
+        "name": "SUPER_ADMIN",
+        "description": "Super Administrator - Full system access",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "ADMIN",
+        "description": "Administrator - User and system management",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "MANAGER",
+        "description": "Manager - Business operations management",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "OPERATOR",
+        "description": "Operator - Daily operations",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "ANALYST",
+        "description": "Analyst - Reports and analytics access",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "VIEWER",
+        "description": "Viewer - Read-only access",
+        "composite": false,
+        "clientRole": false
+      },
+      {
         "name": "bss-user",
         "description": "Standard user role for BSS hello-world access",
         "composite": false,
@@ -85,6 +121,114 @@
   },
   "groups": [],
   "users": [
+    {
+      "username": "superadmin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "superadmin@bss.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "SUPER_ADMIN"
+      ]
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@bss.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ]
+    },
+    {
+      "username": "manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Manager",
+      "lastName": "User",
+      "email": "manager@bss.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "MANAGER"
+      ]
+    },
+    {
+      "username": "operator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Operator",
+      "lastName": "User",
+      "email": "operator@bss.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "OPERATOR"
+      ]
+    },
+    {
+      "username": "analyst",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Analyst",
+      "lastName": "User",
+      "email": "analyst@bss.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ANALYST"
+      ]
+    },
+    {
+      "username": "viewer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Viewer",
+      "lastName": "User",
+      "email": "viewer@bss.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "VIEWER"
+      ]
+    },
     {
       "username": "bss-user",
       "enabled": true,
@@ -128,8 +272,8 @@
     "emailTheme": "",
     "realmTheme": "",
     "loginWithEmailAllowed": true,
-    "resetPasswordAllowed": false,
-    "registrationAllowed": false,
+    "resetPasswordAllowed": true,
+    "registrationAllowed": true,
     "registrationEmailAsUsername": false,
     "adminEventsEnabled": false,
     "adminEventsDetailsEnabled": false,

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        .stat-card h3 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-card .change {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .stat-card .change.positive {
+            color: #10b981;
+        }
+
+        .stat-card .change.negative {
+            color: #ef4444;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .chart-card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .table-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .table-section h2 {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 1.25rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f9fafb;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.passed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge.failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge.skipped {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .badge.critical {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .filter-bar select:focus,
+        .filter-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Test Analytics Dashboard</h1>
+        <p>Real-time test metrics, trends, and insights</p>
+    </div>
+
+    <div class="container">
+        <div class="filter-bar">
+            <select id="testSuiteFilter">
+                <option value="all">All Test Suites</option>
+                <option value="smoke">Smoke Tests</option>
+                <option value="regression">Regression Tests</option>
+                <option value="security">Security Tests</option>
+                <option value="resilience">Resilience Tests</option>
+            </select>
+
+            <select id="timeRangeFilter">
+                <option value="7">Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
+
+            <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Tests</h3>
+                <div class="value" id="totalTests">0</div>
+                <div class="change" id="totalTestsChange">-</div>
+            </div>
+
+            <div class="stat-card">
+                <h3>Pass Rate</h3>
+                <div class="value" id="passRate">0%</div>
+                <div class="change" id="passRateChange">-</div>
+            </div>
+
+            <div class="stat-card">
+                <h3>Avg Duration</h3>
+                <div class="value" id="avgDuration">0s</div>
+                <div class="change" id="avgDurationChange">-</div>
+            </div>
+
+            <div class="stat-card">
+                <h3>Flaky Tests</h3>
+                <div class="value" id="flakyTests">0</div>
+                <div class="change" id="flakyTestsChange">-</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>Test Results Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="resultsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h2>Pass Rate Trend</h2>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h2>Tests by Severity</h2>
+                <div class="chart-container">
+                    <canvas id="severityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h2>Test Suite Performance</h2>
+                <div class="chart-container">
+                    <canvas id="suiteChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <h2>Recent Test Executions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test Name</th>
+                        <th>Suite</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>Severity</th>
+                        <th>Owner</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="recentTests">
+                    <tr>
+                        <td colspan="7" class="loading">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Test Analytics Dashboard | Auto-refreshes every 5 minutes | Last updated: <span id="lastUpdated">-</span></p>
+    </div>
+
+    <script>
+        // Simulated test data
+        const generateMockData = () => {
+            const suites = ['smoke', 'regression', 'security', 'resilience', 'contract'];
+            const severities = ['critical', 'normal', 'minor'];
+            const statuses = ['passed', 'failed', 'skipped'];
+            const owners = ['QA Team', 'Dev Team', 'Security Team', 'SRE Team'];
+
+            const data = [];
+            for (let i = 0; i < 100; i++) {
+                data.push({
+                    name: `Test ${i + 1}: ${['User Login', 'Customer CRUD', 'Payment Processing', 'API Validation', 'Security Scan'][i % 5]}`,
+                    suite: suites[Math.floor(Math.random() * suites.length)],
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    duration: Math.floor(Math.random() * 30) + 1,
+                    severity: severities[Math.floor(Math.random() * severities.length)],
+                    owner: owners[Math.floor(Math.random() * owners.length)],
+                    date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
+                });
+            }
+            return data;
+        };
+
+        let testData = generateMockData();
+
+        function updateDashboard() {
+            // Update stats
+            const passed = testData.filter(t => t.status === 'passed').length;
+            const failed = testData.filter(t => t.status === 'failed').length;
+            const skipped = testData.filter(t => t.status === 'skipped').length;
+            const total = testData.length;
+            const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
+            const avgDuration = total > 0 ? (testData.reduce((sum, t) => sum + t.duration, 0) / total).toFixed(1) : 0;
+
+            document.getElementById('totalTests').textContent = total;
+            document.getElementById('totalTestsChange').textContent = '+5 from last week';
+            document.getElementById('totalTestsChange').className = 'change positive';
+
+            document.getElementById('passRate').textContent = passRate + '%';
+            document.getElementById('passRateChange').textContent = '+2.3% from last week';
+            document.getElementById('passRateChange').className = 'change positive';
+
+            document.getElementById('avgDuration').textContent = avgDuration + 's';
+            document.getElementById('avgDurationChange').textContent = '-1.2s from last week';
+            document.getElementById('avgDurationChange').className = 'change positive';
+
+            const flaky = testData.filter(t => t.status === 'failed').length;
+            document.getElementById('flakyTests').textContent = flaky;
+            document.getElementById('flakyTestsChange').textContent = flaky > 0 ? '-3 from last week' : 'No flaky tests';
+            document.getElementById('flakyTestsChange').className = 'change ' + (flaky > 0 ? 'negative' : 'positive');
+
+            // Update charts
+            updateResultsChart(passed, failed, skipped);
+            updateTrendChart();
+            updateSeverityChart();
+            updateSuiteChart();
+
+            // Update table
+            updateRecentTests();
+
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        }
+
+        function updateResultsChart(passed, failed, skipped) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Passed', 'Failed', 'Skipped'],
+                    datasets: [{
+                        data: [passed, failed, skipped],
+                        backgroundColor: [
+                            '#10b981',
+                            '#ef4444',
+                            '#e5e7eb'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const dates = [];
+            const passRates = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+                // Simulate pass rate for each day
+                passRates.push((Math.random() * 20 + 80).toFixed(1));
+            }
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Pass Rate %',
+                        data: passRates,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 70,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSeverityChart() {
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            const critical = testData.filter(t => t.severity === 'critical').length;
+            const normal = testData.filter(t => t.severity === 'normal').length;
+            const minor = testData.filter(t => t.severity === 'minor').length;
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'Normal', 'Minor'],
+                    datasets: [{
+                        label: 'Tests',
+                        data: [critical, normal, minor],
+                        backgroundColor: [
+                            '#f59e0b',
+                            '#10b981',
+                            '#3b82f6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSuiteChart() {
+            const ctx = document.getElementById('suiteChart').getContext('2d');
+            const suites = ['smoke', 'regression', 'security', 'resilience', 'contract'];
+            const passRates = suites.map(suite => {
+                const suiteTests = testData.filter(t => t.suite === suite);
+                if (suiteTests.length === 0) return 0;
+                const passed = suiteTests.filter(t => t.status === 'passed').length;
+                return ((passed / suiteTests.length) * 100).toFixed(1);
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: suites.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                    datasets: [{
+                        label: 'Pass Rate %',
+                        data: passRates,
+                        backgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRecentTests() {
+            const tbody = document.getElementById('recentTests');
+            tbody.innerHTML = '';
+
+            const recent = testData.slice(0, 20);
+
+            recent.forEach(test => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${test.name}</td>
+                    <td>${test.suite}</td>
+                    <td><span class="badge ${test.status}">${test.status}</span></td>
+                    <td>${test.duration}s</td>
+                    <td><span class="badge ${test.severity}">${test.severity}</span></td>
+                    <td>${test.owner}</td>
+                    <td>${test.date.toLocaleDateString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function refreshDashboard() {
+            testData = generateMockData();
+            updateDashboard();
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(refreshDashboard, 5 * 60 * 1000);
+
+        // Initial load
+        updateDashboard();
+    </script>
+</body>
+</html>

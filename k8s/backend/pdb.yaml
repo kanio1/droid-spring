@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bss-backend-pdb
+  namespace: bss
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: bss-backend

@@ -9,8 +9,10 @@ import com.droid.bss.application.dto.subscription.ChangeSubscriptionStatusComman
 import com.droid.bss.application.dto.subscription.CreateSubscriptionCommand;
 import com.droid.bss.application.dto.subscription.SubscriptionResponse;
 import com.droid.bss.application.dto.subscription.UpdateSubscriptionCommand;
+import com.droid.bss.domain.audit.AuditAction;
 import com.droid.bss.domain.subscription.SubscriptionEntity;
 import com.droid.bss.domain.subscription.repository.SubscriptionRepository;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -75,6 +77,7 @@ public class SubscriptionController {
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.SUBSCRIPTION_CREATE, entityType = "Subscription", description = "Creating new subscription")
     public ResponseEntity<SubscriptionResponse> createSubscription(
             @Valid @RequestBody CreateSubscriptionCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -266,6 +269,7 @@ public class SubscriptionController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.SUBSCRIPTION_UPDATE, entityType = "Subscription", description = "Updating subscription {id}")
     public ResponseEntity<SubscriptionResponse> updateSubscription(
             @Parameter(description = "Subscription ID", required = true) @PathVariable String id,
             @Valid @RequestBody UpdateSubscriptionCommand command
@@ -298,6 +302,7 @@ public class SubscriptionController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.SUBSCRIPTION_UPDATE, entityType = "Subscription", description = "Changing status for subscription {id}")
     public ResponseEntity<SubscriptionResponse> changeSubscriptionStatus(
             @Parameter(description = "Subscription ID", required = true) @PathVariable String id,
             @Valid @RequestBody ChangeSubscriptionStatusCommand command
@@ -338,6 +343,7 @@ public class SubscriptionController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.SUBSCRIPTION_DELETE, entityType = "Subscription", description = "Deleting subscription {id}")
     public ResponseEntity<Void> deleteSubscription(
             @Parameter(description = "Subscription ID", required = true) @PathVariable String id
     ) {

@@ -1,0 +1,206 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "BSS Kafka & Messaging",
+    "tags": ["bss", "kafka", "messaging", "events"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Message Rate (per second)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_consumer_fetch_message_consumed_total[5m])) by (topic)",
+            "refId": "A",
+            "legendFormat": "{{topic}} - Consumer"
+          },
+          {
+            "expr": "sum(rate(kafka_producer_message_send_total[5m])) by (topic)",
+            "refId": "B",
+            "legendFormat": "{{topic}} - Producer"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Consumer Lag",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(kafka_consumer_lag_sum) by (topic, partition)",
+            "refId": "A",
+            "legendFormat": "{{topic}}-{{partition}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Throughput (bytes/sec)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_consumer_fetch_message_consumed_total[5m]) * on(topic) group_left() kafka_topic_partition_size_bytes) by (topic)",
+            "refId": "A",
+            "legendFormat": "{{topic}} - Consumer"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Failed Messages",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_consumer_fetch_message_errors_total[5m])) by (topic)",
+            "refId": "A",
+            "legendFormat": "{{topic}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Partition Count per Topic",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kafka_topic_partitions",
+            "refId": "A",
+            "legendFormat": "{{topic}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Replication Factor",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kafka_topic_replication_factor",
+            "refId": "A",
+            "legendFormat": "{{topic}}"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Offline Partitions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kafka_controller_kafkacontroller_offline_partitions_count",
+            "refId": "A",
+            "legendFormat": "Offline"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "Under Replicated Partitions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kafka_controller_kafkacontroller_under_replicated_partitions",
+            "refId": "A",
+            "legendFormat": "URP"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 16}
+      },
+      {
+        "id": 9,
+        "title": "Brokers Online",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "kafka_controller_kafkacontroller_active_controller_count",
+            "refId": "A",
+            "legendFormat": "Controllers"
+          },
+          {
+            "expr": "sum(kafka_brokers)",
+            "refId": "B",
+            "legendFormat": "Total Brokers"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22}
+      },
+      {
+        "id": 10,
+        "title": "ZooKeeper Status",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "zookeeper_ruok",
+            "refId": "A",
+            "legendFormat": "{{instance}} - OK"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "topic",
+          "type": "query",
+          "query": "label_values(kafka_consumer_lag_sum, topic)",
+          "multi": true
+        }
+      ]
+    }
+  }
+}

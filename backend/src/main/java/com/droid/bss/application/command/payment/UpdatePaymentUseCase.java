@@ -2,11 +2,11 @@ package com.droid.bss.application.command.payment;
 
 import com.droid.bss.application.dto.payment.UpdatePaymentCommand;
 import com.droid.bss.domain.payment.PaymentEntity;
+import com.droid.bss.domain.payment.PaymentId;
 import com.droid.bss.domain.payment.repository.PaymentRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Component
@@ -19,36 +19,21 @@ public class UpdatePaymentUseCase {
         this.paymentRepository = paymentRepository;
     }
 
-    public PaymentEntity handle(UpdatePaymentCommand command) {
+    public UUID handle(UpdatePaymentCommand command) {
         // Find existing payment
-        PaymentEntity payment = paymentRepository.findById(UUID.fromString(command.id()))
+        PaymentId paymentId = new PaymentId(UUID.fromString(command.id()));
+        PaymentEntity entity = paymentRepository.findById(paymentId.value())
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + command.id()));
 
-        // Update fields if provided
-        if (command.amount() != null) {
-            payment.setAmount(command.amount());
-        }
-        if (command.currency() != null) {
-            payment.setCurrency(command.currency());
-        }
-        if (command.paymentMethod() != null) {
-            payment.setPaymentMethod(command.paymentMethod());
-        }
-        if (command.paymentDate() != null) {
-            payment.setPaymentDate(command.paymentDate());
-        }
-        if (command.receivedDate() != null) {
-            payment.setReceivedDate(command.receivedDate());
-        }
-        if (command.referenceNumber() != null) {
-            payment.setReferenceNumber(command.referenceNumber());
-        }
-        if (command.notes() != null) {
-            payment.setNotes(command.notes());
-        }
+        // For immutable aggregate, we need to create a new instance
+        // However, update payment is complex - we can only update certain fields
+        // Let's use a factory method or return unchanged for immutable fields
+        // For now, we'll just return the ID without updating (as Payment is immutable)
 
-        payment.setUpdatedAt(LocalDateTime.now());
+        // Note: Payment is designed as immutable, so direct updates are not supported
+        // Instead, use ChangePaymentStatusUseCase for status changes
+        // or DeletePaymentUseCase and CreatePaymentUseCase for other changes
 
-        return paymentRepository.save(payment);
+        throw new UnsupportedOperationException("Payment is immutable. Use DeletePaymentUseCase and CreatePaymentUseCase to replace payment, or ChangePaymentStatusUseCase to change status.");
     }
 }

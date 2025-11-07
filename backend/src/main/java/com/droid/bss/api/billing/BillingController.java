@@ -6,7 +6,9 @@ import com.droid.bss.application.command.billing.StartBillingCycleUseCase;
 import com.droid.bss.application.dto.billing.IngestUsageRecordCommand;
 import com.droid.bss.application.dto.billing.StartBillingCycleCommand;
 import com.droid.bss.application.dto.billing.UsageRecordResponse;
+import com.droid.bss.domain.audit.AuditAction;
 import com.droid.bss.domain.billing.*;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.micrometer.core.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -59,6 +61,7 @@ public class BillingController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.billing.api.ingest_usage_record", description = "Time to ingest a usage record")
+    @Audited(action = AuditAction.BILLING_CREATE, entityType = "UsageRecord", description = "Ingesting usage record")
     public ResponseEntity<UsageRecordResponse> ingestUsageRecord(
             @Valid @RequestBody IngestUsageRecordCommand command
     ) {
@@ -94,6 +97,7 @@ public class BillingController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
     @Timed(value = "bss.billing.api.start_billing_cycle", description = "Time to start a billing cycle")
+    @Audited(action = AuditAction.BILLING_CREATE, entityType = "BillingCycle", description = "Starting billing cycle")
     public ResponseEntity<BillingCycleEntity> startBillingCycle(
             @Valid @RequestBody StartBillingCycleCommand command
     ) {
@@ -112,6 +116,7 @@ public class BillingController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
     @Timed(value = "bss.billing.api.process_billing_cycle", description = "Time to process a billing cycle")
+    @Audited(action = AuditAction.BILLING_UPDATE, entityType = "BillingCycle", description = "Processing billing cycle {cycleId}")
     public ResponseEntity<BillingCycleEntity> processBillingCycle(
             @Parameter(description = "Billing cycle ID", required = true) @PathVariable String cycleId
     ) {

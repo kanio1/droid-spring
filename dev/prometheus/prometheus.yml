@@ -43,6 +43,14 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 30s
 
+  # Kafka Metrics & Lag Monitoring
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
   # Tempo Metrics
   - job_name: 'tempo'
     static_configs:

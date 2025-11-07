@@ -309,4 +309,55 @@ public class AddressEntity extends BaseEntity {
                 ", isPrimary=" + isPrimary +
                 '}';
     }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public Address toDomain() {
+        return Address.restore(
+            this.getId(),
+            this.customer != null ? this.customer.getId() : null,
+            this.type,
+            this.status,
+            this.street,
+            this.houseNumber,
+            this.apartmentNumber,
+            this.postalCode,
+            this.city,
+            this.region,
+            this.country,
+            this.latitude,
+            this.longitude,
+            this.isPrimary != null && this.isPrimary,
+            this.notes,
+            this.getCreatedAt(),
+            this.getUpdatedAt(),
+            this.getVersion() != null ? this.getVersion().intValue() : 0
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static AddressEntity from(Address address) {
+        AddressEntity entity = new AddressEntity();
+        entity.setId(address.getId().value());
+        entity.setType(address.getType());
+        entity.setStatus(address.getStatus());
+        entity.setStreet(address.getStreet());
+        entity.setHouseNumber(address.getHouseNumber());
+        entity.setApartmentNumber(address.getApartmentNumber());
+        entity.setPostalCode(address.getPostalCode());
+        entity.setCity(address.getCity());
+        entity.setRegion(address.getRegion());
+        entity.setCountry(address.getCountry());
+        entity.setLatitude(address.getLatitude());
+        entity.setLongitude(address.getLongitude());
+        entity.setIsPrimary(address.isPrimary());
+        entity.setNotes(address.getNotes());
+        entity.setCreatedAt(address.getCreatedAt());
+        entity.setUpdatedAt(address.getUpdatedAt());
+        // Note: deletedAt should be set separately for soft delete
+        return entity;
+    }
 }

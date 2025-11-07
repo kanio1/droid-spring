@@ -27,14 +27,15 @@ public class UpdateAddressUseCase {
 
     @Transactional
     public AddressResponse handle(UpdateAddressCommand command) {
-        UUID addressId = UUID.fromString(command.id());
+        UUID addressIdUuid = UUID.fromString(command.id());
+        AddressId addressId = AddressId.of(addressIdUuid);
 
         // Find existing address
-        AddressEntity address = addressRepository.findById(addressId)
+        Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("Address not found: " + command.id()));
 
         // Check version for optimistic locking
-        if (!address.getVersion().equals(command.version())) {
+        if (address.getVersion() != command.version()) {
             throw new RuntimeException("Address has been modified by another user");
         }
 
@@ -59,21 +60,22 @@ public class UpdateAddressUseCase {
                     });
         }
 
-        // Update address fields
-        address.setCustomer(com.droid.bss.domain.customer.CustomerEntity.from(customer));
-        address.setType(type);
-        address.setStreet(command.street());
-        address.setHouseNumber(command.getHouseNumber().orElse(null));
-        address.setApartmentNumber(command.getApartmentNumber().orElse(null));
-        address.setPostalCode(command.postalCode());
-        address.setCity(command.city());
-        address.setRegion(command.getRegion().orElse(null));
-        address.setCountry(country);
-        address.setLatitude(command.getLatitude().orElse(null));
-        address.setLongitude(command.getLongitude().orElse(null));
-        address.setIsPrimary(command.isPrimary());
+        // Update address using immutable pattern
+        Address updated = address.updateAddress(
+                command.street(),
+                command.getHouseNumber().orElse(null),
+                command.getApartmentNumber().orElse(null),
+                command.postalCode(),
+                command.city(),
+                command.getRegion().orElse(null),
+                country,
+                command.getLatitude().orElse(null),
+                command.getLongitude().orElse(null),
+                command.getNotes().orElse(null)
+        );
 
-        AddressEntity saved = addressRepository.save(address);
+        // Save and return
+        Address saved = addressRepository.save(updated);
 
         return AddressResponse.from(saved);
     }

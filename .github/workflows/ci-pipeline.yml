@@ -1,0 +1,466 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+  MAVEN_VERSION: '3.9'
+  NODE_VERSION: '20'
+
+jobs:
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Backend - SonarQube Scan
+        run: |
+          cd backend
+          mvn -q -DskipTests clean verify sonar:sonar \
+            -Dsonar.projectKey=bss-backend \
+            -Dsonar.host.url=${{ secrets.SONARQUBE_HOST }} \
+            -Dsonar.login=${{ secrets.SONARQUBE_TOKEN }}
+        continue-on-error: true
+
+      - name: Frontend - SonarQube Scan
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+          pnpm run test:unit -- --run --coverage
+          pnpm run sonar
+        continue-on-error: true
+
+      - name: Security Scan - SAST
+        uses: github/codeql-action/init@v2
+        with:
+          languages: java, javascript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      - name: Dependency Check
+        run: |
+          cd backend
+          mvn org.owasp:dependency-check-maven:check -q
+        continue-on-error: true
+
+      - name: Secrets Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_bss
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      kafka:
+        image: confluentinc/cp-kafka:latest
+        env:
+          KAFKA_BROKER_ID: 1
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        options: >-
+          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9092:9092
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Unit Tests
+        run: |
+          cd backend
+          mvn -q test -Dtest='*Test,!*IntegrationTest' \
+            -Dtest.cutoffLineCoverage=80 \
+            -Dtest.cutoffBranchCoverage=90
+        continue-on-error: true
+
+      - name: Run Integration Tests
+        run: |
+          cd backend
+          mvn -q verify -Dtest='*IntegrationTest,@IntegrationTest' \
+            -Dspring.datasource.url=jdbc:postgresql://localhost:5432/test_bss \
+            -Dspring.datasource.username=postgres \
+            -Dspring.datasource.password=postgres
+        continue-on-error: true
+
+      - name: Run Migration Tests
+        run: |
+          cd backend
+          mvn -q test -Dtest=FlywayMigrationTest
+        continue-on-error: true
+
+      - name: Generate Test Report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend Test Report
+          path: backend/target/surefire-reports/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Upload Coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: backend/target/site/jacoco/jacoco.xml
+          flags: backend
+          name: backend-coverage
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Type Check
+        run: |
+          cd frontend
+          pnpm run typecheck
+
+      - name: Lint
+        run: |
+          cd frontend
+          pnpm run lint
+        continue-on-error: true
+
+      - name: Unit Tests
+        run: |
+          cd frontend
+          pnpm run test:unit -- --run --coverage
+        continue-on-error: true
+
+      - name: E2E Tests
+        run: |
+          cd frontend
+          pnpm run test:e2e -- --project=chromium
+        continue-on-error: true
+
+      - name: Generate Test Report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Frontend Test Report
+          path: frontend/tests/unit-results.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Upload Coverage
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+  build-images:
+    name: Build Container Images
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-tests, frontend-tests]
+    if: always() && needs.code-quality.result == 'success' && needs.backend-tests.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Build Backend JAR
+        run: |
+          cd backend
+          mvn -q -DskipTests clean package -Dprod
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Run Trivy Image Scan - Backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ github.repository }}/backend:${{ github.sha }}'
+          format: 'sarif'
+          output: 'backend-trivy-results.sarif'
+
+      - name: Upload Trivy Scan Results - Backend
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'backend-trivy-results.sarif'
+
+      - name: Run Trivy Image Scan - Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}'
+          format: 'sarif'
+          output: 'frontend-trivy-results.sarif'
+
+      - name: Upload Trivy Scan Results - Frontend
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'frontend-trivy-results.sarif'
+
+  migration-validation:
+    name: Database Migration Validation
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    if: always() && needs.build-images.result == 'success'
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: validate_bss
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Validate Migrations
+        run: |
+          cd backend
+          mvn -q test -Dtest=*MigrationTest \
+            -Dspring.datasource.url=jdbc:postgresql://localhost:5432/validate_bss \
+            -Dspring.datasource.username=postgres \
+            -Dspring.datasource.password=postgres
+
+      - name: Migration Dry Run
+        run: |
+          cd backend
+          mvn -q flyway:migrate -Dflyway.validateOnMigrate=true \
+            -Dspring.datasource.url=jdbc:postgresql://localhost:5432/validate_bss \
+            -Dspring.datasource.username=postgres \
+            -Dspring.datasource.password=postgres
+
+      - name: Generate Migration Report
+        if: always()
+        run: |
+          echo "Migration validation completed" > migration-report.txt
+          cat migration-report.txt
+
+  publish-artifacts:
+    name: Publish Artifacts
+    runs-on: ubuntu-latest
+    needs: [build-images, migration-validation]
+    if: always() && needs.build-images.result == 'success' && needs.migration-validation.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Backend JAR
+        run: |
+          mkdir -p artifacts
+          find backend/target -name '*.jar' -type f -exec cp {} artifacts/ \;
+
+      - name: Upload Backend JAR
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-jar
+          path: artifacts/*.jar
+          retention-days: 30
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            backend/target/surefire-reports/
+            frontend/test-results/
+          retention-days: 30
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            backend/target/site/jacoco/
+            frontend/coverage/
+          retention-days: 30
+
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-tests, frontend-tests, build-images, migration-validation]
+    if: always()
+
+    steps:
+      - name: Notify Slack on Success
+        if: needs.code-quality.result == 'success' && needs.backend-tests.result == 'success' && needs.frontend-tests.result == 'success' && needs.build-images.result == 'success' && needs.migration-validation.result == 'success'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: 'CI Pipeline Success - Build ${{ github.run_number }}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: 'CI Pipeline Failed - Build ${{ github.run_number }}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

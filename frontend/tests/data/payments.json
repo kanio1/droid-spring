@@ -1,0 +1,39 @@
+[
+  {
+    "id": "pay-001",
+    "invoiceId": "inv-001",
+    "customerId": "cust-001",
+    "amount": 32.39,
+    "currency": "USD",
+    "method": "credit_card",
+    "status": "completed",
+    "transactionId": "txn_abc123",
+    "processedAt": "2024-01-16T10:30:00Z",
+    "createdAt": "2024-01-15T11:00:00Z"
+  },
+  {
+    "id": "pay-002",
+    "invoiceId": "inv-002",
+    "customerId": "cust-002",
+    "amount": 64.79,
+    "currency": "USD",
+    "method": "bank_transfer",
+    "status": "processing",
+    "transactionId": "txn_def456",
+    "processedAt": null,
+    "createdAt": "2024-01-16T12:00:00Z"
+  },
+  {
+    "id": "pay-003",
+    "invoiceId": "inv-003",
+    "customerId": "cust-004",
+    "amount": 215.99,
+    "currency": "USD",
+    "method": "credit_card",
+    "status": "failed",
+    "transactionId": "txn_ghi789",
+    "processedAt": "2024-01-20T15:30:00Z",
+    "createdAt": "2024-01-20T15:00:00Z",
+    "failureReason": "Insufficient funds"
+  }
+]

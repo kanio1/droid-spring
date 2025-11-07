@@ -1,0 +1,126 @@
+# Proxmox VM Inventory for BSS Load Testing Environment
+# Format: VM_ID,VM_Name,Node,Template,VCPU,RAM_GB,Disk_GB,Network,Bridge,Notes,Role
+# Load Testing Cluster Configuration (1K, 10K, 1M Events)
+
+# =============================================================================
+# INFRASTRUCTURE VMs
+# =============================================================================
+
+# Load Balancer
+100,bss-lb-prod,pve-node1,no,8,8,100,virtio,vmbr0,HAProxy + Keepalived,LoadBalancer
+
+# Database Cluster
+110,bss-db-master,pve-node1,no,16,64,500, virtio,vmbr0,PostgreSQL 18 Master + Citus,DatabaseMaster
+111,bss-db-replica-1,pve-node2,no,12,48,500, virtio,vmbr0,PostgreSQL 18 Replica 1,DatabaseReplica
+112,bss-db-replica-2,pve-node3,no,12,48,500, virtio,vmbr0,PostgreSQL 18 Replica 2,DatabaseReplica
+113,bss-db-coord,pve-node1,no,8,32,200, virtio,vmbr0,Citus Coordinator,DatabaseCoordinator
+114,bss-citus-worker-1,pve-node2,no,8,32,200, virtio,vmbr0,Citus Worker 1,DatabaseWorker
+115,bss-citus-worker-2,pve-node3,no,8,32,200, virtio,vmbr0,Citus Worker 2,DatabaseWorker
+
+# Cache Layer
+120,bss-redis-cluster-1,pve-node1,no,4,16,100, virtio,vmbr0,Redis Cluster Node 1,CacheNode
+121,bss-redis-cluster-2,pve-node2,no,4,16,100, virtio,vmbr0,Redis Cluster Node 2,CacheNode
+122,bss-redis-cluster-3,pve-node3,no,4,16,100, virtio,vmbr0,Redis Cluster Node 3,CacheNode
+
+# =============================================================================
+# APPLICATION TIERS - Development/Testing (1K events)
+# =============================================================================
+
+# API Gateway
+200,bss-gateway-dev,pve-node1,no,4,8,100, virtio,vmbr0,Traefik Gateway (Dev),APIGateway
+
+# Backend Services
+210,bss-backend-1-dev,pve-node1,no,8,16,200, virtio,vmbr0,Spring Boot Backend 1,BackendService
+211,bss-backend-2-dev,pve-node2,no,8,16,200, virtio,vmbr0,Spring Boot Backend 2,BackendService
+
+# Message Queue
+220,bss-kafka-1-dev,pve-node1,no,6,16,200, virtio,vmbr0,Kafka Broker 1,KafkaBroker
+221,bss-kafka-2-dev,pve-node2,no,6,16,200, virtio,vmbr0,Kafka Broker 2,KafkaBroker
+222,bss-kafka-3-dev,pve-node3,no,6,16,200, virtio,vmbr0,Kafka Broker 3,KafkaBroker
+223,bss-zookeeper-dev,pve-node1,no,4,8,50,  virtio,vmbr0,ZooKeeper Ensemble,ZooKeeper
+
+# Monitoring
+230,bss-prometheus,pve-node1,no,4,8,200, virtio,vmbr0,Prometheus + AlertManager,Monitoring
+231,bss-grafana,pve-node1,no,2,4,50,  virtio,vmbr0,Grafana Dashboards,Monitoring
+232,bss-jaeger,pve-node2,no,4,8,100, virtio,vmbr0,Jaeger Tracing,Tracing
+233,bss-tempo,pve-node2,no,4,8,200, virtio,vmbr0,Tempo Metrics Backend,Metrics
+234,bss-loki,pve-node3,no,4,8,200, virtio,vmbr0,Loki Log Aggregation,Logging
+
+# =============================================================================
+# APPLICATION TIERS - Staging (10K events)
+# =============================================================================
+
+# API Gateway
+300,bss-gateway-stage,pve-node2,no,6,12,150, virtio,vmbr0,Traefik Gateway (Staging),APIGateway
+
+# Backend Services
+310,bss-backend-1-stage,pve-node1,no,12,24,300, virtio,vmbr0,Spring Boot Backend 1,BackendService
+311,bss-backend-2-stage,pve-node2,no,12,24,300, virtio,vmbr0,Spring Boot Backend 2,BackendService
+312,bss-backend-3-stage,pve-node3,no,12,24,300, virtio,vmbr0,Spring Boot Backend 3,BackendService
+
+# Message Queue
+320,bss-kafka-1-stage,pve-node1,no,8,24,300, virtio,vmbr0,Kafka Broker 1,KafkaBroker
+321,bss-kafka-2-stage,pve-node2,no,8,24,300, virtio,vmbr0,Kafka Broker 2,KafkaBroker
+322,bss-kafka-3-stage,pve-node3,no,8,24,300, virtio,vmbr0,Kafka Broker 3,KafkaBroker
+323,bss-zookeeper-stage,pve-node1,no,6,12,100, virtio,vmbr0,ZooKeeper Ensemble,ZooKeeper
+
+# Monitoring
+330,bss-prometheus-stage,pve-node2,no,6,12,300, virtio,vmbr0,Prometheus + AlertManager,Monitoring
+331,bss-grafana-stage,pve-node2,no,4,8,100,  virtio,vmbr0,Grafana Dashboards,Monitoring
+332,bss-jaeger-stage,pve-node3,no,6,12,150, virtio,vmbr0,Jaeger Tracing,Tracing
+333,bss-tempo-stage,pve-node3,no,6,12,300, virtio,vmbr0,Tempo Metrics Backend,Metrics
+334,bss-loki-stage,pve-node1,no,6,12,300, virtio,vmbr0,Loki Log Aggregation,Logging
+
+# =============================================================================
+# APPLICATION TIERS - Production (100K-1M events)
+# =============================================================================
+
+# API Gateway
+400,bss-gateway-prod,pve-node1,no,12,16,200, virtio,vmbr0,Traefik Gateway (HA),APIGateway
+
+# Backend Services
+410,bss-backend-1-prod,pve-node1,no,16,32,500, virtio,vmbr0,Spring Boot Backend 1,BackendService
+411,bss-backend-2-prod,pve-node2,no,16,32,500, virtio,vmbr0,Spring Boot Backend 2,BackendService
+412,bss-backend-3-prod,pve-node3,no,16,32,500, virtio,vmbr0,Spring Boot Backend 3,BackendService
+413,bss-backend-4-prod,pve-node1,no,16,32,500, virtio,vmbr0,Spring Boot Backend 4,BackendService
+414,bss-backend-5-prod,pve-node2,no,16,32,500, virtio,vmbr0,Spring Boot Backend 5,BackendService
+415,bss-backend-6-prod,pve-node3,no,16,32,500, virtio,vmbr0,Spring Boot Backend 6,BackendService
+
+# Message Queue
+420,bss-kafka-1-prod,pve-node1,no,12,32,500, virtio,vmbr0,Kafka Broker 1,KafkaBroker
+421,bss-kafka-2-prod,pve-node2,no,12,32,500, virtio,vmbr0,Kafka Broker 2,KafkaBroker
+422,bss-kafka-3-prod,pve-node3,no,12,32,500, virtio,vmbr0,Kafka Broker 3,KafkaBroker
+423,bss-kafka-4-prod,pve-node1,no,12,32,500, virtio,vmbr0,Kafka Broker 4 (Expansion),KafkaBroker
+424,bss-kafka-5-prod,pve-node2,no,12,32,500, virtio,vmbr0,Kafka Broker 5 (Expansion),KafkaBroker
+425,bss-zookeeper-prod,pve-node1,no,8,16,200, virtio,vmbr0,ZooKeeper Ensemble,ZooKeeper
+
+# Monitoring
+430,bss-prometheus-prod,pve-node2,no,8,16,500, virtio,vmbr0,Prometheus + AlertManager,Monitoring
+431,bss-grafana-prod,pve-node2,no,6,12,200,  virtio,vmbr0,Grafana Dashboards,Monitoring
+432,bss-jaeger-prod,pve-node3,no,8,16,300, virtio,vmbr0,Jaeger Tracing,Tracing
+433,bss-tempo-prod,pve-node3,no,8,16,500, virtio,vmbr0,Tempo Metrics Backend,Metrics
+434,bss-loki-prod,pve-node1,no,8,16,500, virtio,vmbr0,Loki Log Aggregation,Logging
+
+# =============================================================================
+# TESTING & MONITORING
+# =============================================================================
+
+# Load Testing
+500,bss-k6-runner-1,pve-node1,no,8,16,100, virtio,vmbr0,K6 Load Test Runner 1,LoadTester
+501,bss-k6-runner-2,pve-node2,no,8,16,100, virtio,vmbr0,K6 Load Test Runner 2,LoadTester
+502,bss-k6-runner-3,pve-node3,no,8,16,100, virtio,vmbr0,K6 Load Test Runner 3,LoadTester
+
+# Performance Monitoring
+510,bss-perf-monitor,pve-node1,no,4,8,100, virtio,vmbr0,Performance Monitoring,PerfMonitor
+
+# =============================================================================
+# DEVELOPMENT & ADMINISTRATION
+# =============================================================================
+
+# CI/CD
+600,bss-jenkins,pve-node1,no,4,8,200, virtio,vmbr0,Jenkins CI/CD Server,CIServer
+601,bss-nexus,pve-node2,no,4,8,200, virtio,vmbr0,Nexus Repository,ArtifactRepo
+
+# Management
+610,bss-admin,pve-node3,no,2,4,50,  virtio,vmbr0,Administration VM,AdminVM
+611,bss-backup,pve-node1,no,4,16,1000,virtio,vmbr0,Backup Storage Server,BackupServer

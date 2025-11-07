@@ -79,6 +79,7 @@ public record PaymentResponse(
             case COMPLETED -> "Zakończone";
             case FAILED -> "Nieudane";
             case REFUNDED -> "Zwrócone";
+            case CANCELLED -> "Anulowane";
         };
     }
 }

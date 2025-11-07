@@ -288,4 +288,55 @@ public class PaymentEntity extends BaseEntity {
     public void setDeletedAt(LocalDate deletedAt) {
         this.deletedAt = deletedAt;
     }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public Payment toDomain() {
+        return Payment.restore(
+            this.id,
+            this.paymentNumber,
+            this.customer != null ? this.customer.getId() : null,
+            this.invoice != null ? this.invoice.getId() : null,
+            this.amount,
+            this.currency,
+            this.paymentMethod,
+            this.paymentStatus,
+            this.transactionId,
+            this.gateway,
+            this.paymentDate,
+            this.receivedDate,
+            this.referenceNumber,
+            this.notes,
+            this.reversalReason,
+            this.createdAt,
+            this.updatedAt,
+            this.version != null ? this.version.intValue() : 0
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static PaymentEntity from(Payment payment) {
+        PaymentEntity entity = new PaymentEntity();
+        entity.id = payment.id().value();
+        entity.paymentNumber = payment.paymentNumber();
+        // Note: Customer and Invoice need to be set by repository
+        entity.amount = payment.amount();
+        entity.currency = payment.currency();
+        entity.paymentMethod = payment.paymentMethod();
+        entity.paymentStatus = payment.status();
+        entity.transactionId = payment.transactionId();
+        entity.gateway = payment.gateway();
+        entity.paymentDate = payment.paymentDate();
+        entity.receivedDate = payment.receivedDate();
+        entity.referenceNumber = payment.referenceNumber();
+        entity.notes = payment.notes();
+        entity.reversalReason = payment.reversalReason();
+        entity.createdAt = payment.createdAt();
+        entity.updatedAt = payment.updatedAt();
+        // Note: deletedAt should be set separately for soft delete
+        return entity;
+    }
 }

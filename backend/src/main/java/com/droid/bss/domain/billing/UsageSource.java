@@ -6,7 +6,8 @@ package com.droid.bss.domain.billing;
 public enum UsageSource {
     CDR("Call Detail Record"),
     MANUAL("Manual entry"),
-    BULK_UPLOAD("Bulk upload");
+    BULK_UPLOAD("Bulk upload"),
+    SYSTEM("System generated");
 
     private final String description;
 

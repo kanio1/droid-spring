@@ -1,0 +1,5 @@
+name,description,price,currency,billingCycle,status
+Starter Plan,Basic entry level plan,19.99,USD,monthly,active
+Growth Plan,Medium tier plan,39.99,USD,monthly,active
+Scale Plan,High tier plan,99.99,USD,monthly,active
+Enterprise Custom,Custom enterprise solution,299.99,USD,monthly,active

@@ -323,4 +323,59 @@ public class SubscriptionEntity extends BaseEntity {
     public void setDeletedAt(LocalDate deletedAt) {
         this.deletedAt = deletedAt;
     }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public Subscription toDomain() {
+        return Subscription.restore(
+            this.id,
+            this.subscriptionNumber,
+            this.customer != null ? this.customer.getId() : null,
+            this.product != null ? this.product.getId() : null,
+            this.status,
+            this.startDate,
+            this.endDate,
+            this.billingStart,
+            this.nextBillingDate,
+            this.billingPeriod,
+            this.price,
+            this.currency,
+            this.discountAmount,
+            this.netAmount,
+            this.configuration,
+            this.autoRenew,
+            this.renewalNoticeSent,
+            this.createdAt,
+            this.updatedAt,
+            this.version != null ? this.version.intValue() : 0
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static SubscriptionEntity from(Subscription subscription) {
+        SubscriptionEntity entity = new SubscriptionEntity();
+        entity.id = subscription.id().value();
+        entity.subscriptionNumber = subscription.subscriptionNumber();
+        // Note: Customer and Product need to be set by repository
+        entity.status = subscription.status();
+        entity.startDate = subscription.startDate();
+        entity.endDate = subscription.endDate();
+        entity.billingStart = subscription.billingStart();
+        entity.nextBillingDate = subscription.nextBillingDate();
+        entity.billingPeriod = subscription.billingPeriod();
+        entity.price = subscription.price();
+        entity.currency = subscription.currency();
+        entity.discountAmount = subscription.discountAmount();
+        entity.netAmount = subscription.netAmount();
+        entity.configuration = subscription.configuration();
+        entity.autoRenew = subscription.autoRenew();
+        entity.renewalNoticeSent = subscription.renewalNoticeSent();
+        entity.createdAt = subscription.createdAt();
+        entity.updatedAt = subscription.updatedAt();
+        // Note: deletedAt should be set separately for soft delete
+        return entity;
+    }
 }

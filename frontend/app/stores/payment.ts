@@ -72,7 +72,7 @@ export const usePaymentStore = defineStore('payment', () => {
         ...(params.paymentMethod && { paymentMethod: params.paymentMethod })
       }
 
-      const response = await get<PaymentListResponse>('/payments', { query })
+      const response = await get<PaymentListResponse>('/api/v1/payments', { query })
       payments.value = response.data.content
 
       pagination.page = response.data.page
@@ -100,7 +100,7 @@ export const usePaymentStore = defineStore('payment', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const response = await get<Payment>(`/payments/${id}`)
+      const response = await get<Payment>(`/api/v1/payments/${id}`)
       currentPayment.value = response.data
       return response.data
     } catch (err: any) {
@@ -118,7 +118,7 @@ export const usePaymentStore = defineStore('payment', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { post } = useApi()
-      const response = await post<Payment>('/payments', data)
+      const response = await post<Payment>('/api/v1/payments', data)
 
       payments.value.unshift(response.data)
       pagination.totalElements++
@@ -139,7 +139,7 @@ export const usePaymentStore = defineStore('payment', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { put } = useApi()
-      const response = await put<Payment>(`/payments/${data.id}/status`, data)
+      const response = await put<Payment>(`/api/v1/payments/${data.id}/status`, data)
 
       const index = payments.value.findIndex(p => p.id === data.id)
       if (index !== -1) {

@@ -45,7 +45,9 @@ public record CreateAddressCommand(
 
         Double longitude,
 
-        Boolean isPrimary
+        Boolean isPrimary,
+
+        String notes
 ) {
     // Helper method to get optional fields
     public Optional<String> getHouseNumber() {
@@ -66,5 +68,9 @@ public record CreateAddressCommand(
 
     public Optional<Double> getLongitude() {
         return Optional.ofNullable(longitude);
+    }
+
+    public Optional<String> getNotes() {
+        return Optional.ofNullable(notes);
     }
 }

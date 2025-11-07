@@ -34,62 +34,54 @@ public class ListAddressesUseCase {
     ) {
         Pageable pageable = createPageable(page, size, sort);
 
-        Page<AddressEntity> addressPage;
+        List<Address> addresses;
 
         // Build query based on filters
         if (customerId != null && !customerId.isEmpty()) {
             UUID customerUUID = UUID.fromString(customerId);
             if (type != null && !type.isEmpty()) {
                 AddressType typeEnum = AddressType.valueOf(type);
-                addressPage = addressRepository.findByCustomerIdAndTypeAndDeletedAtIsNull(
+                addresses = addressRepository.findByCustomerIdAndTypeAndDeletedAtIsNull(
                         customerUUID, typeEnum, pageable
                 );
             } else if (status != null && !status.isEmpty()) {
                 AddressStatus statusEnum = AddressStatus.valueOf(status);
-                addressPage = addressRepository.findByCustomerIdAndStatusAndDeletedAtIsNull(
+                addresses = addressRepository.findByCustomerIdAndStatusAndDeletedAtIsNull(
                         customerUUID, statusEnum, pageable
                 );
             } else {
-                List<AddressEntity> addresses = addressRepository.findByCustomerIdAndDeletedAtIsNull(customerUUID);
-                addressPage = createPageFromList(addresses, pageable);
+                addresses = addressRepository.findByCustomerIdAndDeletedAtIsNull(customerUUID);
             }
         } else if (searchTerm != null && !searchTerm.isEmpty()) {
-            List<AddressEntity> addresses = addressRepository.searchByTerm(searchTerm);
-            addressPage = createPageFromList(addresses, pageable);
+            addresses = addressRepository.searchByTerm(searchTerm);
         } else if (type != null && !type.isEmpty()) {
             AddressType typeEnum = AddressType.valueOf(type);
-            addressPage = addressRepository.findByTypeAndStatusAndDeletedAtIsNull(
+            addresses = addressRepository.findByTypeAndStatusAndDeletedAtIsNull(
                     typeEnum, AddressStatus.ACTIVE, pageable
             );
         } else if (country != null && !country.isEmpty()) {
             Country countryEnum = Country.valueOf(country);
-            List<AddressEntity> addresses = addressRepository.findByCountryAndDeletedAtIsNull(countryEnum);
-            addressPage = createPageFromList(addresses, pageable);
+            addresses = addressRepository.findByCountryAndDeletedAtIsNull(countryEnum);
         } else {
             // No filters, return all non-deleted addresses
-            Page<AddressEntity> allAddresses = addressRepository.findAll(pageable);
-            // Filter out deleted addresses
-            List<AddressEntity> nonDeleted = allAddresses.getContent().stream()
-                    .filter(addr -> addr.getDeletedAt() == null)
-                    .collect(Collectors.toList());
-            addressPage = new PageImpl<>(nonDeleted, pageable, allAddresses.getTotalElements());
+            addresses = addressRepository.findAll(pageable);
         }
 
         // Convert to response DTOs
-        List<AddressResponse> responses = addressPage.getContent().stream()
+        List<AddressResponse> responses = addresses.stream()
                 .map(AddressResponse::from)
                 .collect(Collectors.toList());
 
         return new AddressListResponse(
                 responses,
-                addressPage.getNumber(),
-                addressPage.getSize(),
-                addressPage.getTotalElements(),
-                addressPage.getTotalPages(),
-                addressPage.isFirst(),
-                addressPage.isLast(),
-                addressPage.getNumberOfElements(),
-                addressPage.isEmpty()
+                page,
+                size,
+                (long) addresses.size(),
+                (int) Math.ceil((double) addresses.size() / size),
+                page == 0,
+                page >= (addresses.size() / size),
+                addresses.size(),
+                addresses.isEmpty()
         );
     }
 

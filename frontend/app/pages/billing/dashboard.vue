@@ -336,9 +336,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useBillingStore } from '~/stores/billing'
 import { useToast } from 'primevue/usetoast'
+import { useLazyLoad } from '~/composables/useLazyLoad'
 import type { UsageRecord, BillingCycle, UsageType, BillingCycleStatus } from '~/schemas/billing'
 import {
   getUsageTypeLabel,
@@ -346,21 +347,35 @@ import {
   formatUsageAmount,
   calculateTotalCost
 } from '~/schemas/billing'
-import RevenueLineChart from '~/components/charts/RevenueLineChart.vue'
-import UsagePieChart from '~/components/charts/UsagePieChart.vue'
-import CyclesBarChart from '~/components/charts/CyclesBarChart.vue'
 
-// Meta
+// Lazy load heavy chart components for better performance
+const RevenueLineChart = defineAsyncComponent(() => import('~/components/charts/RevenueLineChart.vue'))
+const UsagePieChart = defineAsyncComponent(() => import('~/components/charts/UsagePieChart.vue'))
+const CyclesBarChart = defineAsyncComponent(() => import('~/components/charts/CyclesBarChart.vue'))
+
+// Meta with SEO
 definePageMeta({
-  title: 'Billing Dashboard'
+  title: 'Billing Dashboard',
+  description: 'Comprehensive billing analytics and revenue insights. Monitor billing cycles, usage records, revenue trends, and payment processing in real-time.',
+  keywords: 'billing, revenue, invoicing, payment processing, billing cycles, usage records, telecom billing, BSS billing',
+  ogTitle: 'BSS Billing Dashboard & Revenue Analytics',
+  ogDescription: 'Comprehensive billing analytics and revenue insights. Monitor billing cycles, usage records, and payment processing.',
+  ogImage: '/images/billing-og.png',
+  twitterCard: 'summary_large_image'
 })
 
 // Stores & Composables
 const billingStore = useBillingStore()
 const toast = useToast()
+const { preloadComponents } = useLazyLoad()
 
 // Reactive State
 const loading = ref(false)
+
+// Preload common components in the background
+onMounted(() => {
+  preloadComponents()
+})
 
 // Computed Properties
 const usageRecords = computed(() => billingStore.usageRecords)

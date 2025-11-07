@@ -10,6 +10,8 @@ import com.droid.bss.application.dto.product.CreateProductCommand;
 import com.droid.bss.application.dto.product.ProductResponse;
 import com.droid.bss.application.dto.product.UpdateProductCommand;
 import com.droid.bss.application.query.product.ProductQueryService;
+import com.droid.bss.domain.audit.AuditAction;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -69,6 +71,7 @@ public class ProductController {
     @ApiResponse(responseCode = "201", description = "Product created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @Audited(action = AuditAction.PRODUCT_CREATE, entityType = "Product", description = "Creating new product")
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody CreateProductCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -185,6 +188,7 @@ public class ProductController {
     @ApiResponse(responseCode = "404", description = "Product not found")
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @Audited(action = AuditAction.PRODUCT_UPDATE, entityType = "Product", description = "Updating product {id}")
     public ResponseEntity<ProductResponse> updateProduct(
             @Parameter(description = "Product ID", required = true) @PathVariable UUID id,
             @Valid @RequestBody UpdateProductCommand command
@@ -210,6 +214,7 @@ public class ProductController {
     @ApiResponse(responseCode = "404", description = "Product not found")
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @Audited(action = AuditAction.PRODUCT_UPDATE, entityType = "Product", description = "Changing status for product {id}")
     public ResponseEntity<ProductResponse> changeProductStatus(
             @Parameter(description = "Product ID", required = true) @PathVariable UUID id,
             @Valid @RequestBody ChangeProductStatusCommand command
@@ -234,6 +239,7 @@ public class ProductController {
     @ApiResponse(responseCode = "404", description = "Product not found")
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @Audited(action = AuditAction.PRODUCT_DELETE, entityType = "Product", description = "Deleting product {id}")
     public ResponseEntity<Void> deleteProduct(
             @Parameter(description = "Product ID", required = true) @PathVariable UUID id,
             @Parameter(description = "Product version for optimistic locking", required = true) @RequestParam @NotNull Long version

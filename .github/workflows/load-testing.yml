@@ -1,0 +1,234 @@
+name: Load Testing
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'dev/k6/**'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: true
+        default: 'spike'
+        type: choice
+        options:
+          - spike
+          - volume
+          - marathon
+          - soak
+      vus:
+        description: 'Virtual Users (for spike/volume tests)'
+        required: false
+        default: '1000'
+        type: string
+      duration:
+        description: 'Test duration (for marathon/soak tests)'
+        required: false
+        default: '12h'
+        type: string
+
+env:
+  K6_VERSION: '0.46'
+
+jobs:
+  prepare-infrastructure:
+    name: Prepare Test Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    outputs:
+      postgres-url: ${{ steps.db.outputs.url }}
+      redis-url: ${{ steps.redis.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start PostgreSQL
+        id: db
+        run: |
+          docker run -d --name postgres-test -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=bss_test -p 5432:5432 postgres:18
+          sleep 5
+          echo "url=jdbc:postgresql://localhost:5432/bss_test" >> $GITHUB_OUTPUT
+
+      - name: Start Redis
+        id: redis
+        run: |
+          docker run -d --name redis-test -p 6379:6379 redis:7-alpine
+          sleep 2
+          echo "url=redis://localhost:6379" >> $GITHUB_OUTPUT
+
+  load-test-spike:
+    name: Spike Test
+    runs-on: ubuntu-latest
+    needs: prepare-infrastructure
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.test_type == 'spike' || github.event.inputs.test_type == '')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: ${{ env.K6_VERSION }}
+
+      - name: Run spike test
+        working-directory: dev/k6/scripts
+        env:
+          API_URL: ${{ secrets.STAGING_API_URL || 'http://localhost:8080' }}
+          VUS: ${{ github.event.inputs.vus || '1000' }}
+        run: |
+          k6 run --vus $VUS --duration 5m extreme-spike-test.js
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-test-results
+          path: |
+            dev/k6/scripts/results/
+            dev/k6/scripts/screenshots/
+
+  load-test-volume:
+    name: Volume Test (1M+ events)
+    runs-on: ubuntu-latest
+    needs: prepare-infrastructure
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_type == 'volume'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: ${{ env.K6_VERSION }}
+
+      - name: Run volume test
+        working-directory: dev/k6/scripts
+        env:
+          API_URL: ${{ secrets.STAGING_API_URL || 'http://localhost:8080' }}
+          VUS: ${{ github.event.inputs.vus || '500' }}
+          ITERATIONS: '2000'
+        run: |
+          k6 run --vus $VUS --iterations $ITERATIONS volume-test-1m.js
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: volume-test-results
+          path: dev/k6/scripts/results/
+
+  load-test-marathon:
+    name: Marathon Test (12h endurance)
+    runs-on: ubuntu-latest
+    needs: prepare-infrastructure
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_type == 'marathon'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: ${{ env.K6_VERSION }}
+
+      - name: Run marathon test
+        working-directory: dev/k6/scripts
+        env:
+          API_URL: ${{ secrets.STAGING_API_URL || 'http://localhost:8080' }}
+          DURATION: ${{ github.event.inputs.duration || '12h' }}
+        run: |
+          k6 run --duration $DURATION marathon-test.js
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: marathon-test-results
+          path: dev/k6/scripts/results/
+
+  load-test-soak:
+    name: Soak Test (24h endurance)
+    runs-on: ubuntu-latest
+    needs: prepare-infrastructure
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_type == 'soak'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: ${{ env.K6_VERSION }}
+
+      - name: Run soak test
+        working-directory: dev/k6/scripts
+        env:
+          API_URL: ${{ secrets.STAGING_API_URL || 'http://localhost:8080' }}
+          DURATION: ${{ github.event.inputs.duration || '24h' }}
+        run: |
+          k6 run --duration $DURATION extreme-soak-test.js
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-test-results
+          path: dev/k6/scripts/results/
+
+  generate-report:
+    name: Generate Load Test Report
+    runs-on: ubuntu-latest
+    needs: [load-test-spike, load-test-volume, load-test-marathon, load-test-soak]
+    if: always() && (needs.load-test-spike.result != 'skipped' || needs.load-test-volume.result != 'skipped' || needs.load-test-marathon.result != 'skipped' || needs.load-test-soak.result != 'skipped')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate markdown report
+        run: |
+          mkdir -p load-test-report
+          cat > load-test-report/index.md << 'EOF'
+          # Load Test Report
+
+          ## Test Summary
+          - Date: ${{ github.event.head_commit.timestamp }}
+          - Commit: ${{ github.sha }}
+          - Branch: ${{ github.ref_name }}
+
+          ## Test Results
+
+          ### Spike Test
+          - VUs: ${{ github.event.inputs.vus || '1000' }}
+          - Status: ${{ needs.load-test-spike.result }}
+
+          ### Volume Test
+          - VUs: ${{ github.event.inputs.vus || '500' }}
+          - Iterations: 2000
+          - Status: ${{ needs.load-test-volume.result }}
+
+          ### Marathon Test
+          - Duration: ${{ github.event.inputs.duration || '12h' }}
+          - Status: ${{ needs.load-test-marathon.result }}
+
+          ### Soak Test
+          - Duration: ${{ github.event.inputs.duration || '24h' }}
+          - Status: ${{ needs.load-test-soak.result }}
+
+          ## Artifacts
+          - Test results available in workflow artifacts
+          - Screenshots and metrics exported
+          EOF
+
+      - name: Archive report
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-report
+          path: load-test-report/

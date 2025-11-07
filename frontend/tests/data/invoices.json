@@ -1,0 +1,66 @@
+[
+  {
+    "id": "inv-001",
+    "invoiceNumber": "INV-2024-001",
+    "customerId": "cust-001",
+    "orderId": "order-001",
+    "items": [
+      {
+        "description": "Basic Service Plan - January 2024",
+        "quantity": 1,
+        "unitPrice": 29.99,
+        "totalPrice": 29.99
+      }
+    ],
+    "subtotal": 29.99,
+    "tax": 2.40,
+    "total": 32.39,
+    "currency": "USD",
+    "status": "paid",
+    "issueDate": "2024-01-15T00:00:00Z",
+    "dueDate": "2024-02-15T00:00:00Z",
+    "paidDate": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "inv-002",
+    "invoiceNumber": "INV-2024-002",
+    "customerId": "cust-002",
+    "orderId": "order-002",
+    "items": [
+      {
+        "description": "Professional Service Plan - January 2024",
+        "quantity": 1,
+        "unitPrice": 59.99,
+        "totalPrice": 59.99
+      }
+    ],
+    "subtotal": 59.99,
+    "tax": 4.80,
+    "total": 64.79,
+    "currency": "USD",
+    "status": "pending",
+    "issueDate": "2024-01-16T00:00:00Z",
+    "dueDate": "2024-02-16T00:00:00Z"
+  },
+  {
+    "id": "inv-003",
+    "invoiceNumber": "INV-2024-003",
+    "customerId": "cust-004",
+    "orderId": "order-003",
+    "items": [
+      {
+        "description": "Enterprise Service Plan - January 2024",
+        "quantity": 1,
+        "unitPrice": 199.99,
+        "totalPrice": 199.99
+      }
+    ],
+    "subtotal": 199.99,
+    "tax": 16.00,
+    "total": 215.99,
+    "currency": "USD",
+    "status": "draft",
+    "issueDate": "2024-01-20T00:00:00Z",
+    "dueDate": "2024-02-20T00:00:00Z"
+  }
+]

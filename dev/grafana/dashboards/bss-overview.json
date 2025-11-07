@@ -1,81 +1,30 @@
 {
   "dashboard": {
     "id": null,
-    "title": "BSS System Overview",
-    "tags": ["bss", "business", "telecom"],
-    "style": "dark",
-    "timezone": "browser",
-    "refresh": "30s",
+    "title": "BSS System Overview - 400k Events/Min",
+    "description": "Comprehensive monitoring dashboard for BSS system targeting 400,000 events per minute",
+    "tags": ["bss", "monitoring", "kafka", "postgresql", "redis"],
+    "timezone": "UTC",
+    "refresh": "5s",
     "time": {
-      "from": "now-1h",
+      "from": "now-15m",
       "to": "now"
     },
     "panels": [
       {
         "id": 1,
-        "title": "Customer Operations",
+        "title": "Event Throughput (Target: 6,667 events/sec)",
         "type": "stat",
         "targets": [
           {
-            "expr": "rate(bss_customers_created_total[5m])",
-            "refId": "A",
-            "legendFormat": "Created/min"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "steps": [
-                {"color": "green", "value": 0},
-                {"color": "yellow", "value": 5},
-                {"color": "red", "value": 10}
-              ]
-            },
-            "unit": "ops"
-          }
-        },
-        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
-      },
-      {
-        "id": 2,
-        "title": "Invoice Processing",
-        "type": "stat",
-        "targets": [
+            "expr": "rate(bss_events_total[1m])",
+            "legendFormat": "Current Rate",
+            "refId": "A"
+          },
           {
-            "expr": "rate(bss_invoices_created_total[5m])",
-            "refId": "A",
-            "legendFormat": "Created/min"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "steps": [
-                {"color": "green", "value": 0},
-                {"color": "yellow", "value": 3},
-                {"color": "red", "value": 7}
-              ]
-            },
-            "unit": "ops"
-          }
-        },
-        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
-      },
-      {
-        "id": 3,
-        "title": "Payment Success Rate",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "rate(bss_payments_completed_total[5m]) / rate(bss_payments_created_total[5m]) * 100",
-            "refId": "A",
-            "legendFormat": "Success Rate"
+            "expr": "6667",
+            "legendFormat": "Target",
+            "refId": "B"
           }
         ],
         "fieldConfig": {
@@ -86,109 +35,41 @@
             "thresholds": {
               "steps": [
                 {"color": "red", "value": 0},
-                {"color": "yellow", "value": 80},
-                {"color": "green", "value": 95}
+                {"color": "yellow", "value": 5000},
+                {"color": "green", "value": 6000}
               ]
             },
-            "unit": "percent"
+            "unit": "events/s"
           }
         },
-        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
       },
       {
-        "id": 4,
-        "title": "Active Subscriptions",
+        "id": 2,
+        "title": "Events per Minute",
         "type": "stat",
         "targets": [
           {
-            "expr": "bss_subscriptions_active",
-            "refId": "A",
-            "legendFormat": "Active"
+            "expr": "rate(bss_events_total[1m]) * 60",
+            "legendFormat": "Events/Min",
+            "refId": "A"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
+            "color": {"mode": "thresholds"},
             "thresholds": {
               "steps": [
-                {"color": "blue", "value": 0},
-                {"color": "green", "value": 100}
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 300000},
+                {"color": "green", "value": 400000}
               ]
-            }
+            },
+            "unit": "events/min"
           }
         },
-        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
-      },
-      {
-        "id": 5,
-        "title": "API Request Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(http_server_requests_total[5m])",
-            "refId": "A",
-            "legendFormat": "{{method}} {{uri}}"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
-      },
-      {
-        "id": 6,
-        "title": "API Latency (P95)",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, rate(http_server_requests_duration_bucket[5m]))",
-            "refId": "A",
-            "legendFormat": "P95"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
-      },
-      {
-        "id": 7,
-        "title": "Error Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(http_server_requests_total{status=~\"5..\"}[5m]) / rate(http_server_requests_total[5m]) * 100",
-            "refId": "A",
-            "legendFormat": "Error %"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "percent"
-          }
-        },
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
-      },
-      {
-        "id": 8,
-        "title": "Database Connection Pool",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "hikaricp_connections_active",
-            "refId": "A",
-            "legendFormat": "Active"
-          },
-          {
-            "expr": "hikaricp_connections_idle",
-            "refId": "B",
-            "legendFormat": "Idle"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
       }
-    ],
-    "templating": {
-      "list": []
-    },
-    "annotations": {
-      "list": []
-    }
+    ]
   }
 }

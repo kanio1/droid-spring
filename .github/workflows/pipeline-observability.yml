@@ -1,0 +1,382 @@
+name: Pipeline Observability
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline", "CD Pipeline"]
+    types: [completed]
+  schedule:
+    # Generate daily pipeline report at 8 AM
+    - cron: '0 8 * * *'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  collect-metrics:
+    name: Collect Pipeline Metrics
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != '')
+
+    outputs:
+      report-date: ${{ steps.date.outputs.date }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get Current Date
+        id: date
+        run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Fetch Workflow Runs - Last 7 Days
+        run: |
+          # Get workflow runs from the last 7 days
+          gh run list --limit 100 --json status,conclusion,createdAt,workflowId,name | \
+          jq -r --argjson since "$(date -d '7 days ago' -Iseconds)" \
+          '[.[] | select(.createdAt > $since)]' > workflow-runs.json
+
+      - name: Process Pipeline Metrics
+        run: |
+          cat > process-metrics.py << 'EOF'
+          import json
+          import sys
+          from datetime import datetime
+          from collections import defaultdict
+
+          with open('workflow-runs.json', 'r') as f:
+              runs = json.load(f)
+
+          metrics = {
+              'total_runs': len(runs),
+              'successful_runs': 0,
+              'failed_runs': 0,
+              'cancelled_runs': 0,
+              'workflows': defaultdict(int),
+              'avg_duration': 0,
+              'daily_stats': defaultdict(lambda: {'success': 0, 'failure': 0, 'total': 0})
+          }
+
+          durations = []
+          for run in runs:
+              # Count by status
+              if run['conclusion'] == 'success':
+                  metrics['successful_runs'] += 1
+                  metrics['daily_stats'][run['createdAt'][:10]]['success'] += 1
+              elif run['conclusion'] == 'failure':
+                  metrics['failed_runs'] += 1
+                  metrics['daily_stats'][run['createdAt'][:10]]['failure'] += 1
+              elif run['conclusion'] == 'cancelled':
+                  metrics['cancelled_runs'] += 1
+
+              metrics['daily_stats'][run['createdAt'][:10]]['total'] += 1
+              metrics['workflows'][run['name']] += 1
+
+          # Calculate success rate
+          if metrics['total_runs'] > 0:
+              metrics['success_rate'] = (metrics['successful_runs'] / metrics['total_runs']) * 100
+          else:
+              metrics['success_rate'] = 0
+
+          with open('pipeline-metrics.json', 'w') as f:
+              json.dump(metrics, f, indent=2)
+
+          print(json.dumps(metrics, indent=2))
+          EOF
+
+          python3 process-metrics.py
+
+      - name: Upload Metrics
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-metrics-${{ steps.date.outputs.date }}
+          path: |
+            workflow-runs.json
+            pipeline-metrics.json
+          retention-days: 90
+
+  generate-dashboard:
+    name: Generate Pipeline Dashboard
+    runs-on: ubuntu-latest
+    needs: collect-metrics
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Metrics
+        uses: actions/download-artifact@v3
+        with:
+          name: pipeline-metrics-${{ needs.collect-metrics.outputs.report-date }}
+          path: metrics/
+
+      - name: Generate Dashboard
+        run: |
+          cat > generate-dashboard.py << 'EOF'
+          import json
+          import os
+
+          # Find the metrics file
+          metrics_file = None
+          for root, dirs, files in os.walk('metrics/'):
+              for file in files:
+                  if file == 'pipeline-metrics.json':
+                      metrics_file = os.path.join(root, file)
+                      break
+
+          if not metrics_file:
+              print("No metrics file found")
+              exit(1)
+
+          with open(metrics_file, 'r') as f:
+              metrics = json.load(f)
+
+          # Generate HTML dashboard
+          html = f"""
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>BSS Pipeline Dashboard</title>
+              <style>
+                  body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                  .metric-card {{ display: inline-block; margin: 10px; padding: 20px;
+                                  border: 1px solid #ddd; border-radius: 5px; min-width: 200px; }}
+                  .success {{ color: #28a745; }}
+                  .failure {{ color: #dc3545; }}
+                  .warning {{ color: #ffc107; }}
+                  table {{ border-collapse: collapse; width: 100%; margin-top: 20px; }}
+                  th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                  th {{ background-color: #f2f2f2; }}
+              </style>
+          </head>
+          <body>
+              <h1>BSS Pipeline Dashboard</h1>
+              <h2>Last 7 Days Summary</h2>
+
+              <div class="metric-card">
+                  <h3>Total Runs</h3>
+                  <p style="font-size: 2em; font-weight: bold;">{metrics['total_runs']}</p>
+              </div>
+
+              <div class="metric-card">
+                  <h3>Success Rate</h3>
+                  <p style="font-size: 2em; font-weight: bold;" class="success">
+                      {metrics['success_rate']:.1f}%
+                  </p>
+              </div>
+
+              <div class="metric-card">
+                  <h3>Successful</h3>
+                  <p style="font-size: 2em; font-weight: bold;" class="success">
+                      {metrics['successful_runs']}
+                  </p>
+              </div>
+
+              <div class="metric-card">
+                  <h3>Failed</h3>
+                  <p style="font-size: 2em; font-weight: bold;" class="failure">
+                      {metrics['failed_runs']}
+                  </p>
+              </div>
+
+              <h2>Workflow Statistics</h2>
+              <table>
+                  <tr>
+                      <th>Workflow</th>
+                      <th>Total Runs</th>
+                  </tr>
+          """
+
+          for workflow, count in metrics['workflows'].items():
+              html += f"""
+                  <tr>
+                      <td>{workflow}</td>
+                      <td>{count}</td>
+                  </tr>
+              """
+
+          html += """
+              </table>
+
+              <h2>Daily Breakdown</h2>
+              <table>
+                  <tr>
+                      <th>Date</th>
+                      <th>Total</th>
+                      <th>Success</th>
+                      <th>Failure</th>
+                      <th>Success Rate</th>
+                  </tr>
+          """
+
+          for date, stats in sorted(metrics['daily_stats'].items()):
+              total = stats['total']
+              success = stats['success']
+              failure = stats['failure']
+              rate = (success / total * 100) if total > 0 else 0
+              html += f"""
+                  <tr>
+                      <td>{date}</td>
+                      <td>{total}</td>
+                      <td class="success">{success}</td>
+                      <td class="failure">{failure}</td>
+                      <td>{rate:.1f}%</td>
+                  </tr>
+              """
+
+          html += """
+              </table>
+          </body>
+          </html>
+          """
+
+          with open('pipeline-dashboard.html', 'w') as f:
+              f.write(html)
+
+          print("Dashboard generated successfully")
+          EOF
+
+          python3 generate-dashboard.py
+
+      - name: Upload Dashboard
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-dashboard-${{ needs.collect-metrics.outputs.report-date }}
+          path: pipeline-dashboard.html
+          retention-days: 90
+
+  send-metrics-to-grafana:
+    name: Send Metrics to Grafana
+    runs-on: ubuntu-latest
+    needs: collect-metrics
+    if: env.GRAFANA_API_KEY != ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Metrics
+        uses: actions/download-artifact@v3
+        with:
+          name: pipeline-metrics-${{ needs.collect-metrics.outputs.report-date }}
+          path: metrics/
+
+      - name: Send to Grafana
+        env:
+          GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}
+          GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+        run: |
+          # In production, send metrics to Grafana via API
+          echo "Sending metrics to Grafana..."
+
+  alert-on-failures:
+    name: Alert on Pipeline Failures
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+
+    steps:
+      - name: Get Workflow Info
+        id: info
+        run: |
+          echo "workflow_name=${{ github.event.workflow_run.name }}" >> $GITHUB_OUTPUT
+          echo "conclusion=${{ github.event.workflow_run.conclusion }}" >> $GITHUB_OUTPUT
+          echo "html_url=${{ github.event.workflow_run.html_url }}" >> $GITHUB_OUTPUT
+
+      - name: Send Slack Alert
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            🔴 Pipeline Failed!
+            **Workflow:** ${{ steps.info.outputs.workflow_name }}
+            **Conclusion:** ${{ steps.info.outputs.conclusion }}
+            **URL:** ${{ steps.info.outputs.html_url }}
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Create GitHub Issue
+        if: env.GITHUB_ISSUE_PROJECT != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Pipeline Failure: ${{ steps.info.outputs.workflow_name }}',
+              body: `
+              **Pipeline:** ${{ steps.info.outputs.workflow_name }}
+              **Status:** ${{ steps.info.outputs.conclusion }}
+              **URL:** ${{ steps.info.outputs.html_url }}
+              **Commit:** \`${{ github.sha }}\`
+              **Branch:** ${{ github.ref_name }}
+
+              Please investigate the pipeline failure and take appropriate action.
+              `,
+              labels: ['bug', 'ci-cd', 'priority-high']
+            })
+
+  generate-weekly-report:
+    name: Generate Weekly Pipeline Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    schedule:
+      # Run every Monday at 9 AM
+      - cron: '0 9 * * 1'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Weekly Report
+        run: |
+          cat > weekly-report.md << 'EOF'
+          # BSS Pipeline Weekly Report
+
+          ## Summary
+          This report summarizes the CI/CD pipeline performance for the past week.
+
+          ## Key Metrics
+          - Total Pipeline Runs
+          - Success Rate
+          - Average Build Duration
+          - Deployment Frequency
+
+          ## Trends
+          - Week over week comparison
+          - Success rate trends
+          - Performance improvements
+
+          ## Recommendations
+          - Areas for improvement
+          - Optimization opportunities
+          - Technical debt items
+
+          ## Next Steps
+          - Action items
+          - Scheduled maintenance
+          - Upcoming changes
+          EOF
+
+      - name: Create GitHub Issue with Report
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('weekly-report.md', 'utf8');
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Weekly Pipeline Report - ${new Date().toISOString().split('T')[0]}`,
+              body: report,
+              labels: ['ci-cd', 'weekly-report']
+            });
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: weekly-pipeline-report
+          path: weekly-report.md
+          retention-days: 365

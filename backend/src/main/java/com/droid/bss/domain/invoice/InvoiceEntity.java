@@ -197,7 +197,7 @@ public class InvoiceEntity extends BaseEntity {
         recalculateFromItems();
     }
 
-    private void recalculateFromItems() {
+    public void recalculateFromItems() {
         this.subtotal = items.stream()
                 .map(InvoiceItemEntity::getTotalAmount)
                 .filter(java.util.Objects::nonNull)
@@ -408,5 +408,50 @@ public class InvoiceEntity extends BaseEntity {
 
     public void setBillingCycle(com.droid.bss.domain.billing.BillingCycleEntity billingCycle) {
         this.billingCycle = billingCycle;
+    }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public Invoice toDomain() {
+        return Invoice.restore(
+            this.getId(),
+            this.invoiceNumber,
+            this.customer != null ? this.customer.getId() : null,
+            this.status,
+            this.totalAmount,
+            this.currency,
+            this.issueDate,
+            this.dueDate,
+            null, // orderNumber not stored in entity
+            null, // salesRepId not stored in entity
+            this.notes,
+            this.getCreatedAt(),
+            this.getUpdatedAt(),
+            this.version != null ? this.version.intValue() : 0,
+            this.items != null
+                ? this.items.stream()
+                    .map(InvoiceItemEntity::toDomain)
+                    .toList()
+                : java.util.Collections.emptyList()
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static InvoiceEntity from(Invoice invoice) {
+        InvoiceEntity entity = new InvoiceEntity();
+        entity.setId(invoice.getId().value());
+        entity.setInvoiceNumber(invoice.getInvoiceNumber());
+        entity.setStatus(invoice.getStatus());
+        entity.setTotalAmount(invoice.getTotalAmount());
+        entity.setCurrency(invoice.getCurrency());
+        entity.setIssueDate(invoice.getInvoiceDate());
+        entity.setDueDate(invoice.getDueDate());
+        entity.setNotes(invoice.getNotes());
+        // Note: customer relationship should be set by caller
+        // Note: items relationship should be set by caller
+        return entity;
     }
 }

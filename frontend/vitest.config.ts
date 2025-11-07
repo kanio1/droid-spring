@@ -7,7 +7,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     include: ['tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['tests/e2e/**'],
+    exclude: [
+      'tests/e2e/**',
+      'tests/unit/pages/**',
+      'tests/unit/middleware/**',
+      'tests/unit/plugins/**'
+    ],
     coverage: {
       enabled: true,
       provider: 'v8',

@@ -1,0 +1,209 @@
+package com.droid.bss.infrastructure.event;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.ConsumerSeekAware;
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Kafka Offset Manager
+ * Manages event replay and time travel functionality
+ * Allows seeking to specific timestamps for event replay
+ */
+@Component
+public class KafkaOffsetManager implements ConsumerSeekAware {
+
+    private static final Logger log = LoggerFactory.getLogger(KafkaOffsetManager.class);
+
+    private final Map<TopicPartition, Map<Instant, Long>> timestampToOffsetMap = new ConcurrentHashMap<>();
+    private final Map<TopicPartition, Long> currentOffsets = new ConcurrentHashMap<>();
+    private final Map<String, Long> latestOffsets = new ConcurrentHashMap<>();
+    private final Map<String, Long> earliestOffsets = new ConcurrentHashMap<>();
+
+    private String groupId = "default-group";
+
+    /**
+     * Record offset with timestamp for time travel capability
+     */
+    public void recordOffset(ConsumerRecord<?, ?> record) {
+        TopicPartition tp = new TopicPartition(record.topic(), record.partition());
+        Instant timestamp = Instant.ofEpochMilli(record.timestamp());
+
+        timestampToOffsetMap.computeIfAbsent(tp, k -> new ConcurrentHashMap<>())
+                .put(timestamp, record.offset());
+
+        currentOffsets.put(tp, record.offset());
+
+        // Track latest and earliest offsets
+        String topic = record.topic();
+        latestOffsets.compute(topic, (k, v) -> (v == null || record.offset() > v) ? record.offset() : v);
+
+        log.debug("Recorded offset: topic={}, partition={}, offset={}, timestamp={}",
+                record.topic(), record.partition(), record.offset(), timestamp);
+    }
+
+    /**
+     * Get offset for specific timestamp
+     */
+    public long getOffsetForTimestamp(String topic, int partition, Instant timestamp) {
+        TopicPartition tp = new TopicPartition(topic, partition);
+        Map<Instant, Long> timestampMap = timestampToOffsetMap.get(tp);
+
+        if (timestampMap == null || timestampMap.isEmpty()) {
+            log.warn("No offset found for topic={}, partition={}", topic, partition);
+            return -1;
+        }
+
+        // Find the closest timestamp that is >= requested timestamp
+        Optional<Instant> closest = timestampMap.keySet().stream()
+                .filter(t -> t.isAfter(timestamp) || t.equals(timestamp))
+                .min(Instant::compareTo);
+
+        if (closest.isPresent()) {
+            return timestampMap.get(closest.get());
+        }
+
+        // If no timestamp found, return the earliest available
+        return timestampMap.values().stream().min(Long::compareTo).orElse(-1L);
+    }
+
+    /**
+     * Seek to specific timestamp for replay
+     */
+    public void seekToTimestamp(Map<TopicPartition, Long> targetOffsets) {
+        log.info("Seeking to offsets for time travel replay: {}", targetOffsets);
+        onPartitionsAssigned(targetOffsets.keySet());
+        targetOffsets.forEach(this::seekTo);
+    }
+
+    /**
+     * Get all offsets for a topic
+     */
+    public Map<TopicPartition, Long> getTopicOffsets(String topic) {
+        Map<TopicPartition, Long> offsets = new HashMap<>();
+        latestOffsets.entrySet().stream()
+                .filter(e -> e.getKey().equals(topic))
+                .forEach(e -> {
+                    // Add all partitions (this is a simplified version)
+                    offsets.put(new TopicPartition(topic, 0), e.getValue());
+                });
+        return offsets;
+    }
+
+    /**
+     * Get offset range (earliest to latest) for a topic
+     */
+    public Map<String, Long> getOffsetRange(String topic) {
+        Map<String, Long> range = new HashMap<>();
+        range.put("earliest", earliestOffsets.getOrDefault(topic, 0L));
+        range.put("latest", latestOffsets.getOrDefault(topic, 0L));
+        return range;
+    }
+
+    /**
+     * Get event count in time range
+     */
+    public long getEventCountInRange(String topic, Instant startTime, Instant endTime) {
+        // This is a simplified implementation
+        // In production, you would query Kafka directly
+        return 0;
+    }
+
+    /**
+     * Create snapshot of current offsets for state reconstruction
+     */
+    public Map<String, Object> createOffsetSnapshot(String topic) {
+        Map<String, Object> snapshot = new HashMap<>();
+        snapshot.put("topic", topic);
+        snapshot.put("timestamp", Instant.now());
+        snapshot.put("offsets", getTopicOffsets(topic));
+        snapshot.put("range", getOffsetRange(topic));
+        return snapshot;
+    }
+
+    /**
+     * Restore from offset snapshot
+     */
+    public void restoreFromSnapshot(Map<String, Object> snapshot) {
+        log.info("Restoring from offset snapshot: {}", snapshot);
+        // Implementation would restore offsets from snapshot
+    }
+
+    /**
+     * Get events for replay in time range
+     */
+    public List<Map<String, Object>> getEventsForReplay(
+            String topic,
+            Instant startTime,
+            Instant endTime,
+            int maxEvents) {
+
+        List<Map<String, Object>> events = new ArrayList<>();
+        // This would use the timestampToOffsetMap to find events
+        // and return them for replay
+
+        return events;
+    }
+
+    /**
+     * Calculate replay duration based on event count
+     */
+    public long calculateReplayDuration(long eventCount, double eventsPerSecond) {
+        if (eventsPerSecond <= 0) {
+            return 0;
+        }
+        return (long) (eventCount / eventsPerSecond);
+    }
+
+    // ConsumerSeekAware implementation
+    @Override
+    public void onPartitionsAssigned(Map<TopicPartition, Long> assignments) {
+        log.info("Partitions assigned: {}", assignments);
+        assignments.forEach((tp, offset) -> {
+            currentOffsets.put(tp, offset);
+        });
+    }
+
+    @Override
+    public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+        log.info("Partitions revoked: {}", partitions);
+    }
+
+    @Override
+    public void onPartitionsLost(Collection<TopicPartition> partitions) {
+        log.info("Partitions lost: {}", partitions);
+    }
+
+    @Override
+    public void seek(TopicPartition topicPartition, long offset) {
+        log.debug("Seeking to offset: topic={}, partition={}, offset={}",
+                topicPartition.topic(), topicPartition.partition(), offset);
+    }
+
+    // Getters
+    public Map<TopicPartition, Long> getCurrentOffsets() {
+        return new HashMap<>(currentOffsets);
+    }
+
+    public long getLatestOffset(String topic) {
+        return latestOffsets.getOrDefault(topic, 0L);
+    }
+
+    public long getEarliestOffset(String topic) {
+        return earliestOffsets.getOrDefault(topic, 0L);
+    }
+
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
+    }
+}

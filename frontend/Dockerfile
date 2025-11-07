@@ -24,6 +24,9 @@ RUN pnpm run build
 
 FROM node:${NODE_VERSION}-alpine AS runtime
 
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nuxtjs -u 1001
+
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -33,6 +36,12 @@ ENV PORT=3000
 
 COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/package.json ./package.json
+
+# Change ownership to non-root user
+RUN chown -R nuxtjs:nodejs /app
+
+# Switch to non-root user
+USER nuxtjs
 
 EXPOSE 3000
 

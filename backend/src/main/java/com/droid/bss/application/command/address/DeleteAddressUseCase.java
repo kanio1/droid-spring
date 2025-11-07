@@ -1,11 +1,9 @@
 package com.droid.bss.application.command.address;
 
-import com.droid.bss.domain.address.AddressEntity;
+import com.droid.bss.domain.address.AddressId;
 import com.droid.bss.domain.address.AddressRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 /**
  * Use case for soft-deleting an address
@@ -21,14 +19,13 @@ public class DeleteAddressUseCase {
 
     @Transactional
     public void handle(String addressId) {
-        UUID id = UUID.fromString(addressId);
+        AddressId id = new AddressId(java.util.UUID.fromString(addressId));
 
-        AddressEntity address = addressRepository.findById(id)
+        // Check if address exists
+        addressRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Address not found: " + addressId));
 
         // Soft delete
-        address.softDelete();
-
-        addressRepository.save(address);
+        addressRepository.deleteById(id);
     }
 }

@@ -2,7 +2,7 @@ spring:
   application:
     name: bss-backend
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:6432}/${POSTGRES_DB:bss}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:6432}/${POSTGRES_DB:bss}?sslmode=${DB_SSL_MODE:require}&ssl=true
     username: ${POSTGRES_USER:bss_app}
     password: ${POSTGRES_PASSWORD:placeholder_password}
     driver-class-name: org.postgresql.Driver
@@ -18,6 +18,17 @@ spring:
       # Transaction pooling mode
       data-source-properties:
         prepareThreshold: 1
+        # SSL/TLS Configuration
+        ssl: ${DB_SSL_ENABLED:true}
+        sslmode: ${DB_SSL_MODE:require}
+        sslrootcert: ${DB_SSL_ROOTCERT:/etc/ssl/certs/ca-cert.pem}
+        sslcert: ${DB_SSL_CERT:}
+        sslkey: ${DB_SSL_KEY:}
+        sslcrl: ${DB_SSL_CRL:}
+        sslcompression: ${DB_SSL_COMPRESSION:0}
+        sslpassword: ${DB_SSL_PASSWORD:}
+        sslcallback: ${DB_SSL_CALLBACK:}
+        sslpasswordcallback: ${DB_SSL_PASSWORD_CALLBACK:}
         cachePrepStmts: true
         prepStmtCacheSize: 250
         prepStmtCacheSqlLimit: 2048
@@ -47,12 +58,20 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:#{null}}
       timeout: 2000ms
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:true}
+        keystore:
+          location: ${REDIS_SSL_KEYSTORE:#{null}}
+          password: ${REDIS_SSL_KEYSTORE_PASSWORD:#{null}}
+        truststore:
+          location: ${REDIS_SSL_TRUSTSTORE:/etc/ssl/certs/truststore.jks}
+          password: ${REDIS_SSL_TRUSTSTORE_PASSWORD:changeit}
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+          max-active: 50
+          max-idle: 20
+          min-idle: 10
+          max-wait: 2000ms
 
   cache:
     type: redis
@@ -60,14 +79,37 @@ spring:
       time-to-live: 300000
       cache-null-values: false
 
+# Cache Invalidation Configuration
+bss:
+  cache:
+    invalidation:
+      enabled: true
+      warming:
+        enabled: true
+        interval-minutes: 10
+        hot-key-threshold: 20
+      probabilistic-expiration:
+        enabled: true
+        base-probability: 0.1
+        check-interval-seconds: 30
+        max-entries-to-check: 1000
+        hot-key-reduction-factor: 0.5
+      postgres-notify:
+        enabled: true
+        channel-name: cache_invalidation
+      redis-listener:
+        enabled: true
+        topics:
+          - cache:invalidation:key
+          - cache:invalidation:pattern
+          - cache:invalidation:prefix
+
   session:
     store-type: redis
     redis:
       namespace: bss:session
       flush-mode: on_save
       timeout: 1800s
-    timeout: 1800s
-    redis:
       repository:
         enabled: true
 
@@ -80,6 +122,19 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8081/realms/bss}
+
+  # Email configuration for notifications
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   # Kafka configuration for CloudEvents
   kafka:
@@ -97,6 +152,16 @@ spring:
         max.in.flight.requests.per.connection: 1
         compression.type: snappy
         request.timeout.ms: 30000
+        # SSL Configuration
+        security.protocol: ${KAFKA_SSL_ENABLED:false}
+        ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/ssl/certs/truststore.jks}
+        ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:changeit}
+        ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:/etc/ssl/certs/kafka/kafka.p12}
+        ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD:changeit}
+        ssl.keystore.type: PKCS12
+        ssl.client.auth: required
+        ssl.enabled.protocols: TLSv1.2,TLSv1.3
+        ssl.cipher.suites: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP_ID:bss-backend}
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -108,6 +173,16 @@ spring:
         fetch.min.bytes: 1024
         fetch.max.wait.ms: 500
         max.partition.fetch.bytes: 1048576
+        # SSL Configuration
+        security.protocol: ${KAFKA_SSL_ENABLED:false}
+        ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/ssl/certs/truststore.jks}
+        ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:changeit}
+        ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:/etc/ssl/certs/kafka/kafka.p12}
+        ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD:changeit}
+        ssl.keystore.type: PKCS12
+        ssl.client.auth: required
+        ssl.enabled.protocols: TLSv1.2,TLSv1.3
+        ssl.cipher.suites: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
     template:
       default-topic: ${KAFKA_DEFAULT_TOPIC:bss.events}
     listener:
@@ -157,6 +232,90 @@ server:
       protocol-header: X-Forwarded-Proto
       remote-ip-header: X-Forwarded-For
       host-header: X-Forwarded-Host
+
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      backendService:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        slow-call-rate-threshold: 100
+        slow-call-duration-threshold: 2s
+        automatic-transition-from-open-to-half-open-enabled: true
+        events:
+          enable-emit-after-state-transition: true
+      customerQueryService:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        slow-call-rate-threshold: 100
+        slow-call-duration-threshold: 2s
+        automatic-transition-from-open-to-half-open-enabled: true
+        events:
+          enable-emit-after-state-transition: true
+      orderQueryService:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        slow-call-rate-threshold: 100
+        slow-call-duration-threshold: 2s
+        automatic-transition-from-open-to-half-open-enabled: true
+        events:
+          enable-emit-after-state-transition: true
+    metrics:
+      legacy:
+        enabled: true
+  retry:
+    instances:
+      backendService:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+      customerQueryService:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - java.sql.SQLException
+          - org.springframework.jdbc.CannotGetJdbcConnectionException
+      orderQueryService:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - java.sql.SQLException
+          - org.springframework.jdbc.CannotGetJdbcConnectionException
+  timelimiter:
+    instances:
+      backendService:
+        timeout-duration: 5s
+      customerQueryService:
+        timeout-duration: 3s
+      orderQueryService:
+        timeout-duration: 3s
+  ratelimiter:
+    instances:
+      backendService:
+        limit-for-period: 50
+        limit-refresh-period: 10s
+        timeout-duration: 0s
+        allow-health-indicator-to-exceed-limits: true
+      customerQueryService:
+        limit-for-period: 100
+        limit-refresh-period: 10s
+        timeout-duration: 0s
+        allow-health-indicator-to-exceed-limits: true
+      orderQueryService:
+        limit-for-period: 100
+        limit-refresh-period: 10s
+        timeout-duration: 0s
+        allow-health-indicator-to-exceed-limits: true
+
       port-header: X-Forwarded-Port
       internal-proxies: 127\.0\.0\.1|::1|10\.(\d{1,3}\.){2}\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.)\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}
 

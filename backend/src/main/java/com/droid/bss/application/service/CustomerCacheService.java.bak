@@ -1,0 +1,144 @@
+package com.droid.bss.application.service;
+
+import com.droid.bss.domain.customer.Customer;
+import com.droid.bss.infrastructure.cache.CacheInvalidator;
+import com.droid.bss.infrastructure.cache.CacheWarmingService;
+import com.droid.bss.infrastructure.cache.ProbabilisticExpirationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
+
+/**
+ * Customer Cache Service
+ * Demonstrates intelligent cache invalidation for customer data
+ */
+@Service
+public class CustomerCacheService {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomerCacheService.class);
+
+    private final CustomerRepository customerRepository;
+    private final CacheInvalidator cacheInvalidator;
+    private final CacheWarmingService warmingService;
+    private final ProbabilisticExpirationService expirationService;
+
+    public CustomerCacheService(CustomerRepository customerRepository,
+                               CacheInvalidator cacheInvalidator,
+                               CacheWarmingService warmingService,
+                               ProbabilisticExpirationService expirationService) {
+        this.customerRepository = customerRepository;
+        this.cacheInvalidator = cacheInvalidator;
+        this.warmingService = warmingService;
+        this.expirationService = expirationService;
+    }
+
+    /**
+     * Get customer with caching and automatic invalidation
+     */
+    public CompletableFuture<Customer> getCustomer(String customerId) {
+        String cacheKey = "customer:" + customerId;
+
+        // Record access for probabilistic expiration
+        expirationService.recordAccess(cacheKey);
+
+        return warmingService.getOrLoad(cacheKey, () -> {
+            log.debug("Loading customer from database: {}", customerId);
+            return customerRepository.findById(customerId);
+        });
+    }
+
+    /**
+     * Create customer with cache invalidation
+     */
+    public Customer createCustomer(Customer customer) {
+        Customer saved = customerRepository.save(customer);
+
+        // Invalidate customer list cache
+        cacheInvalidator.invalidateByPattern("customers:list:*");
+        cacheInvalidator.invalidateByPattern("customers:summary:*");
+
+        // Warm up the new customer
+        warmingService.preWarm("customer:" + customer.getId(), () -> saved);
+
+        log.info("Created customer: {}", customer.getId());
+        return saved;
+    }
+
+    /**
+     * Update customer with cache invalidation
+     */
+    public Customer updateCustomer(String customerId, Customer customer) {
+        Customer updated = customerRepository.save(customer);
+
+        // Invalidate all related cache entries
+        cacheInvalidator.invalidateCustomerData(customerId);
+        cacheInvalidator.invalidateByPattern("customers:list:*");
+        cacheInvalidator.invalidateByPattern("customers:summary:*");
+
+        // Warm up updated customer
+        warmingService.preWarm("customer:" + customerId, () -> updated);
+
+        log.info("Updated customer: {}", customerId);
+        return updated;
+    }
+
+    /**
+     * Delete customer with cache invalidation
+     */
+    public void deleteCustomer(String customerId) {
+        customerRepository.deleteById(customerId);
+
+        // Invalidate all related cache entries
+        cacheInvalidator.invalidateCustomerData(customerId);
+        cacheInvalidator.invalidateByPattern("customers:list:*");
+        cacheInvalidator.invalidateByPattern("customers:summary:*");
+
+        log.info("Deleted customer: {}", customerId);
+    }
+
+    /**
+     * Get customer list with caching
+     */
+    public CompletableFuture<CustomerList> getCustomers(int page, int size) {
+        String cacheKey = String.format("customers:list:page=%d:size=%d", page, size);
+
+        expirationService.recordAccess(cacheKey);
+
+        return warmingService.getOrLoad(cacheKey, () -> {
+            log.debug("Loading customer list from database: page={}, size={}", page, size);
+            // Implementation would load from repository
+            return new CustomerList(); // Placeholder
+        });
+    }
+
+    /**
+     * Manually trigger cache invalidation
+     */
+    public void invalidateCustomerCache(String customerId) {
+        cacheInvalidator.invalidateCustomerData(customerId);
+        log.info("Manually invalidated cache for customer: {}", customerId);
+    }
+
+    /**
+     * Warm up customer data in background
+     */
+    public void warmUpCustomer(String customerId) {
+        warmingService.warmUpCustomerData(customerId);
+        log.info("Started warming up cache for customer: {}", customerId);
+    }
+
+    // Placeholder for repository
+    public interface CustomerRepository {
+        Customer findById(String id);
+        Customer save(Customer customer);
+        void deleteById(String id);
+    }
+
+    // Placeholder for CustomerList
+    public static class CustomerList {
+        // Implementation would contain customer list and pagination info
+    }
+}

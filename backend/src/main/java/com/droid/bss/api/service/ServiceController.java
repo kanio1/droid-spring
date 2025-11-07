@@ -4,8 +4,10 @@ import com.droid.bss.application.command.service.CreateServiceActivationUseCase;
 import com.droid.bss.application.command.service.DeactivateServiceUseCase;
 import com.droid.bss.application.command.service.ServiceActivationService;
 import com.droid.bss.application.dto.service.*;
+import com.droid.bss.domain.audit.AuditAction;
 import com.droid.bss.domain.service.ActivationEligibility;
 import com.droid.bss.domain.service.ServiceType;
+import com.droid.bss.infrastructure.audit.Audited;
 import com.droid.bss.infrastructure.metrics.BusinessMetrics;
 import io.micrometer.core.annotation.Timed;
 import jakarta.validation.Valid;
@@ -134,6 +136,7 @@ public class ServiceController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.services.create_activation.time", description = "Time to create service activation")
+    @Audited(action = AuditAction.SERVICE_CREATE, entityType = "Service", description = "Creating service activation for customer")
     public ResponseEntity<ServiceActivationResponse> createServiceActivation(
             @Valid @RequestBody CreateServiceActivationCommand command
     ) {
@@ -157,6 +160,7 @@ public class ServiceController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.services.deactivate_service.time", description = "Time to deactivate service")
+    @Audited(action = AuditAction.SERVICE_UPDATE, entityType = "Service", description = "Deactivating service activation {activationId}")
     public ResponseEntity<ServiceActivationResponse> deactivateService(
             @Parameter(description = "Activation ID", required = true) @PathVariable String activationId,
             @Valid @RequestBody DeactivateServiceCommand command

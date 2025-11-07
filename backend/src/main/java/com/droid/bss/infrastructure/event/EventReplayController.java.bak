@@ -1,0 +1,300 @@
+package com.droid.bss.infrastructure.event;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Event Replay Controller
+ * REST API for time travel and event replay functionality
+ */
+@RestController
+@RequestMapping("/api/v1/event-replay")
+@Tag(name = "Event Replay", description = "Time travel and event replay APIs")
+
+public class EventReplayController {
+
+    private static final Logger log = LoggerFactory.getLogger(EventReplayController.class);
+
+    private final EventReplayService replayService;
+    private final KafkaOffsetManager offsetManager;
+
+    public EventReplayController(EventReplayService replayService, KafkaOffsetManager offsetManager) {
+        this.replayService = replayService;
+        this.offsetManager = offsetManager;
+    }
+
+    /**
+     * Start event replay for time range
+     */
+    @PostMapping("/replay")
+    @Operation(summary = "Replay events in time range", description = "Replays events from a specific time range for debugging or analysis")
+    public CompletableFuture<ResponseEntity<EventReplayService.ReplayResult>> replayEvents(
+            @RequestBody ReplayRequest request) {
+
+        log.info("Received replay request: {}", request);
+
+        return replayService.replayEvents(
+                request.getTopic(),
+                request.getStartTime(),
+                request.getEndTime(),
+                request.getOptions()
+        ).thenApply(result -> {
+            log.info("Replay completed: {}", result.getStatus());
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    /**
+     * Reconstruct system state at specific time
+     */
+    @PostMapping("/reconstruct-state")
+    @Operation(summary = "Reconstruct state at time", description = "Reconstructs system state at a specific point in time")
+    public CompletableFuture<ResponseEntity<EventReplayService.StateSnapshot>> reconstructState(
+            @RequestBody StateReconstructionRequest request) {
+
+        log.info("Received state reconstruction request: {}", request);
+
+        return replayService.reconstructStateAtTime(
+                request.getTopic(),
+                request.getTargetTime(),
+                request.getRelatedTopics()
+        ).thenApply(snapshot -> {
+            log.info("State reconstruction completed: {}", snapshot.getStatus());
+            return ResponseEntity.ok(snapshot);
+        });
+    }
+
+    /**
+     * Get event timeline for debugging
+     */
+    @GetMapping("/timeline")
+    @Operation(summary = "Get event timeline", description = "Retrieves event timeline for a specific time range")
+    public ResponseEntity<List<EventReplayService.EventTimeline>> getEventTimeline(
+            @RequestParam String topic,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
+            @RequestParam(defaultValue = "1000") int maxEvents) {
+
+        log.info("Getting event timeline: topic={}, startTime={}, endTime={}, maxEvents={}",
+                topic, startTime, endTime, maxEvents);
+
+        List<EventReplayService.EventTimeline> timeline = replayService.getEventTimeline(
+                topic, startTime, endTime, maxEvents);
+
+        return ResponseEntity.ok(timeline);
+    }
+
+    /**
+     * Get offset information for a topic
+     */
+    @GetMapping("/offsets/{topic}")
+    @Operation(summary = "Get topic offsets", description = "Retrieves offset information for a specific topic")
+    public ResponseEntity<Map<String, Object>> getTopicOffsets(@PathVariable String topic) {
+
+        log.info("Getting topic offsets: topic={}", topic);
+
+        Map<String, Object> offsetInfo = Map.of(
+                "earliest", offsetManager.getEarliestOffset(topic),
+                "latest", offsetManager.getLatestOffset(topic),
+                "range", offsetManager.getOffsetRange(topic)
+        );
+
+        return ResponseEntity.ok(offsetInfo);
+    }
+
+    /**
+     * Create offset snapshot for state reconstruction
+     */
+    @PostMapping("/snapshot")
+    @Operation(summary = "Create offset snapshot", description = "Creates a snapshot of current offsets for state reconstruction")
+    public ResponseEntity<Map<String, Object>> createOffsetSnapshot(
+            @RequestParam String topic) {
+
+        log.info("Creating offset snapshot: topic={}", topic);
+
+        Map<String, Object> snapshot = offsetManager.createOffsetSnapshot(topic);
+        return ResponseEntity.ok(snapshot);
+    }
+
+    /**
+     * Restore from offset snapshot
+     */
+    @PostMapping("/restore")
+    @Operation(summary = "Restore from snapshot", description = "Restores system state from an offset snapshot")
+    public ResponseEntity<String> restoreFromSnapshot(
+            @RequestBody Map<String, Object> snapshot) {
+
+        log.info("Restoring from offset snapshot");
+
+        try {
+            offsetManager.restoreFromSnapshot(snapshot);
+            return ResponseEntity.ok("Snapshot restored successfully");
+        } catch (Exception e) {
+            log.error("Failed to restore snapshot", e);
+            return ResponseEntity.badRequest().body("Failed to restore: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Create debug session for time travel
+     */
+    @PostMapping("/debug-session")
+    @Operation(summary = "Create debug session", description = "Creates a debug session for time travel analysis")
+    public ResponseEntity<EventReplayService.DebugSession> createDebugSession(
+            @RequestBody DebugSessionRequest request) {
+
+        log.info("Creating debug session: {}", request);
+
+        String sessionId = UUID.randomUUID().toString();
+        EventReplayService.DebugSession session = replayService.createDebugSession(
+                sessionId,
+                request.getTime(),
+                request.getParameters()
+        );
+
+        return ResponseEntity.ok(session);
+    }
+
+    /**
+     * Controlled replay with specific speed
+     */
+    @PostMapping("/controlled-replay")
+    @Operation(summary = "Controlled replay", description = "Executes event replay with controlled speed for debugging")
+    public CompletableFuture<ResponseEntity<EventReplayService.ReplayResult>> controlledReplay(
+            @RequestBody ControlledReplayRequest request) {
+
+        log.info("Starting controlled replay: {}", request);
+
+        return replayService.controlledReplay(
+                request.getTopic(),
+                request.getStartTime(),
+                request.getEndTime(),
+                request.getSpeed()
+        ).thenApply(result -> {
+            log.info("Controlled replay completed: {}", result.getStatus());
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    /**
+     * Get all current offsets
+     */
+    @GetMapping("/offsets")
+    @Operation(summary = "Get all offsets", description = "Retrieves all current offsets for all topics")
+    public ResponseEntity<Map<String, Long>> getAllOffsets() {
+        Map<String, Long> offsets = offsetManager.getCurrentOffsets().entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        e -> e.getKey().topic() + "-" + e.getKey().partition(),
+                        Map.Entry::getValue
+                ));
+        return ResponseEntity.ok(offsets);
+    }
+
+    // Request/Response DTOs
+
+    public static class ReplayRequest {
+        private String topic;
+        private Instant startTime;
+        private Instant endTime;
+        private EventReplayService.ReplayOptions options;
+
+        // Constructors
+        public ReplayRequest() {}
+
+        public ReplayRequest(String topic, Instant startTime, Instant endTime, EventReplayService.ReplayOptions options) {
+            this.topic = topic;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.options = options;
+        }
+
+        // Getters and setters
+        public String getTopic() { return topic; }
+        public void setTopic(String topic) { this.topic = topic; }
+        public Instant getStartTime() { return startTime; }
+        public void setStartTime(Instant startTime) { this.startTime = startTime; }
+        public Instant getEndTime() { return endTime; }
+        public void setEndTime(Instant endTime) { this.endTime = endTime; }
+        public EventReplayService.ReplayOptions getOptions() { return options; }
+        public void setOptions(EventReplayService.ReplayOptions options) { this.options = options; }
+    }
+
+    public static class StateReconstructionRequest {
+        private String topic;
+        private Instant targetTime;
+        private List<String> relatedTopics;
+
+        // Constructors
+        public StateReconstructionRequest() {}
+
+        public StateReconstructionRequest(String topic, Instant targetTime, List<String> relatedTopics) {
+            this.topic = topic;
+            this.targetTime = targetTime;
+            this.relatedTopics = relatedTopics;
+        }
+
+        // Getters and setters
+        public String getTopic() { return topic; }
+        public void setTopic(String topic) { this.topic = topic; }
+        public Instant getTargetTime() { return targetTime; }
+        public void setTargetTime(Instant targetTime) { this.targetTime = targetTime; }
+        public List<String> getRelatedTopics() { return relatedTopics; }
+        public void setRelatedTopics(List<String> relatedTopics) { this.relatedTopics = relatedTopics; }
+    }
+
+    public static class DebugSessionRequest {
+        private Instant time;
+        private Map<String, String> parameters;
+
+        // Constructors
+        public DebugSessionRequest() {}
+
+        public DebugSessionRequest(Instant time, Map<String, String> parameters) {
+            this.time = time;
+            this.parameters = parameters;
+        }
+
+        // Getters and setters
+        public Instant getTime() { return time; }
+        public void setTime(Instant time) { this.time = time; }
+        public Map<String, String> getParameters() { return parameters; }
+        public void setParameters(Map<String, String> parameters) { this.parameters = parameters; }
+    }
+
+    public static class ControlledReplayRequest {
+        private String topic;
+        private Instant startTime;
+        private Instant endTime;
+        private EventReplayService.ReplaySpeed speed;
+
+        // Constructors
+        public ControlledReplayRequest() {}
+
+        public ControlledReplayRequest(String topic, Instant startTime, Instant endTime, EventReplayService.ReplaySpeed speed) {
+            this.topic = topic;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.speed = speed;
+        }
+
+        // Getters and setters
+        public String getTopic() { return topic; }
+        public void setTopic(String topic) { this.topic = topic; }
+        public Instant getStartTime() { return startTime; }
+        public void setStartTime(Instant startTime) { this.startTime = startTime; }
+        public Instant getEndTime() { return endTime; }
+        public void setEndTime(Instant endTime) { this.endTime = endTime; }
+        public EventReplayService.ReplaySpeed getSpeed() { return speed; }
+        public void setSpeed(EventReplayService.ReplaySpeed speed) { this.speed = speed; }
+    }
+}

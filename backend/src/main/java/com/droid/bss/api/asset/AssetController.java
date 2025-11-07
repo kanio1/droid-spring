@@ -3,6 +3,8 @@ package com.droid.bss.api.asset;
 import com.droid.bss.application.command.asset.*;
 import com.droid.bss.application.dto.asset.*;
 import com.droid.bss.domain.asset.*;
+import com.droid.bss.domain.audit.AuditAction;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.micrometer.core.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -79,6 +81,7 @@ public class AssetController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.assets.api.create_asset", description = "Time to create an asset")
+    @Audited(action = AuditAction.ASSET_CREATE, entityType = "Asset", description = "Creating new asset")
     public ResponseEntity<AssetResponse> createAsset(@Valid @RequestBody CreateAssetCommand command) {
         var response = createAssetUseCase.handle(command);
         return ResponseEntity.ok(response);
@@ -94,6 +97,7 @@ public class AssetController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.assets.api.assign_asset", description = "Time to assign an asset")
+    @Audited(action = AuditAction.ASSET_UPDATE, entityType = "Asset", description = "Assigning asset {assetId}")
     public ResponseEntity<AssetResponse> assignAsset(
             @Parameter(description = "Asset ID", required = true) @PathVariable String assetId,
             @Valid @RequestBody AssignAssetCommand command) {
@@ -111,6 +115,7 @@ public class AssetController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.assets.api.release_asset", description = "Time to release an asset")
+    @Audited(action = AuditAction.ASSET_UPDATE, entityType = "Asset", description = "Releasing asset {assetId}")
     public ResponseEntity<AssetResponse> releaseAsset(
             @Parameter(description = "Asset ID", required = true) @PathVariable String assetId) {
         var response = releaseAssetUseCase.handle(assetId);
@@ -198,6 +203,7 @@ public class AssetController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.assets.api.create_element", description = "Time to create a network element")
+    @Audited(action = AuditAction.ASSET_CREATE, entityType = "NetworkElement", description = "Creating network element")
     public ResponseEntity<NetworkElementResponse> createNetworkElement(
             @Valid @RequestBody CreateNetworkElementCommand command) {
         var response = createElementUseCase.handle(command);
@@ -213,6 +219,7 @@ public class AssetController {
     @ApiResponse(responseCode = "404", description = "Network element not found")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR') or hasRole('SYSTEM')")
+    @Audited(action = AuditAction.ASSET_UPDATE, entityType = "NetworkElement", description = "Updating heartbeat for network element {elementId}")
     public ResponseEntity<Void> updateNetworkElementHeartbeat(
             @Parameter(description = "Element ID", required = true) @PathVariable String elementId) {
         updateHeartbeatUseCase.handle(elementId);
@@ -280,6 +287,7 @@ public class AssetController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.assets.api.create_sim", description = "Time to create a SIM card")
+    @Audited(action = AuditAction.ASSET_CREATE, entityType = "SIMCard", description = "Creating SIM card")
     public ResponseEntity<SIMCardResponse> createSIMCard(@Valid @RequestBody CreateSIMCardCommand command) {
         var response = createSimUseCase.handle(command);
         return ResponseEntity.ok(response);
@@ -295,6 +303,7 @@ public class AssetController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Timed(value = "bss.assets.api.assign_sim", description = "Time to assign a SIM card")
+    @Audited(action = AuditAction.ASSET_UPDATE, entityType = "SIMCard", description = "Assigning SIM card {simId}")
     public ResponseEntity<SIMCardResponse> assignSIMCard(
             @Parameter(description = "SIM ID", required = true) @PathVariable String simId,
             @RequestParam String assignedToType,

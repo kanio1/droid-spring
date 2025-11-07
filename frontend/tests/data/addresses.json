@@ -1,0 +1,35 @@
+[
+  {
+    "id": "addr-001",
+    "customerId": "cust-001",
+    "type": "billing",
+    "street": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10001",
+    "country": "USA",
+    "isPrimary": true
+  },
+  {
+    "id": "addr-002",
+    "customerId": "cust-001",
+    "type": "shipping",
+    "street": "456 Oak Ave",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10002",
+    "country": "USA",
+    "isPrimary": false
+  },
+  {
+    "id": "addr-003",
+    "customerId": "cust-002",
+    "type": "billing",
+    "street": "789 Pine St",
+    "city": "Los Angeles",
+    "state": "CA",
+    "postalCode": "90001",
+    "country": "USA",
+    "isPrimary": true
+  }
+]

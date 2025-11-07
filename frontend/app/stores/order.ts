@@ -75,7 +75,7 @@ export const useOrderStore = defineStore('order', () => {
         ...(params.customerId && { customerId: params.customerId })
       }
 
-      const response = await get<OrderListResponse>('/orders', { query })
+      const response = await get<OrderListResponse>('/api/v1/orders', { query })
       orders.value = response.data.content
 
       pagination.page = response.data.page
@@ -103,7 +103,7 @@ export const useOrderStore = defineStore('order', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const response = await get<Order>(`/orders/${id}`)
+      const response = await get<Order>(`/api/v1/orders/${id}`)
       currentOrder.value = response.data
       return response.data
     } catch (err: any) {
@@ -121,7 +121,7 @@ export const useOrderStore = defineStore('order', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { post } = useApi()
-      const response = await post<Order>('/orders', data)
+      const response = await post<Order>('/api/v1/orders', data)
 
       orders.value.unshift(response.data)
       pagination.totalElements++
@@ -142,7 +142,7 @@ export const useOrderStore = defineStore('order', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { put } = useApi()
-      const response = await put<Order>(`/orders/${data.id}/status`, data)
+      const response = await put<Order>(`/api/v1/orders/${data.id}/status`, data)
 
       const index = orders.value.findIndex(o => o.id === data.id)
       if (index !== -1) {

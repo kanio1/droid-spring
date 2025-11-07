@@ -1,11 +1,16 @@
 package com.droid.bss.application.command.payment;
 
+import com.droid.bss.application.dto.payment.DeletePaymentCommand;
+import com.droid.bss.domain.payment.PaymentId;
 import com.droid.bss.domain.payment.repository.PaymentRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+/**
+ * Use case for deleting payment (soft delete)
+ */
 @Component
 @Transactional
 public class DeletePaymentUseCase {
@@ -16,14 +21,8 @@ public class DeletePaymentUseCase {
         this.paymentRepository = paymentRepository;
     }
 
-    public boolean handle(String id) {
-        UUID paymentId = UUID.fromString(id);
-
-        return paymentRepository.findById(paymentId)
-                .map(payment -> {
-                    paymentRepository.delete(payment);
-                    return true;
-                })
-                .orElse(false);
+    public void handle(DeletePaymentCommand command) {
+        PaymentId paymentId = new PaymentId(UUID.fromString(command.id()));
+        paymentRepository.deleteById(paymentId.value());
     }
 }

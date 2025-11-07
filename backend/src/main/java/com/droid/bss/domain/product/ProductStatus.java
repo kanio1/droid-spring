@@ -7,7 +7,8 @@ public enum ProductStatus {
     ACTIVE("Aktywny"),
     INACTIVE("Nieaktywny"),
     DEPRECATED("Wycofany"),
-    SUSPENDED("Zawieszony");
+    SUSPENDED("Zawieszony"),
+    DISCONTINUED("Wycofany z oferty");
 
     private final String displayName;
 

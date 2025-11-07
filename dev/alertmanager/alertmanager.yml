@@ -1,5 +1,5 @@
-# AlertManager Configuration
-# BSS System - Phase 3 Advanced Monitoring
+# AlertManager Configuration for BSS
+# Enhanced for 400k events/min monitoring - Phase 2 Optimization
 
 global:
   smtp_smarthost: 'localhost:587'
@@ -8,42 +8,112 @@ global:
   smtp_auth_password: 'password'
   resolve_timeout: 5m
 
-# Route all alerts to default receiver
+# Route tree - routes alerts to appropriate teams
 route:
-  group_by: ['alertname', 'cluster', 'service']
-  group_wait: 10s
-  group_interval: 10s
-  repeat_interval: 1h
+  # Default receiver
   receiver: 'default-receiver'
+  # Group alerts by label
+  group_by: ['alertname', 'cluster', 'service', 'team']
+  # Wait 10s before sending initial alert
+  group_wait: 10s
+  # If alert persists, send notification every 5 minutes
+  group_interval: 5m
+  # If alert resolved, send notification
+  repeat_interval: 2h
+
   routes:
-    # Critical alerts
+    # Critical alerts - immediate notification
     - match:
         severity: critical
       receiver: 'critical-alerts'
-      group_wait: 5s
+      group_wait: 0s
       repeat_interval: 15m
+      continue: true
 
-    # Warning alerts
+    # Business metrics - higher priority
     - match:
-        severity: warning
-      receiver: 'warning-alerts'
+        business_metric: "true"
+      receiver: 'business-alerts'
       group_wait: 30s
-      repeat_interval: 2h
+      repeat_interval: 30m
+      continue: true
 
-    # Database alerts
+    # SLA alerts - highest priority
     - match:
-        component: database
-      receiver: 'database-alerts'
-      group_interval: 5m
+        sla: "true"
+      receiver: 'sla-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+      continue: true
 
-    # Kafka alerts
+    # Database team
     - match:
-        component: kafka
-      receiver: 'kafka-alerts'
+        team: database
+      receiver: 'database-team'
       group_interval: 5m
+      repeat_interval: 1h
+
+    # Cache/Redis team
+    - match:
+        team: cache
+      receiver: 'cache-team'
+      group_interval: 5m
+      repeat_interval: 1h
+
+    # Kafka/Streaming team
+    - match:
+        team: streaming
+      receiver: 'streaming-team'
+      group_interval: 5m
+      repeat_interval: 1h
+
+    # SRE/DevOps team
+    - match:
+        team: sre
+      receiver: 'sre-team'
+      group_interval: 5m
+      repeat_interval: 1h
+
+    # Capacity planning
+    - match:
+        capacity: "true"
+      receiver: 'capacity-alerts'
+      group_interval: 30m
+      repeat_interval: 12h
+
+# Inhibition rules - suppress lower priority alerts
+inhibit_rules:
+  # If service is down, don't send other alerts for that service
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: 'HighCPUUsage|HighMemoryUsage'
+    equal: ['instance', 'service']
+
+  # If Kafka is down, suppress business metric alerts
+  - source_match:
+      alertname: 'KafkaBrokerDown'
+    target_match:
+      business_metric: "true"
+    equal: ['cluster']
+
+  # If PostgreSQL is down, suppress other DB alerts
+  - source_match:
+      alertname: 'PostgreSQLDown'
+    target_match_re:
+      alertname: 'PostgreSQLHighConnections|PostgreSQLSlowQueries'
+    equal: ['instance']
+
+  # Critical alerts suppress warnings
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
 
 # Receivers
 receivers:
+  # Default receiver
   - name: 'default-receiver'
     email_configs:
       - to: 'admin@bss.local'
@@ -57,25 +127,154 @@ receivers:
           Time: {{ .StartsAt }}
           {{ end }}
 
+  # Critical alerts
   - name: 'critical-alerts'
+    pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+        description: 'BSS Critical Alert: {{ .GroupLabels.alertname }}'
+        severity: 'critical'
     email_configs:
-      - to: 'oncall@bss.local'
-        subject: '[CRITICAL] BSS System Alert'
+      - to: 'sre-oncall@bss.local,engineering@bss.local'
+        subject: '[CRITICAL] BSS Alert - {{ .GroupLabels.alertname }}'
         body: |
-          CRITICAL ALERT: Immediate attention required!
+          🚨 CRITICAL ALERT 🚨
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
           Severity: {{ .Labels.severity }}
           Instance: {{ .Labels.instance }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#alerts-critical'
+        title: 'BSS Critical Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          {{ end }}
+
+  # Database team
+  - name: 'database-team'
+    email_configs:
+      - to: 'database-team@bss.local'
+        subject: '[DATABASE] PostgreSQL Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          📊 Database Team Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#database-alerts'
+        title: 'BSS Database Alert'
+
+  # Cache team
+  - name: 'cache-team'
+    email_configs:
+      - to: 'cache-team@bss.local'
+        subject: '[CACHE] Redis Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          🗃️ Cache Team Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+
+  # Streaming team
+  - name: 'streaming-team'
+    email_configs:
+      - to: 'streaming-team@bss.local'
+        subject: '[KAFKA] Kafka Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          📨 Streaming Team Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+
+  # SRE team
+  - name: 'sre-team'
+    email_configs:
+      - to: 'sre-team@bss.local'
+        subject: '[SRE] BSS System Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          🛠️ SRE Team Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+
+  # Business alerts
+  - name: 'business-alerts'
+    email_configs:
+      - to: 'product@bss.local,engineering@bss.local'
+        subject: '[BSS] Business Metric Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          📈 Business Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Value: {{ .Annotations.value }}
+          Threshold: {{ .Annotations.threshold }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#business-metrics'
+        title: 'BSS Business Metric Alert'
+
+  # Capacity alerts
+  - name: 'capacity-alerts'
+    email_configs:
+      - to: 'capacity-planning@bss.local'
+        subject: '[BSS] Capacity Planning Alert'
+        body: |
+          📊 Capacity Planning Alert
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  # SLA alerts
+  - name: 'sla-alerts'
+    pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+        description: 'BSS SLA Breach: {{ .GroupLabels.alertname }}'
+        severity: 'critical'
+    email_configs:
+      - to: 'sre-oncall@bss.local,cto@bss.local'
+        subject: '🚨 SLA BREACH - BSS System'
+        body: |
+          🚨 SLA BREACH DETECTED 🚨
+
+          System is not meeting SLA requirements!
+
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
           Time: {{ .StartsAt }}
           {{ end }}
     slack_configs:
       - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-        channel: '#critical-alerts'
-        title: 'CRITICAL: BSS System Alert'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        channel: '#alerts-critical'
+        title: '🚨 SLA BREACH'
+        text: 'BSS system is not meeting SLA requirements! Check dashboard immediately.'
 
+  # Legacy receivers for backward compatibility
   - name: 'warning-alerts'
     email_configs:
       - to: 'team@bss.local'
@@ -88,37 +287,15 @@ receivers:
           Instance: {{ .Labels.instance }}
           {{ end }}
 
-  - name: 'database-alerts'
-    email_configs:
-      - to: 'dba@bss.local'
-        subject: '[DATABASE] BSS System Alert'
-        body: |
-          Database alert detected
-          {{ range .Alerts }}
-          Alert: {{ .Annotations.summary }}
-          Description: {{ .Annotations.description }}
-          Instance: {{ .Labels.instance }}
-          {{ end }}
-
-  - name: 'kafka-alerts'
-    email_configs:
-      - to: 'devops@bss.local'
-        subject: '[KAFKA] BSS System Alert'
-        body: |
-          Kafka alert detected
-          {{ range .Alerts }}
-          Alert: {{ .Annotations.summary }}
-          Description: {{ .Annotations.description }}
-          Instance: {{ .Labels.instance }}
-          {{ end }}
-
-# Inhibit rules
-inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'cluster', 'service']
+# Time intervals for alert suppression
+time_intervals:
+  - name: 'business_hours'
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '17:00'
+        weekdays: ['monday:friday']
+        timezone: 'UTC'
 
 # Templates
 templates:

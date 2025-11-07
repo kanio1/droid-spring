@@ -1,0 +1,55 @@
+{
+  "app": {
+    "title": "Portal BSS",
+    "dashboard": "Panel Główny",
+    "customers": "Klienci",
+    "addresses": "Adresy",
+    "coverageNodes": "Węzły Zasięgu",
+    "monitoring": "Monitorowanie Zasobów",
+    "alerts": "Zarządzanie Alertami",
+    "settings": "Ustawienia",
+    "profile": "Profil"
+  },
+  "nav": {
+    "home": "Strona Główna",
+    "dashboard": "Panel Główny",
+    "customers": "Klienci",
+    "addresses": "Adresy",
+    "coverageNodes": "Węzły Zasięgu",
+    "monitoring": "Monitorowanie",
+    "alerts": "Alerty",
+    "settings": "Ustawienia",
+    "profile": "Profil"
+  },
+  "actions": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "create": "Utwórz",
+    "update": "Aktualizuj",
+    "submit": "Wyślij",
+    "close": "Zamknij"
+  },
+  "common": {
+    "loading": "Ładowanie...",
+    "error": "Wystąpił błąd",
+    "success": "Sukces",
+    "warning": "Ostrzeżenie",
+    "info": "Informacja",
+    "yes": "Tak",
+    "no": "Nie"
+  },
+  "form": {
+    "name": "Nazwa",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "address": "Adres",
+    "city": "Miasto",
+    "country": "Kraj",
+    "zipCode": "Kod Pocztowy",
+    "search": "Szukaj",
+    "filter": "Filtr",
+    "reset": "Resetuj"
+  }
+}

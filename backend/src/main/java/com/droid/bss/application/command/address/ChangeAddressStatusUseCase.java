@@ -2,9 +2,7 @@ package com.droid.bss.application.command.address;
 
 import com.droid.bss.application.dto.address.AddressResponse;
 import com.droid.bss.application.dto.address.ChangeAddressStatusCommand;
-import com.droid.bss.domain.address.AddressEntity;
-import com.droid.bss.domain.address.AddressRepository;
-import com.droid.bss.domain.address.AddressStatus;
+import com.droid.bss.domain.address.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +22,10 @@ public class ChangeAddressStatusUseCase {
 
     @Transactional
     public AddressResponse handle(ChangeAddressStatusCommand command) {
-        UUID addressId = UUID.fromString(command.id());
+        UUID addressIdUuid = UUID.fromString(command.id());
+        AddressId addressId = AddressId.of(addressIdUuid);
 
-        AddressEntity address = addressRepository.findById(addressId)
+        Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("Address not found: " + command.id()));
 
         AddressStatus status = AddressStatus.valueOf(command.status());
@@ -36,9 +35,10 @@ public class ChangeAddressStatusUseCase {
             throw new IllegalStateException("Cannot deactivate a primary address");
         }
 
-        address.setStatus(status);
+        // Update status using immutable pattern
+        Address updated = address.changeStatus(status);
 
-        AddressEntity saved = addressRepository.save(address);
+        Address saved = addressRepository.save(updated);
 
         return AddressResponse.from(saved);
     }

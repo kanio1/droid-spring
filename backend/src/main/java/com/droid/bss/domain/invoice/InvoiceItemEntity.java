@@ -8,6 +8,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Map;
 
 /**
@@ -67,6 +68,28 @@ public class InvoiceItemEntity extends BaseEntity {
 
     @Column(name = "period_end")
     private LocalDate periodEnd;
+
+    // Proration support
+    @Column(name = "days_in_period")
+    private Integer daysInPeriod;
+
+    @Column(name = "days_billed")
+    private Integer daysBilled;
+
+    @Column(name = "is_prorated", nullable = false)
+    private Boolean isProrated = false;
+
+    @Column(name = "original_unit_price", precision = 10, scale = 2)
+    private BigDecimal originalUnitPrice;
+
+    @Column(name = "advance_payment", nullable = false)
+    private Boolean advancePayment = false;
+
+    @Column(name = "advance_amount", precision = 10, scale = 2)
+    private BigDecimal advanceAmount;
+
+    @Column(name = "billing_scheme", length = 50)
+    private String billingScheme; // EQUAL, USAGE_BASED, TIME_BASED
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "configuration", columnDefinition = "jsonb")
@@ -168,6 +191,134 @@ public class InvoiceItemEntity extends BaseEntity {
 
     public boolean isAdjustment() {
         return itemType == InvoiceItemType.ADJUSTMENT;
+    }
+
+    public boolean isAdvancePayment() {
+        return Boolean.TRUE.equals(advancePayment) || itemType == InvoiceItemType.ADVANCE_PAYMENT;
+    }
+
+    public boolean isProrated() {
+        return Boolean.TRUE.equals(isProrated) || (periodStart != null && periodEnd != null &&
+                daysInPeriod != null && daysBilled != null && daysBilled < daysInPeriod);
+    }
+
+    /**
+     * Calculate proration factor (0.0 to 1.0)
+     */
+    public BigDecimal getProrationFactor() {
+        if (daysInPeriod == null || daysBilled == null || daysInPeriod == 0) {
+            return BigDecimal.ONE;
+        }
+        return BigDecimal.valueOf(daysBilled).divide(BigDecimal.valueOf(daysInPeriod), 4, BigDecimal.ROUND_HALF_UP);
+    }
+
+    /**
+     * Apply proration to this invoice item
+     */
+    public void applyProration(LocalDate actualStart, LocalDate actualEnd) {
+        this.isProrated = true;
+        this.periodStart = actualStart;
+        this.periodEnd = actualEnd;
+
+        // Calculate days
+        if (periodStart != null && periodEnd != null) {
+            this.daysInPeriod = (int) (periodEnd.toEpochDay() - periodStart.toEpochDay() + 1);
+            this.daysBilled = (int) (actualEnd.toEpochDay() - actualStart.toEpochDay() + 1);
+
+            // Store original price before proration
+            if (this.originalUnitPrice == null) {
+                this.originalUnitPrice = this.unitPrice;
+            }
+
+            // Calculate prorated price
+            BigDecimal prorationFactor = getProrationFactor();
+            this.unitPrice = this.originalUnitPrice.multiply(prorationFactor);
+
+            // Recalculate amounts
+            recalculateAmounts();
+        }
+    }
+
+    /**
+     * Mark as advance payment with specified amount
+     */
+    public void markAsAdvancePayment(BigDecimal advanceAmt) {
+        this.advancePayment = true;
+        this.advanceAmount = advanceAmt;
+        this.unitPrice = advanceAmt;
+        this.itemType = InvoiceItemType.ADVANCE_PAYMENT;
+        recalculateAmounts();
+    }
+
+    /**
+     * Calculate advance payment amount for a service
+     */
+    public BigDecimal calculateAdvancePayment(BigDecimal monthlyRate, int advanceMonths) {
+        if (monthlyRate == null || advanceMonths <= 0) {
+            return BigDecimal.ZERO;
+        }
+        this.advanceAmount = monthlyRate.multiply(BigDecimal.valueOf(advanceMonths));
+        this.advancePayment = true;
+        return this.advanceAmount;
+    }
+
+    /**
+     * Get prorated amount for partial billing
+     */
+    public BigDecimal getProratedAmount(BigDecimal fullAmount, int daysInPeriod, int daysToBill) {
+        if (fullAmount == null || daysInPeriod <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        this.daysInPeriod = daysInPeriod;
+        this.daysBilled = daysToBill;
+        this.isProrated = true;
+        this.periodStart = LocalDate.now().minusDays(daysToBill);
+        this.periodEnd = LocalDate.now().minusDays(1);
+
+        BigDecimal prorationFactor = BigDecimal.valueOf(daysToBill)
+                .divide(BigDecimal.valueOf(daysInPeriod), 4, BigDecimal.ROUND_HALF_UP);
+
+        BigDecimal proratedAmount = fullAmount.multiply(prorationFactor);
+        this.unitPrice = proratedAmount;
+        this.quantity = BigDecimal.ONE;
+
+        recalculateAmounts();
+        return this.totalAmount;
+    }
+
+    /**
+     * Normalize advance payment to regular billing
+     */
+    public void normalizeAdvancePayment() {
+        if (this.advancePayment && this.originalUnitPrice != null) {
+            this.advancePayment = false;
+            this.unitPrice = this.originalUnitPrice;
+            this.isProrated = false;
+            recalculateAmounts();
+        }
+    }
+
+    /**
+     * Check if this item is a mid-cycle change
+     */
+    public boolean isMidCycleChange() {
+        return isProrated() && (periodStart != null && periodEnd != null &&
+                (!periodStart.equals(periodStart.with(TemporalAdjusters.firstDayOfMonth())) ||
+                !periodEnd.equals(periodEnd.with(TemporalAdjusters.lastDayOfMonth()))));
+    }
+
+    /**
+     * Calculate remaining amount for advance payment
+     */
+    public BigDecimal getRemainingAdvanceAmount(BigDecimal totalServiceAmount) {
+        if (!advancePayment || advanceAmount == null) {
+            return BigDecimal.ZERO;
+        }
+
+        // If this is a prorated item, calculate remaining from full period
+        BigDecimal fullPeriodAmount = originalUnitPrice != null ? originalUnitPrice : totalServiceAmount;
+        return fullPeriodAmount.subtract(this.totalAmount);
     }
 
     // Getters and setters
@@ -310,5 +461,94 @@ public class InvoiceItemEntity extends BaseEntity {
 
     public void setConfiguration(Map<String, Object> configuration) {
         this.configuration = configuration;
+    }
+
+    public Integer getDaysInPeriod() {
+        return daysInPeriod;
+    }
+
+    public void setDaysInPeriod(Integer daysInPeriod) {
+        this.daysInPeriod = daysInPeriod;
+    }
+
+    public Integer getDaysBilled() {
+        return daysBilled;
+    }
+
+    public void setDaysBilled(Integer daysBilled) {
+        this.daysBilled = daysBilled;
+    }
+
+    public Boolean getIsProrated() {
+        return isProrated;
+    }
+
+    public void setIsProrated(Boolean isProrated) {
+        this.isProrated = isProrated;
+    }
+
+    public BigDecimal getOriginalUnitPrice() {
+        return originalUnitPrice;
+    }
+
+    public void setOriginalUnitPrice(BigDecimal originalUnitPrice) {
+        this.originalUnitPrice = originalUnitPrice;
+    }
+
+    public Boolean getAdvancePayment() {
+        return advancePayment;
+    }
+
+    public void setAdvancePayment(Boolean advancePayment) {
+        this.advancePayment = advancePayment;
+    }
+
+    public BigDecimal getAdvanceAmount() {
+        return advanceAmount;
+    }
+
+    public void setAdvanceAmount(BigDecimal advanceAmount) {
+        this.advanceAmount = advanceAmount;
+    }
+
+    public String getBillingScheme() {
+        return billingScheme;
+    }
+
+    public void setBillingScheme(String billingScheme) {
+        this.billingScheme = billingScheme;
+    }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public InvoiceItem toDomain() {
+        return InvoiceItem.restore(
+            this.getId(),
+            null, // orderId not available in this entity
+            null, // productId not available in this entity
+            this.description,
+            this.quantity != null ? this.quantity.intValue() : 1,
+            this.unitPrice,
+            this.discountAmount,
+            this.taxRate,
+            InvoiceItemStatus.PENDING, // Status not tracked in this entity
+            this.version != null ? this.version.intValue() : 0
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static InvoiceItemEntity from(InvoiceItem invoiceItem) {
+        InvoiceItemEntity entity = new InvoiceItemEntity();
+        entity.setId(invoiceItem.getId());
+        entity.setDescription(invoiceItem.getDescription());
+        entity.setQuantity(BigDecimal.valueOf(invoiceItem.getQuantity()));
+        entity.setUnitPrice(invoiceItem.getUnitPrice());
+        entity.setDiscountAmount(invoiceItem.getDiscountAmount());
+        entity.setTaxRate(invoiceItem.getTaxRate());
+        // Note: invoice relationship should be set by caller
+        return entity;
     }
 }

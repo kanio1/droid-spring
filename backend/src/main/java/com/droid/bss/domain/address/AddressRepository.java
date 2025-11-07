@@ -1,152 +1,147 @@
 package com.droid.bss.domain.address;
 
-import org.springframework.data.domain.Page;
+import com.droid.bss.domain.customer.CustomerId;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Repository for Address entity
+ * AddressRepository - DDD Port for Address Aggregate
+ * This is the interface (port) that the domain depends on.
+ * The implementation will be in the infrastructure layer.
  */
-@Repository
-public interface AddressRepository extends JpaRepository<AddressEntity, UUID> {
+public interface AddressRepository {
 
     /**
-     * Find all addresses for a customer (excluding deleted)
+     * Find address by ID
      */
-    List<AddressEntity> findByCustomerIdAndDeletedAtIsNull(UUID customerId);
+    Optional<Address> findById(AddressId id);
 
     /**
-     * Find active addresses for a customer
+     * Find addresses by customer
      */
-    List<AddressEntity> findByCustomerIdAndStatusAndDeletedAtIsNull(UUID customerId, AddressStatus status);
+    List<Address> findByCustomerId(CustomerId customerId);
 
     /**
-     * Find active addresses for a customer (with pagination)
+     * Find addresses by customer and type
      */
-    Page<AddressEntity> findByCustomerIdAndStatusAndDeletedAtIsNull(UUID customerId, AddressStatus status, Pageable pageable);
+    List<Address> findByCustomerIdAndType(CustomerId customerId, AddressType type);
 
     /**
-     * Find addresses by type for a customer
+     * Find primary address by customer
      */
-    List<AddressEntity> findByCustomerIdAndTypeAndDeletedAtIsNull(UUID customerId, AddressType type);
+    Optional<Address> findPrimaryByCustomerId(CustomerId customerId);
 
     /**
-     * Find addresses by type for a customer (with pagination)
+     * Find primary address by customer and type
      */
-    Page<AddressEntity> findByCustomerIdAndTypeAndDeletedAtIsNull(UUID customerId, AddressType type, Pageable pageable);
+    Optional<Address> findPrimaryByCustomerIdAndType(CustomerId customerId, AddressType type);
 
     /**
-     * Find primary address for a customer and type
+     * Find addresses by type
      */
-    Optional<AddressEntity> findByCustomerIdAndTypeAndIsPrimaryTrueAndDeletedAtIsNull(UUID customerId, AddressType type);
+    List<Address> findByType(AddressType type);
 
     /**
-     * Find primary address for a customer (any type)
+     * Find addresses by status
      */
-    @Query("SELECT a FROM AddressEntity a " +
-           "WHERE a.customer.id = :customerId " +
-           "AND a.isPrimary = true " +
-           "AND a.deletedAt IS NULL " +
-           "ORDER BY a.createdAt ASC")
-    Optional<AddressEntity> findPrimaryAddressByCustomerId(@Param("customerId") UUID customerId);
+    List<Address> findByStatus(AddressStatus status);
 
     /**
      * Find addresses by country
      */
-    List<AddressEntity> findByCountryAndDeletedAtIsNull(Country country);
-
-    /**
-     * Find addresses by postal code
-     */
-    List<AddressEntity> findByPostalCodeAndDeletedAtIsNull(String postalCode);
-
-    /**
-     * Find all primary addresses (excluding deleted)
-     */
-    @Query("SELECT a FROM AddressEntity a WHERE a.isPrimary = true AND a.deletedAt IS NULL")
-    List<AddressEntity> findAllPrimaryAddresses();
-
-    /**
-     * Find active addresses with geographic coordinates
-     */
-    @Query("SELECT a FROM AddressEntity a " +
-           "WHERE a.status = 'ACTIVE' " +
-           "AND a.deletedAt IS NULL " +
-           "AND a.latitude IS NOT NULL " +
-           "AND a.longitude IS NOT NULL")
-    List<AddressEntity> findActiveAddressesWithCoordinates();
+    List<Address> findByCountry(Country country);
 
     /**
      * Find addresses by city
      */
-    List<AddressEntity> findByCityAndDeletedAtIsNull(String city);
+    List<Address> findByCity(String city);
 
     /**
-     * Find addresses by type and status
+     * Find addresses by postal code
      */
-    List<AddressEntity> findByTypeAndStatusAndDeletedAtIsNull(AddressType type, AddressStatus status);
+    List<Address> findByPostalCode(String postalCode);
 
     /**
-     * Find addresses by type and status (with pagination)
+     * Find active addresses by customer
      */
-    Page<AddressEntity> findByTypeAndStatusAndDeletedAtIsNull(AddressType type, AddressStatus status, Pageable pageable);
+    List<Address> findActiveByCustomerId(CustomerId customerId);
 
     /**
-     * Check if customer has any active addresses
+     * Save address (create or update)
      */
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END " +
-           "FROM AddressEntity a " +
-           "WHERE a.customer.id = :customerId " +
-           "AND a.status = 'ACTIVE' " +
-           "AND a.deletedAt IS NULL")
-    boolean existsActiveAddressesByCustomerId(@Param("customerId") UUID customerId);
+    Address save(Address address);
 
     /**
-     * Count addresses by type for a customer
+     * Delete address by ID
      */
-    @Query("SELECT COUNT(a) FROM AddressEntity a " +
-           "WHERE a.customer.id = :customerId " +
-           "AND a.type = :type " +
-           "AND a.deletedAt IS NULL")
-    long countByCustomerIdAndType(@Param("customerId") UUID customerId, @Param("type") AddressType type);
+    void deleteById(AddressId id);
 
     /**
-     * Find address by ID (excluding deleted)
+     * Check if address exists by ID
      */
-    Optional<AddressEntity> findByIdAndDeletedAtIsNull(UUID id);
+    boolean existsById(AddressId id);
 
     /**
-     * Find all non-deleted addresses (active and inactive)
+     * Count addresses by customer
      */
-    @Query("SELECT a FROM AddressEntity a WHERE a.deletedAt IS NULL")
-    List<AddressEntity> findAllNonDeleted();
+    long countByCustomerId(CustomerId customerId);
 
     /**
-     * Find addresses with search term (street, city, region)
+     * Count active addresses by customer
      */
-    @Query("SELECT a FROM AddressEntity a " +
-           "WHERE a.deletedAt IS NULL " +
-           "AND (LOWER(a.street) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
-           "OR LOWER(a.city) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
-           "OR LOWER(a.region) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
-    List<AddressEntity> searchByTerm(@Param("searchTerm") String searchTerm);
+    long countActiveByCustomerId(CustomerId customerId);
 
     /**
-     * Count all non-deleted addresses
+     * Check if customer has primary address
      */
-    @Query("SELECT COUNT(a) FROM AddressEntity a WHERE a.deletedAt IS NULL")
-    long countAll();
+    boolean hasPrimaryAddress(CustomerId customerId);
 
     /**
-     * Count addresses by status
+     * Check if customer has primary address of specific type
      */
-    @Query("SELECT COUNT(a) FROM AddressEntity a WHERE a.status = :status AND a.deletedAt IS NULL")
-    long countByStatus(@Param("status") AddressStatus status);
+    boolean hasPrimaryAddressOfType(CustomerId customerId, AddressType type);
+
+    /**
+     * Find primary address by customer and type (legacy method for backward compatibility)
+     */
+    Optional<Address> findByCustomerIdAndTypeAndIsPrimaryTrueAndDeletedAtIsNull(UUID customerId, AddressType type);
+
+    /**
+     * Find addresses by customer ID and type (with soft delete filter)
+     */
+    List<Address> findByCustomerIdAndTypeAndDeletedAtIsNull(UUID customerId, AddressType type, Pageable pageable);
+
+    /**
+     * Find addresses by customer ID and status (with soft delete filter)
+     */
+    List<Address> findByCustomerIdAndStatusAndDeletedAtIsNull(UUID customerId, AddressStatus status, Pageable pageable);
+
+    /**
+     * Find addresses by customer ID (with soft delete filter)
+     */
+    List<Address> findByCustomerIdAndDeletedAtIsNull(UUID customerId);
+
+    /**
+     * Search addresses by term
+     */
+    List<Address> searchByTerm(String term);
+
+    /**
+     * Find addresses by type and status (with soft delete filter)
+     */
+    List<Address> findByTypeAndStatusAndDeletedAtIsNull(AddressType type, AddressStatus status, Pageable pageable);
+
+    /**
+     * Find addresses by country (with soft delete filter)
+     */
+    List<Address> findByCountryAndDeletedAtIsNull(Country country);
+
+    /**
+     * Find all addresses with pagination
+     */
+    List<Address> findAll(Pageable pageable);
 }
+

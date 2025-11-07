@@ -10,6 +10,8 @@ import com.droid.bss.application.dto.customer.CreateCustomerCommand;
 import com.droid.bss.application.dto.customer.CustomerResponse;
 import com.droid.bss.application.dto.customer.UpdateCustomerCommand;
 import com.droid.bss.application.query.customer.CustomerQueryService;
+import com.droid.bss.domain.audit.AuditAction;
+import com.droid.bss.infrastructure.audit.Audited;
 import com.droid.bss.infrastructure.metrics.BusinessMetrics;
 import com.droid.bss.infrastructure.security.RateLimiting;
 import io.micrometer.core.annotation.Timed;
@@ -37,7 +39,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/api/customers")
+@RequestMapping("/api/v1/customers")
 @Tag(name = "Customer", description = "Customer management API")
 public class CustomerController {
 
@@ -74,6 +76,7 @@ public class CustomerController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
     @Timed(value = "bss.customers.create.time", description = "Time to create customer")
+    @Audited(action = AuditAction.CUSTOMER_CREATE, entityType = "Customer", description = "Creating new customer")
     public ResponseEntity<CustomerResponse> createCustomer(
             @Valid @RequestBody CreateCustomerCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -114,11 +117,11 @@ public class CustomerController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
-    // Read all with pagination and sorting
+    // Read all with pagination, sorting, search, and status filter
     @GetMapping
     @Operation(
         summary = "Get all customers",
-        description = "Retrieves a paginated list of all customers"
+        description = "Retrieves a paginated list of all customers with optional search and status filter"
     )
     @ApiResponse(responseCode = "200", description = "Customers retrieved successfully")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
@@ -128,9 +131,20 @@ public class CustomerController {
     public ResponseEntity<PageResponse<CustomerResponse>> getAllCustomers(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')") @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')") @RequestParam(defaultValue = "createdAt,desc") String sort,
+            @Parameter(description = "Search term (name, email, PESEL, or NIP)") @RequestParam(required = false) String search,
+            @Parameter(description = "Filter by customer status") @RequestParam(required = false) String status
     ) {
-        var pageResponse = customerQueryService.findAll(page, size, sort);
+        PageResponse<CustomerResponse> pageResponse;
+
+        if (search != null && !search.isBlank()) {
+            pageResponse = customerQueryService.search(search, page, size, sort);
+        } else if (status != null && !status.isBlank()) {
+            pageResponse = customerQueryService.findByStatus(status, page, size, sort);
+        } else {
+            pageResponse = customerQueryService.findAll(page, size, sort);
+        }
+
         return ResponseEntity.ok(pageResponse);
     }
     
@@ -188,6 +202,7 @@ public class CustomerController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.getClaimAsString('customer_id')")
+    @Audited(action = AuditAction.CUSTOMER_UPDATE, entityType = "Customer", description = "Updating customer {id}")
     public ResponseEntity<CustomerResponse> updateCustomer(
             @Parameter(description = "Customer ID", required = true) @PathVariable String id,
             @Valid @RequestBody UpdateCustomerCommand command
@@ -223,6 +238,7 @@ public class CustomerController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.CUSTOMER_UPDATE, entityType = "Customer", description = "Changing status for customer {id}")
     public ResponseEntity<CustomerResponse> changeCustomerStatus(
             @Parameter(description = "Customer ID", required = true) @PathVariable String id,
             @Valid @RequestBody ChangeCustomerStatusCommand command
@@ -248,6 +264,7 @@ public class CustomerController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.CUSTOMER_DELETE, entityType = "Customer", description = "Deleting customer {id}")
     public ResponseEntity<Void> deleteCustomer(
             @Parameter(description = "Customer ID", required = true) @PathVariable String id
     ) {

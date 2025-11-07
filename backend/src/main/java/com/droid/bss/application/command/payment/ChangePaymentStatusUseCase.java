@@ -1,16 +1,19 @@
 package com.droid.bss.application.command.payment;
 
 import com.droid.bss.application.dto.payment.ChangePaymentStatusCommand;
+import com.droid.bss.domain.payment.Payment;
 import com.droid.bss.domain.payment.PaymentEntity;
+import com.droid.bss.domain.payment.PaymentId;
 import com.droid.bss.domain.payment.PaymentStatus;
 import com.droid.bss.domain.payment.repository.PaymentRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Use case for changing payment status (immutable update)
+ */
 @Component
 @Transactional
 public class ChangePaymentStatusUseCase {
@@ -21,27 +24,33 @@ public class ChangePaymentStatusUseCase {
         this.paymentRepository = paymentRepository;
     }
 
-    public PaymentEntity handle(ChangePaymentStatusCommand command) {
+    public UUID handle(ChangePaymentStatusCommand command) {
         // Find existing payment
-        PaymentEntity payment = paymentRepository.findById(UUID.fromString(command.id()))
+        PaymentId paymentId = new PaymentId(UUID.fromString(command.id()));
+        PaymentEntity entity = paymentRepository.findById(paymentId.value())
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + command.id()));
 
-        PaymentStatus oldStatus = payment.getPaymentStatus();
+        // Convert to DDD aggregate
+        Payment payment = entity.toDomain();
         PaymentStatus newStatus = command.status();
 
-        // Update status
-        payment.setPaymentStatus(newStatus);
-        payment.setUpdatedAt(LocalDateTime.now());
+        // Use immutable update - create new payment instance
+        Payment updatedPayment = payment.changeStatus(newStatus);
 
-        // Set additional fields based on status
-        if (newStatus == PaymentStatus.COMPLETED && oldStatus != PaymentStatus.COMPLETED) {
-            payment.setReceivedDate(LocalDate.now());
+        // Handle additional fields based on status
+        Payment finalPayment = updatedPayment;
+        if (newStatus == PaymentStatus.COMPLETED) {
+            finalPayment = updatedPayment.complete();
+        } else if (newStatus == PaymentStatus.FAILED) {
+            finalPayment = updatedPayment.fail();
+        } else if (newStatus == PaymentStatus.REFUNDED && command.reason() != null) {
+            finalPayment = updatedPayment.refund(command.reason());
         }
 
-        if (newStatus == PaymentStatus.REFUNDED && command.reason() != null) {
-            payment.setReversalReason(command.reason());
-        }
+        // Save the updated payment - convert to entity first
+        PaymentEntity newEntity = PaymentEntity.from(finalPayment);
+        PaymentEntity savedEntity = paymentRepository.save(newEntity);
 
-        return paymentRepository.save(payment);
+        return savedEntity.getId();
     }
 }

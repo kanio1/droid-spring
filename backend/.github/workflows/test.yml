@@ -5,13 +5,29 @@ on:
     branches: [ "main", "develop" ]
   pull_request:
     branches: [ "main", "develop" ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  JAVA_VERSION: '21'
+  MAVEN_OPTS: '-Xmx2048m -XX:MaxMetaspaceSize=1024m'
+  MAVEN_CLI_OPTS: '--batch-mode --errors --fail-fast --show-version'
 
 jobs:
-  test:
+  # ========== UNIT TESTS (Fast, Parallel) ==========
+  unit-tests:
+    name: Unit Tests (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [ '21' ]
+        test-group: [ 'unit', 'component' ]
 
     services:
-      # PostgreSQL service for tests
       postgres:
         image: postgres:18-alpine
         env:
@@ -26,57 +42,146 @@ jobs:
         ports:
           - 5432:5432
 
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up JDK 21
+    - name: Set up JDK ${{ matrix.java-version }}
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: ${{ matrix.java-version }}
         distribution: 'temurin'
+        cache: 'maven'
 
-    - name: Cache Maven dependencies
+    - name: Cache Maven repository
       uses: actions/cache@v4
       with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
 
-    - name: Run tests with Testcontainers
+    - name: Verify Java version and environment
+      run: |
+        java -version
+        mvn -version
+        echo "MAVEN_OPTS=$MAVEN_OPTS"
+        echo "MAVEN_CLI_OPTS=$MAVEN_CLI_OPTS"
+
+    - name: Run unit tests with parallel execution
       env:
-        # Testcontainers requires specific environment
-        ACT: true
-        # Database configuration (using service container)
+        # Database configuration
         SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bss_test
         SPRING_DATASOURCE_USERNAME: test
         SPRING_DATASOURCE_PASSWORD: test
-        # OAuth2 configuration for tests
-        SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8081/realms/bss
-        SECURITY_OAUTH2_AUDIENCE: bss-backend
-        # Disable Flyway for faster tests
-        SPRING_FLYWAY_ENABLED: "false"
-        # JPA configuration
-        SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      run: |
-        # Install Act locally if running locally
-        if [ "$ACT" = "true" ]; then
-          echo "Running locally with Act"
-          export PATH="$PWD/bin:$PATH"
-        fi
-        # Run all tests including integration tests
-        mvn clean test -B -DfailIfNoTests=false
+        SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
 
-    - name: Upload test results
+        # Redis configuration
+        SPRING_REDIS_HOST: localhost
+        SPRING_REDIS_PORT: 6379
+
+        # JPA/Hibernate configuration
+        SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+        SPRING_JPA_SHOW_SQL: false
+        SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: false
+
+        # Disable Flyway for unit tests
+        SPRING_FLYWAY_ENABLED: false
+
+        # Test configuration
+        TEST_PARALLEL_EXECUTION: true
+        JAVA_OPTS: ${{ env.MAVEN_OPTS }}
+
+      run: |
+        # Run specific test groups
+        if [ "${{ matrix.test-group }}" = "unit" ]; then
+          mvn test $MAVEN_CLI_OPTS \
+            -Dtest.groups=unit \
+            -DfailIfNoTests=false \
+            -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dmaven.test.failure.ignore=false
+        elif [ "${{ matrix.test-group }}" = "component" ]; then
+          mvn test $MAVEN_CLI_OPTS \
+            -Dtest.groups=component \
+            -DfailIfNoTests=false \
+            -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dmaven.test.failure.ignore=false
+        fi
+
+    - name: Upload unit test results
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results
-        path: target/surefire-reports/
+        name: unit-test-results-${{ matrix.test-group }}
+        path: |
+          target/surefire-reports/
+          target/site/jacoco/
+        retention-days: 30
 
-  build:
+    - name: Publish unit test results
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Unit Test Results (${{ matrix.test-group }})
+        path: target/surefire-reports/*.xml
+        reporter: java-junit
+        fail-on-error: false
+
+  # ========== INTEGRATION TESTS (Parallel, Testcontainers) ==========
+  integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
-    needs: test
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: bss_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      kafka:
+        image: confluentinc/cp-kafka:7.4.0
+        env:
+          KAFKA_BROKER_ID: 1
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        options: >-
+          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9092:9092
 
     steps:
     - name: Checkout code
@@ -85,23 +190,283 @@ jobs:
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
+        cache: 'maven'
 
-    - name: Cache Maven dependencies
+    - name: Cache Maven repository
       uses: actions/cache@v4
       with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for PostgreSQL..."
+        timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U test; do sleep 2; done'
+        echo "PostgreSQL is ready!"
+
+        echo "Waiting for Redis..."
+        timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 2; done'
+        echo "Redis is ready!"
+
+        echo "Waiting for Kafka..."
+        timeout 60 bash -c 'until kafka-topics --bootstrap-server localhost:9092 --list; do sleep 3; done'
+        echo "Kafka is ready!"
+
+    - name: Run integration tests with Testcontainers
+      env:
+        # Database configuration
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bss_test
+        SPRING_DATASOURCE_USERNAME: test
+        SPRING_DATASOURCE_PASSWORD: test
+        SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+
+        # Redis configuration
+        SPRING_REDIS_HOST: localhost
+        SPRING_REDIS_PORT: 6379
+
+        # Kafka configuration
+        SPRING_KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+
+        # JPA configuration
+        SPRING_JPA_HIBERNATE_DDL_AUTO: update
+        SPRING_JPA_SHOW_SQL: false
+
+        # Enable Flyway for integration tests
+        SPRING_FLYWAY_ENABLED: true
+
+        # OAuth2 configuration (use test values)
+        SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8081/realms/bss
+        SECURITY_OAUTH2_AUDIENCE: bss-backend
+
+        # Test configuration
+        TEST_PARALLEL_EXECUTION: true
+        JAVA_OPTS: ${{ env.MAVEN_OPTS }}
+
+      run: |
+        mvn verify $MAVEN_CLI_OPTS \
+          -Dintegration.tests=true \
+          -DfailIfNoTests=false \
+          -Dsurefire.failIfNoSpecifiedTests=false \
+          -Dmaven.test.failure.ignore=false
+
+    - name: Upload integration test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: |
+          target/surefire-reports/
+          target/failsafe-reports/
+          target/site/jacoco/
+        retention-days: 30
+
+    - name: Publish integration test results
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Integration Test Results
+        path: target/failsafe-reports/*.xml
+        reporter: java-junit
+        fail-on-error: false
+
+  # ========== PERFORMANCE TESTS (Separate Job) ==========
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: bss_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Run performance tests
+      env:
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bss_test
+        SPRING_DATASOURCE_USERNAME: test
+        SPRING_DATASOURCE_PASSWORD: test
+        SPRING_REDIS_HOST: localhost
+        SPRING_REDIS_PORT: 6379
+      run: |
+        mvn test $MAVEN_CLI_OPTS \
+          -Dtest.groups=performance \
+          -DfailIfNoTests=false
+
+    - name: Upload performance test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-test-results
+        path: target/surefire-reports/
+        retention-days: 90
+
+  # ========== CODE QUALITY AND BUILD ==========
+  quality-build:
+    name: Code Quality & Build
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Cache Maven repository
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Run SonarCloud Scan
+      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        mvn $MAVEN_CLI_OPTS \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=bss-backend
 
     - name: Build application
       env:
         SPRING_PROFILES_ACTIVE: prod
-      run: mvn clean package -DskipTests
+      run: |
+        mvn clean package $MAVEN_CLI_OPTS \
+          -DskipTests \
+          -Dmaven.javadoc.skip=true
+
+    - name: Generate Javadoc
+      run: |
+        mvn $MAVEN_CLI_OPTS \
+          javadoc:javadoc \
+          -Dmaven.javadoc.skip=false
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: bss-backend-artifacts
-        path: target/*.jar
+        path: |
+          target/*.jar
+          target/javadoc/
+        retention-days: 30
+
+    - name: Build Docker image
+      run: |
+        docker build -t bss-backend:${{ github.sha }} .
+
+    - name: Docker image size
+      run: |
+        echo "Image size:"
+        docker images bss-backend:${{ github.sha }} --format "{{.Size}}"
+
+  # ========== SECURITY SCANS ==========
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # ========== TEST SUMMARY ==========
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, quality-build]
+    if: always()
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Summarize test results
+      run: |
+        echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "### Unit Tests" >> $GITHUB_STEP_SUMMARY
+        ls -la unit-test-results-*/ 2>/dev/null || echo "No unit test results found" >> $GITHUB_STEP_SUMMARY
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
+        ls -la integration-test-results/ 2>/dev/null || echo "No integration test results found" >> $GITHUB_STEP_SUMMARY
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Build Artifacts" >> $GITHUB_STEP_SUMMARY
+        ls -la bss-backend-artifacts/ 2>/dev/null || echo "No build artifacts found" >> $GITHUB_STEP_SUMMARY
+
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## 🧪 Test Results\n\n' + summary
+          });

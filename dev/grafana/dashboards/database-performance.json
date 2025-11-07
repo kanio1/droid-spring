@@ -1,0 +1,193 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "BSS Database Performance",
+    "tags": ["bss", "database", "postgresql", "performance"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "refId": "A",
+            "legendFormat": "{{datname}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Cache Hit Ratio",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_blks_hit[5m]) / (rate(pg_stat_database_blks_hit[5m]) + rate(pg_stat_database_blks_read[5m])) * 100",
+            "refId": "A",
+            "legendFormat": "{{datname}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 90},
+                {"color": "green", "value": 99}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Queries per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_tup_returned[5m])",
+            "refId": "A",
+            "legendFormat": "{{datname}} - Rows"
+          },
+          {
+            "expr": "rate(pg_stat_database_xact_commit[5m])",
+            "refId": "B",
+            "legendFormat": "{{datname}} - Commits"
+          },
+          {
+            "expr": "rate(pg_stat_database_xact_rollback[5m])",
+            "refId": "C",
+            "legendFormat": "{{datname}} - Rollbacks"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Query Performance (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(pg_stat_statements_mean_time_bucket[5m]))",
+            "refId": "A",
+            "legendFormat": "P95"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Buffer Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_database_blks_hit",
+            "refId": "A",
+            "legendFormat": "{{datname}} - Cache Hits"
+          },
+          {
+            "expr": "pg_stat_database_blks_read",
+            "refId": "B",
+            "legendFormat": "{{datname}} - Disk Reads"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Active Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (state) (pg_stat_activity_count)",
+            "refId": "A",
+            "legendFormat": "{{state}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Deadlocks",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_deadlocks[5m])",
+            "refId": "A",
+            "legendFormat": "{{datname}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Replication Lag (if applicable)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_replication_lag",
+            "refId": "A",
+            "legendFormat": "Lag (seconds)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "Table Size",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_database_size_bytes",
+            "refId": "A",
+            "legendFormat": "{{datname}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "id": 10,
+        "title": "Long Running Queries",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "pg_stat_activity_max_tx_duration",
+            "refId": "A",
+            "legendFormat": "Max Duration"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "database",
+          "type": "query",
+          "query": "label_values(pg_stat_database_numbackends, datname)",
+          "multi": true
+        }
+      ]
+    }
+  }
+}

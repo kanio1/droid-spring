@@ -1,7 +1,8 @@
 /**
- * Visual Regression Tests
+ * Visual Regression Tests with Accessibility Validation
  *
  * Tests for visual differences across themes, viewports, and components
+ * Includes accessibility validation using axe-core
  * Used for visual regression testing in CI/CD pipeline
  *
  * Priority: 🔴 HIGH
@@ -9,11 +10,14 @@
  */
 
 import { test, expect } from '@playwright/test'
+import { AccessibilityTest } from '../framework/accessibility/axe-testing'
 
 test.describe('Visual Regression Tests', () => {
   test.describe('Component Visual Tests @visual:component', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('/')
+      // Inject axe-core for accessibility testing
+      await AccessibilityTest.injectAxe(page)
     })
 
     test('Button component - Light theme @visual:component:Button', async ({ page }) => {
@@ -24,6 +28,14 @@ test.describe('Visual Regression Tests', () => {
 
       const button = page.locator('[data-testid="primary-button"]').first()
       await expect(button).toBeVisible()
+
+      // Validate button accessibility
+      const buttonCheck = await AccessibilityTest.checkAriaLabel(
+        page,
+        '[data-testid="primary-button"]'
+      )
+      expect(buttonCheck.hasLabel).toBe(true)
+
       await expect(button).toHaveScreenshot('button-primary-light.png')
     })
 
@@ -510,6 +522,137 @@ test.describe('Visual Regression Tests', () => {
       await page.waitForSelector('[data-testid="error-notification"]')
 
       await expect(page.locator('[data-testid="error-notification"]')).toHaveScreenshot('error-notification.png')
+    })
+  })
+
+  test.describe('Accessibility Tests @visual:accessibility', () => {
+    test('Homepage should be accessible', async ({ page }) => {
+      await page.goto('/')
+
+      await AccessibilityTest.expectPageToBeAccessible(page, {
+        tags: ['wcag2a', 'wcag2aa', 'wcag21aa']
+      })
+    })
+
+    test('Dashboard should meet accessibility standards', async ({ page }) => {
+      await page.goto('/dashboard')
+
+      await AccessibilityTest.expectPageToBeAccessible(page, {
+        tags: ['wcag2a', 'wcag2aa']
+      })
+
+      // Check focus indicators
+      await page.keyboard.press('Tab')
+      const focusedElement = await page.evaluate(() => document.activeElement)
+      expect(focusedElement).not.toBeNull()
+
+      await expect(page).toHaveScreenshot('dashboard-focus-indicators.png')
+    })
+
+    test('Modal dialogs should trap focus and be accessible', async ({ page }) => {
+      await page.goto('/customers')
+
+      // Open modal
+      await page.click('[data-testid="create-customer-btn"]')
+      await page.waitForSelector('[data-testid="modal"]')
+
+      // Validate modal accessibility
+      await AccessibilityTest.expectElementToBeAccessible(
+        page,
+        '[data-testid="modal"]',
+        { tags: ['wcag2aa'] }
+      )
+
+      // Test focus trap
+      await page.keyboard.press('Tab')
+      let focusedInModal = await page.evaluate(() => {
+        const modal = document.querySelector('[role="dialog"]')
+        const active = document.activeElement
+        return modal?.contains(active as Node)
+      })
+      expect(focusedInModal).toBe(true)
+
+      // Close modal with Escape
+      await page.keyboard.press('Escape')
+      await expect(page.locator('[data-testid="modal"]')).not.toBeVisible()
+    })
+
+    test('Form should be fully accessible with proper labels', async ({ page }) => {
+      await page.goto('/customers/create')
+
+      await AccessibilityTest.expectPageToBeAccessible(page, {
+        tags: ['wcag2a', 'wcag2aa']
+      })
+
+      // Check all form fields have labels
+      const labelCheck = await AccessibilityTest.checkFormLabels(page, 'form')
+      expect(labelCheck.hasLabels).toBe(true)
+      expect(labelCheck.missingLabels.length).toBe(0)
+    })
+
+    test('Navigation should be keyboard accessible', async ({ page }) => {
+      await page.goto('/')
+
+      const nav = page.locator('[data-testid="main-navigation"]')
+      await expect(nav).toBeVisible()
+
+      // Check keyboard navigation
+      const navCheck = await AccessibilityTest.checkKeyboardNavigation(
+        page,
+        '[data-testid="main-navigation"]'
+      )
+      expect(navCheck.isFocusable).toBe(true)
+    })
+
+    test('Color contrast should meet WCAG standards', async ({ page }) => {
+      await page.goto('/dashboard')
+
+      const contrastInfo = await AccessibilityTest.checkColorContrast(
+        page,
+        page.locator('body')
+      )
+
+      expect(contrastInfo.normal).toBe(true)
+      expect(contrastInfo.large).toBe(true)
+      expect(contrastInfo.ratio).toBeGreaterThanOrEqual(4.5)
+    })
+
+    test('Images should have alt text', async ({ page }) => {
+      await page.goto('/customers')
+
+      const imageCheck = await AccessibilityTest.checkImageAltText(page)
+      expect(imageCheck.hasAlt).toBe(true)
+    })
+
+    test('Skip links should be present and functional', async ({ page }) => {
+      await page.goto('/')
+
+      const skipLink = page.locator('a[href="#main-content"]')
+      await expect(skipLink).toBeVisible()
+
+      // Test skip link works
+      await skipLink.focus()
+      await page.keyboard.press('Enter')
+    })
+
+    test('ARIA live regions should announce dynamic updates', async ({ page }) => {
+      await page.goto('/customers')
+
+      // Create a customer to trigger success message
+      await page.click('[data-testid="create-customer-btn"]')
+      await page.fill('[name="firstName"]', 'Test')
+      await page.fill('[name="lastName"]', 'User')
+      await page.fill('[name="email"]', 'test@example.com')
+      await page.click('[data-testid="save-customer-btn"]')
+
+      // Check for ARIA live regions
+      const liveRegion = page.locator('[aria-live="polite"], [role="status"]')
+      if (await liveRegion.isVisible()) {
+        const hasAriaLive = await page.evaluate(() => {
+          return document.querySelector('[aria-live="polite"], [role="status"]') !== null
+        })
+        expect(hasAriaLive).toBe(true)
+      }
     })
   })
 })

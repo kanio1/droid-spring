@@ -7,10 +7,13 @@ import com.droid.bss.application.command.payment.UpdatePaymentUseCase;
 import com.droid.bss.application.dto.common.PageResponse;
 import com.droid.bss.application.dto.payment.ChangePaymentStatusCommand;
 import com.droid.bss.application.dto.payment.CreatePaymentCommand;
+import com.droid.bss.application.dto.payment.DeletePaymentCommand;
 import com.droid.bss.application.dto.payment.PaymentResponse;
 import com.droid.bss.application.dto.payment.UpdatePaymentCommand;
+import com.droid.bss.domain.audit.AuditAction;
 import com.droid.bss.domain.payment.PaymentEntity;
 import com.droid.bss.domain.payment.repository.PaymentRepository;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,11 +40,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/api/v1/payments")
 @Tag(name = "Payment", description = "Payment management API")
 @SecurityRequirement(name = "bearer-key")
 public class PaymentController {
@@ -75,6 +79,7 @@ public class PaymentController {
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.PAYMENT_CREATE, entityType = "Payment", description = "Creating new payment")
     public ResponseEntity<PaymentResponse> createPayment(
             @Valid @RequestBody CreatePaymentCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -111,11 +116,11 @@ public class PaymentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Read all with pagination and sorting
+    // Read all with pagination, sorting, and filters
     @GetMapping
     @Operation(
         summary = "Get all payments",
-        description = "Retrieves a paginated list of all payments"
+        description = "Retrieves a paginated list of all payments with optional filters"
     )
     @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
@@ -123,14 +128,53 @@ public class PaymentController {
     public ResponseEntity<PageResponse<PaymentResponse>> getAllPayments(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')") @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')") @RequestParam(defaultValue = "createdAt,desc") String sort,
+            @Parameter(description = "Search term (payment number or reference)") @RequestParam(required = false) String searchTerm,
+            @Parameter(description = "Filter by payment status") @RequestParam(required = false) String status,
+            @Parameter(description = "Filter by customer ID") @RequestParam(required = false) String customerId,
+            @Parameter(description = "Filter by invoice ID") @RequestParam(required = false) String invoiceId,
+            @Parameter(description = "Filter by payment method") @RequestParam(required = false) String paymentMethod
     ) {
         Sort sortObj = parseSort(sort);
         Pageable pageable = PageRequest.of(page, size, sortObj);
-        Page<PaymentEntity> paymentPage = paymentRepository.findAll(pageable);
+        Page<PaymentEntity> paymentPage;
+
+        if (searchTerm != null && !searchTerm.isBlank()) {
+            // Search implementation
+            paymentPage = paymentRepository.findAll(pageable)
+                    .map(payment -> {
+                        if (payment.getPaymentNumber().toLowerCase().contains(searchTerm.toLowerCase()) ||
+                            (payment.getReferenceNumber() != null &&
+                             payment.getReferenceNumber().toLowerCase().contains(searchTerm.toLowerCase()))) {
+                            return payment;
+                        }
+                        return null;
+                    })
+                    .map(payment -> payment != null ? payment : null);
+        } else if (status != null && !status.isBlank()) {
+            // Filter by status
+            paymentPage = paymentRepository.findAll(pageable)
+                    .map(payment -> {
+                        if (payment.getPaymentStatus().name().equals(status)) {
+                            return payment;
+                        }
+                        return null;
+                    });
+        } else if (customerId != null && !customerId.isBlank()) {
+            // Filter by customer
+            paymentPage = paymentRepository.findByCustomerId(UUID.fromString(customerId), pageable);
+        } else {
+            // Get all payments
+            paymentPage = paymentRepository.findAll(pageable);
+        }
+
+        // Filter out nulls from search/status filtering
+        List<PaymentEntity> filteredContent = paymentPage.getContent().stream()
+                .filter(java.util.Objects::nonNull)
+                .toList();
 
         PageResponse<PaymentResponse> response = PageResponse.of(
-                paymentPage.getContent().stream()
+                filteredContent.stream()
                         .map(PaymentResponse::from)
                         .toList(),
                 paymentPage.getNumber(),
@@ -268,6 +312,7 @@ public class PaymentController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.PAYMENT_UPDATE, entityType = "Payment", description = "Updating payment {id}")
     public ResponseEntity<PaymentResponse> updatePayment(
             @Parameter(description = "Payment ID", required = true) @PathVariable String id,
             @Valid @RequestBody UpdatePaymentCommand command
@@ -283,10 +328,10 @@ public class PaymentController {
                 command.notes()
         );
 
-        PaymentEntity updatedPayment = updatePaymentUseCase.handle(updatedCommand);
-        PaymentResponse response = PaymentResponse.from(updatedPayment);
-
-        return ResponseEntity.ok(response);
+        UUID paymentId = updatePaymentUseCase.handle(updatedCommand);
+        // Note: UpdatePaymentUseCase throws UnsupportedOperationException as Payment is immutable
+        // This endpoint should not be used - use delete + create or change status instead
+        // The exception thrown by updatePaymentUseCase.handle() will be caught by @ControllerAdvice
     }
 
     // Change status
@@ -301,15 +346,19 @@ public class PaymentController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.PAYMENT_UPDATE, entityType = "Payment", description = "Changing status for payment {id}")
     public ResponseEntity<PaymentResponse> changePaymentStatus(
             @Parameter(description = "Payment ID", required = true) @PathVariable String id,
             @Valid @RequestBody ChangePaymentStatusCommand command
     ) {
         var statusCommand = new ChangePaymentStatusCommand(id, command.status(), command.reason());
-        PaymentEntity updatedPayment = changePaymentStatusUseCase.handle(statusCommand);
-        PaymentResponse response = PaymentResponse.from(updatedPayment);
+        UUID updatedId = changePaymentStatusUseCase.handle(statusCommand);
 
-        return ResponseEntity.ok(response);
+        // Fetch the updated payment to return in response
+        var updatedPayment = paymentRepository.findById(updatedId)
+                .orElseThrow(() -> new RuntimeException("Payment not found after status change: " + updatedId));
+
+        return ResponseEntity.ok(PaymentResponse.from(updatedPayment));
     }
 
     // Delete
@@ -323,11 +372,13 @@ public class PaymentController {
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.PAYMENT_DELETE, entityType = "Payment", description = "Deleting payment {id}")
     public ResponseEntity<Void> deletePayment(
             @Parameter(description = "Payment ID", required = true) @PathVariable String id
     ) {
-        boolean deleted = deletePaymentUseCase.handle(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        var deleteCommand = new DeletePaymentCommand(id);
+        deletePaymentUseCase.handle(deleteCommand);
+        return ResponseEntity.noContent().build();
     }
 
     private Sort parseSort(String sort) {

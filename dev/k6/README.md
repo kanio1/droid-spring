@@ -55,6 +55,117 @@ Thresholds:
 - 95% of requests must complete within 1000ms
 - Error rate must be less than 10%
 
+### 4. Extreme Spike Test (Traffic Surges)
+
+```bash
+BASE_URL=http://localhost:8080 k6 run --vus 10000 --duration 45m scripts/extreme-spike-test.js
+```
+
+This test simulates sudden traffic spikes:
+- 100 → 1,000 → 5,000 → 10,000 users
+- Tests auto-scaling and circuit breakers
+- Validates system resilience to surges
+- Peak: 10,000 VUs
+
+**Scale**: 100K - 1M events
+
+### 5. Volume Test (1 Million Events)
+
+```bash
+BASE_URL=http://localhost:8080 k6 run --vus 500 --iterations 2000 scripts/volume-test-1m.js
+```
+
+High-volume throughput test:
+- 500 VUs × 2,000 iterations = 1,000,000 requests
+- Tests database connection pooling
+- Validates circuit breaker behavior
+- Checks system under sustained load
+
+**Scale**: 1,000,000 events
+
+### 6. Marathon Test (12+ Hours)
+
+```bash
+BASE_URL=http://localhost:8080 k6 run --vus 500 --duration 12h scripts/marathon-test.js
+```
+
+Long-running endurance test:
+- 12+ hour duration
+- Moderate load (50-1000 VUs)
+- Detects memory leaks and resource exhaustion
+- Tests stability over extended periods
+
+**Scale**: 10M+ events
+
+### 7. Soak Test (24+ Hours)
+
+```bash
+BASE_URL=http://localhost:8080 k6 run --vus 300 --duration 24h scripts/extreme-soak-test.js
+```
+
+Extreme endurance test:
+- 24+ hour duration
+- Continuous moderate load (100-500 VUs)
+- Identifies slow memory leaks
+- Tests log rotation and cache behavior
+- Monitors JVM garbage collection
+
+**Scale**: 20M+ events
+
+### 8. Distributed Test (Multiple Nodes)
+
+```bash
+# Run on multiple machines/nodes
+BASE_URL=http://localhost:8080 WORKER_ID=worker-1 k6 run --vus 5000 scripts/distributed-test.js
+BASE_URL=http://localhost:8080 WORKER_ID=worker-2 k6 run --vus 5000 scripts/distributed-test.js
+BASE_URL=http://localhost:8080 WORKER_ID=worker-3 k6 run --vus 5000 scripts/distributed-test.js
+```
+
+Distributed load test:
+- Multiple K6 instances across different nodes
+- Simulates 15,000+ concurrent users
+- Tests cluster-wide performance
+- Uses K6 Cloud for results aggregation
+
+**Scale**: 100K - 1M+ events per run
+
+## Test Comparison
+
+| Test Type | Duration | VUs | Events | Purpose |
+|-----------|----------|-----|--------|---------|
+| Smoke | 1 min | 1-5 | ~100 | Health check |
+| Load | 10 min | 10-20 | ~5K | Normal operation |
+| Stress | 9 min | 50-200 | ~20K | High load |
+| Spike | 45 min | 100-10K | 100K-1M | Traffic surges |
+| Volume | 15-30 min | 500-1000 | 1M | Throughput |
+| Marathon | 12 hours | 50-1000 | 10M+ | Endurance |
+| Soak | 24 hours | 100-500 | 20M+ | Memory leaks |
+| Distributed | 30-60 min | 5K-15K | 100K-1M+ | Multi-node |
+
+## Running Tests by Scale
+
+### Development (1K events)
+```bash
+# Quick validation
+k6 run scripts/smoke-test.js
+k6 run --vus 10 --duration 5m scripts/api-load-test.js
+```
+
+### Staging (10K events)
+```bash
+# Performance validation
+k6 run --vus 100 --duration 10m scripts/stress-test.js
+k6 run --vus 200 --duration 20m scripts/api-load-test.js
+```
+
+### Production (100K-1M+ events)
+```bash
+# Extreme testing
+k6 run --vus 500 --iterations 2000 scripts/volume-test-1m.js
+k6 run --vus 5000 --duration 30m scripts/distributed-test.js
+k6 run --vus 10000 --duration 45m scripts/extreme-spike-test.js
+```
+
 ## Test Results
 
 After running a test, k6 will display:

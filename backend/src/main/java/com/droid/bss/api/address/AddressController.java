@@ -5,6 +5,8 @@ import com.droid.bss.application.dto.address.*;
 import com.droid.bss.application.query.address.GetAddressUseCase;
 import com.droid.bss.application.query.address.GetCustomerAddressesUseCase;
 import com.droid.bss.application.query.address.ListAddressesUseCase;
+import com.droid.bss.domain.audit.AuditAction;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -69,6 +71,7 @@ public class AddressController {
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     @ApiResponse(responseCode = "404", description = "Customer not found")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    @Audited(action = AuditAction.ADDRESS_CREATE, entityType = "Address", description = "Creating new address for customer")
     public ResponseEntity<AddressResponse> createAddress(@Valid @RequestBody CreateAddressCommand command) {
         AddressResponse response = createAddressUseCase.handle(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -156,6 +159,7 @@ public class AddressController {
     @ApiResponse(responseCode = "400", description = "Invalid input data or version conflict")
     @ApiResponse(responseCode = "404", description = "Address or customer not found")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    @Audited(action = AuditAction.ADDRESS_UPDATE, entityType = "Address", description = "Updating address {addressId}")
     public ResponseEntity<AddressResponse> updateAddress(
             @Parameter(description = "Address ID")
             @PathVariable String addressId,
@@ -180,6 +184,7 @@ public class AddressController {
     @ApiResponse(responseCode = "400", description = "Invalid status or constraint violation")
     @ApiResponse(responseCode = "404", description = "Address not found")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.ADDRESS_UPDATE, entityType = "Address", description = "Changing status for address {addressId}")
     public ResponseEntity<AddressResponse> changeAddressStatus(
             @Parameter(description = "Address ID")
             @PathVariable String addressId,
@@ -204,6 +209,7 @@ public class AddressController {
     @ApiResponse(responseCode = "400", description = "Cannot set inactive address as primary")
     @ApiResponse(responseCode = "404", description = "Address not found")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    @Audited(action = AuditAction.ADDRESS_UPDATE, entityType = "Address", description = "Setting address {addressId} as primary")
     public ResponseEntity<AddressResponse> setPrimaryAddress(
             @Parameter(description = "Address ID")
             @PathVariable String addressId,
@@ -229,6 +235,7 @@ public class AddressController {
     @ApiResponse(responseCode = "204", description = "Address deleted successfully")
     @ApiResponse(responseCode = "404", description = "Address not found")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = AuditAction.ADDRESS_DELETE, entityType = "Address", description = "Deleting address {addressId}")
     public ResponseEntity<Void> deleteAddress(
             @Parameter(description = "Address ID")
             @PathVariable String addressId

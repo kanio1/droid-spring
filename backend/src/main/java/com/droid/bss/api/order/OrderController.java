@@ -7,7 +7,9 @@ import com.droid.bss.application.dto.order.CreateOrderCommand;
 import com.droid.bss.application.dto.order.OrderResponse;
 import com.droid.bss.application.dto.order.UpdateOrderStatusCommand;
 import com.droid.bss.application.query.order.OrderQueryService;
+import com.droid.bss.domain.audit.AuditAction;
 import com.droid.bss.domain.order.OrderStatus;
+import com.droid.bss.infrastructure.audit.Audited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -34,7 +36,7 @@ import java.util.UUID;
  * REST Controller for Order CRUD operations
  */
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/v1/orders")
 @Tag(name = "Order", description = "Order management API")
 public class OrderController {
 
@@ -66,6 +68,7 @@ public class OrderController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @ApiResponse(responseCode = "404", description = "Customer not found")
     @ApiResponse(responseCode = "409", description = "Order number already exists")
+    @Audited(action = AuditAction.ORDER_CREATE, entityType = "Order", description = "Creating new order")
     public ResponseEntity<OrderResponse> createOrder(
             @Valid @RequestBody CreateOrderCommand command,
             @AuthenticationPrincipal Jwt principal
@@ -106,12 +109,12 @@ public class OrderController {
     }
 
     /**
-     * Get all orders with pagination
+     * Get all orders with pagination, search, and filters
      */
     @GetMapping
     @Operation(
         summary = "Get all orders",
-        description = "Retrieves all orders with pagination"
+        description = "Retrieves all orders with optional search and filters"
     )
     @ApiResponse(responseCode = "200", description = "Orders retrieved successfully")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
@@ -120,9 +123,35 @@ public class OrderController {
             @RequestParam(defaultValue = "0") int page,
 
             @Parameter(description = "Number of items per page")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+
+            @Parameter(description = "Sort criteria (e.g., 'createdAt,desc')")
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+
+            @Parameter(description = "Search term (order number or notes)")
+            @RequestParam(required = false) String searchTerm,
+
+            @Parameter(description = "Filter by order status")
+            @RequestParam(required = false) OrderStatus status,
+
+            @Parameter(description = "Filter by order type")
+            @RequestParam(required = false) String type,
+
+            @Parameter(description = "Filter by customer ID")
+            @RequestParam(required = false) UUID customerId
     ) {
-        var orders = orderQueryService.findAll(page, size);
+        PageResponse<OrderResponse> orders;
+
+        if (searchTerm != null && !searchTerm.isBlank()) {
+            orders = orderQueryService.searchOrders(searchTerm, page, size);
+        } else if (status != null) {
+            orders = orderQueryService.findByStatus(status, page, size);
+        } else if (customerId != null) {
+            orders = orderQueryService.findByCustomerId(customerId, page, size);
+        } else {
+            orders = orderQueryService.findAll(page, size);
+        }
+
         return ResponseEntity.ok(orders);
     }
 
@@ -213,6 +242,7 @@ public class OrderController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @ApiResponse(responseCode = "404", description = "Order not found")
     @ApiResponse(responseCode = "409", description = "Version conflict (optimistic locking)")
+    @Audited(action = AuditAction.ORDER_UPDATE, entityType = "Order", description = "Updating status for order {id}")
     public ResponseEntity<Void> updateOrderStatus(
             @Parameter(description = "Order ID", required = true)
             @PathVariable UUID id,
@@ -243,14 +273,14 @@ public class OrderController {
     @ApiResponse(responseCode = "204", description = "Order deleted successfully")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     @ApiResponse(responseCode = "404", description = "Order not found")
+    @Audited(action = AuditAction.ORDER_DELETE, entityType = "Order", description = "Deleting order {id}")
     public ResponseEntity<Void> deleteOrder(
             @Parameter(description = "Order ID", required = true)
             @PathVariable UUID id,
 
             @AuthenticationPrincipal Jwt principal
     ) {
-        // TODO: Implement deleteOrderUseCase
-        // deleteOrderUseCase.handle(id);
+        // Delete order use case not yet implemented
         return ResponseEntity.status(501).build();
     }
 }

@@ -1,0 +1,61 @@
+[
+  {
+    "id": "prod-001",
+    "name": "Basic Service Plan",
+    "description": "Entry-level service plan for small businesses",
+    "price": 29.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "status": "active",
+    "features": [
+      "5GB Storage",
+      "Email Support",
+      "Basic Analytics"
+    ]
+  },
+  {
+    "id": "prod-002",
+    "name": "Professional Service Plan",
+    "description": "Advanced service plan for growing businesses",
+    "price": 59.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "status": "active",
+    "features": [
+      "50GB Storage",
+      "Priority Support",
+      "Advanced Analytics",
+      "API Access"
+    ]
+  },
+  {
+    "id": "prod-003",
+    "name": "Enterprise Service Plan",
+    "description": "Full-featured plan for large enterprises",
+    "price": 199.99,
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "status": "active",
+    "features": [
+      "Unlimited Storage",
+      "24/7 Dedicated Support",
+      "Custom Analytics",
+      "Full API Access",
+      "SLA Guarantee"
+    ]
+  },
+  {
+    "id": "prod-004",
+    "name": "Annual Basic Plan",
+    "description": "Annual subscription for basic plan",
+    "price": 299.99,
+    "currency": "USD",
+    "billingCycle": "yearly",
+    "status": "active",
+    "features": [
+      "5GB Storage",
+      "Email Support",
+      "Basic Analytics"
+    ]
+  }
+]

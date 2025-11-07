@@ -49,7 +49,9 @@ public record UpdateAddressCommand(
 
         Double longitude,
 
-        Boolean isPrimary
+        Boolean isPrimary,
+
+        String notes
 ) {
     // Helper method to get optional fields
     public java.util.Optional<String> getHouseNumber() {
@@ -70,5 +72,9 @@ public record UpdateAddressCommand(
 
     public java.util.Optional<Double> getLongitude() {
         return java.util.Optional.ofNullable(longitude);
+    }
+
+    public java.util.Optional<String> getNotes() {
+        return java.util.Optional.ofNullable(notes);
     }
 }

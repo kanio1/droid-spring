@@ -1,12 +1,11 @@
 package com.droid.bss.application.query.address;
 
 import com.droid.bss.application.dto.address.AddressResponse;
-import com.droid.bss.domain.address.AddressEntity;
+import com.droid.bss.domain.address.Address;
 import com.droid.bss.domain.address.AddressRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -22,9 +21,9 @@ public class GetCustomerAddressesUseCase {
     }
 
     public List<AddressResponse> handle(String customerId) {
-        UUID id = UUID.fromString(customerId);
+        java.util.UUID id = java.util.UUID.fromString(customerId);
 
-        List<AddressEntity> addresses = addressRepository.findByCustomerIdAndDeletedAtIsNull(id);
+        List<Address> addresses = addressRepository.findByCustomerIdAndDeletedAtIsNull(id);
 
         return addresses.stream()
                 .map(AddressResponse::from)

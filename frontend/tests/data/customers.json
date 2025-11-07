@@ -1,0 +1,67 @@
+[
+  {
+    "id": "cust-001",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phone": "+1-555-0101",
+    "status": "active",
+    "createdAt": "2024-01-15T10:30:00Z",
+    "metadata": {
+      "tier": "standard",
+      "source": "web"
+    }
+  },
+  {
+    "id": "cust-002",
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane.smith@example.com",
+    "phone": "+1-555-0102",
+    "status": "active",
+    "createdAt": "2024-01-16T11:45:00Z",
+    "metadata": {
+      "tier": "premium",
+      "source": "referral"
+    }
+  },
+  {
+    "id": "cust-003",
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "email": "bob.johnson@example.com",
+    "phone": "+1-555-0103",
+    "status": "inactive",
+    "createdAt": "2024-01-10T09:15:00Z",
+    "metadata": {
+      "tier": "basic",
+      "source": "organic"
+    }
+  },
+  {
+    "id": "cust-004",
+    "firstName": "Alice",
+    "lastName": "Williams",
+    "email": "alice.williams@example.com",
+    "phone": "+1-555-0104",
+    "status": "pending",
+    "createdAt": "2024-01-20T14:20:00Z",
+    "metadata": {
+      "tier": "enterprise",
+      "source": "campaign"
+    }
+  },
+  {
+    "id": "cust-005",
+    "firstName": "Charlie",
+    "lastName": "Brown",
+    "email": "charlie.brown@example.com",
+    "phone": "+1-555-0105",
+    "status": "suspended",
+    "createdAt": "2024-01-05T08:00:00Z",
+    "metadata": {
+      "tier": "basic",
+      "source": "web"
+    }
+  }
+]

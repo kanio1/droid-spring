@@ -132,6 +132,60 @@ public class OrderEntity extends BaseEntity {
         this.completedDate = LocalDate.now();
     }
 
+    public void approve() {
+        if (status == OrderStatus.PENDING || status == OrderStatus.DRAFT) {
+            this.status = OrderStatus.APPROVED;
+        } else {
+            throw new IllegalStateException("Order cannot be approved from status: " + status);
+        }
+    }
+
+    public void reject(String reason) {
+        if (status == OrderStatus.PENDING || status == OrderStatus.DRAFT) {
+            this.status = OrderStatus.REJECTED;
+            this.notes = (this.notes != null ? this.notes + "\n" : "") + "Rejected: " + reason;
+        } else {
+            throw new IllegalStateException("Order cannot be rejected from status: " + status);
+        }
+    }
+
+    public void startProcessing() {
+        if (status == OrderStatus.APPROVED || status == OrderStatus.PENDING) {
+            this.status = OrderStatus.PROCESSING;
+        } else {
+            throw new IllegalStateException("Order cannot start processing from status: " + status);
+        }
+    }
+
+    public void markAsInProgress() {
+        if (status == OrderStatus.PROCESSING) {
+            this.status = OrderStatus.IN_PROGRESS;
+        } else {
+            throw new IllegalStateException("Order cannot be marked in progress from status: " + status);
+        }
+    }
+
+    public void cancel(String reason) {
+        if (canBeCancelled()) {
+            this.status = OrderStatus.CANCELLED;
+            this.notes = (this.notes != null ? this.notes + "\n" : "") + "Cancelled: " + reason;
+        } else {
+            throw new IllegalStateException("Order cannot be cancelled from status: " + status);
+        }
+    }
+
+    public boolean isActive() {
+        return status != OrderStatus.CANCELLED && status != OrderStatus.REJECTED;
+    }
+
+    public boolean canBeApproved() {
+        return status == OrderStatus.DRAFT || status == OrderStatus.PENDING;
+    }
+
+    public boolean canBeProcessed() {
+        return status == OrderStatus.APPROVED || status == OrderStatus.PENDING;
+    }
+
     // Getters and setters
     public String getOrderNumber() {
         return orderNumber;
@@ -251,5 +305,56 @@ public class OrderEntity extends BaseEntity {
 
     public void setItems(List<OrderItemEntity> items) {
         this.items = items;
+    }
+
+    /**
+     * Converts JPA entity to DDD aggregate
+     */
+    public Order toDomain() {
+        return Order.restore(
+            this.getId(),
+            this.orderNumber,
+            this.customer != null ? this.customer.getId() : null,
+            this.orderType,
+            this.status,
+            this.priority,
+            this.totalAmount,
+            this.currency,
+            this.requestedDate,
+            this.promisedDate,
+            this.orderChannel,
+            this.salesRepId,
+            this.notes,
+            this.getCreatedAt(),
+            this.getUpdatedAt(),
+            this.version != null ? this.version.intValue() : 0,
+            this.items != null
+                ? this.items.stream()
+                    .map(OrderItemEntity::toDomain)
+                    .toList()
+                : java.util.Collections.emptyList()
+        );
+    }
+
+    /**
+     * Creates JPA entity from DDD aggregate
+     */
+    public static OrderEntity from(Order order) {
+        OrderEntity entity = new OrderEntity();
+        entity.setId(order.getId().value());
+        entity.setOrderNumber(order.getOrderNumber());
+        entity.setOrderType(order.getOrderType());
+        entity.setStatus(order.getStatus());
+        entity.setPriority(order.getPriority());
+        entity.setTotalAmount(order.getTotalAmount());
+        entity.setCurrency(order.getCurrency());
+        entity.setRequestedDate(order.getRequestedDate());
+        entity.setPromisedDate(order.getPromisedDate());
+        entity.setOrderChannel(order.getOrderChannel());
+        entity.setSalesRepId(order.getSalesRepId());
+        entity.setNotes(order.getNotes());
+        // Note: customer relationship should be set by caller
+        // Note: items relationship should be set by caller
+        return entity;
     }
 }

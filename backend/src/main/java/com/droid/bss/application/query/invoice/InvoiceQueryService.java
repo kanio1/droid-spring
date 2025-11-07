@@ -6,6 +6,8 @@ import com.droid.bss.domain.invoice.InvoiceEntity;
 import com.droid.bss.domain.invoice.InvoiceReadRepository;
 import com.droid.bss.domain.invoice.InvoiceStatus;
 import com.droid.bss.domain.invoice.InvoiceType;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
  * Query service for invoice-related queries
  */
 @Service
+@CacheConfig(cacheNames = "invoices")
 public class InvoiceQueryService {
 
     private final InvoiceReadRepository invoiceReadRepository;
@@ -33,6 +36,7 @@ public class InvoiceQueryService {
     /**
      * Get invoice by ID
      */
+    @Cacheable(key = "#id", unless = "#result == null")
     public Optional<InvoiceResponse> findById(UUID id) {
         return invoiceReadRepository.findById(id)
                 .map(InvoiceResponse::from);
@@ -60,6 +64,7 @@ public class InvoiceQueryService {
     /**
      * Find invoices by status
      */
+    @Cacheable(key = "{#status, #page, #size}")
     public PageResponse<InvoiceResponse> findByStatus(InvoiceStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<InvoiceEntity> invoicePage = invoiceReadRepository.findByStatus(status, pageable);
@@ -98,6 +103,7 @@ public class InvoiceQueryService {
     /**
      * Find invoices by customer ID
      */
+    @Cacheable(key = "{#customerId, #page, #size}")
     public PageResponse<InvoiceResponse> findByCustomerId(String customerId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         UUID customerUuid = UUID.fromString(customerId);
@@ -118,6 +124,7 @@ public class InvoiceQueryService {
     /**
      * Find invoices by invoice number
      */
+    @Cacheable(key = "#invoiceNumber", unless = "#result == null")
     public Optional<InvoiceResponse> findByInvoiceNumber(String invoiceNumber) {
         return invoiceReadRepository.findByInvoiceNumber(invoiceNumber)
                 .map(InvoiceResponse::from);

@@ -1,0 +1,53 @@
+[
+  {
+    "id": "order-001",
+    "customerId": "cust-001",
+    "items": [
+      {
+        "productId": "prod-001",
+        "productName": "Basic Service Plan",
+        "quantity": 1,
+        "unitPrice": 29.99,
+        "totalPrice": 29.99
+      }
+    ],
+    "totalAmount": 29.99,
+    "currency": "USD",
+    "status": "delivered",
+    "createdAt": "2024-01-15T11:00:00Z"
+  },
+  {
+    "id": "order-002",
+    "customerId": "cust-002",
+    "items": [
+      {
+        "productId": "prod-002",
+        "productName": "Professional Service Plan",
+        "quantity": 1,
+        "unitPrice": 59.99,
+        "totalPrice": 59.99
+      }
+    ],
+    "totalAmount": 59.99,
+    "currency": "USD",
+    "status": "processing",
+    "createdAt": "2024-01-16T12:00:00Z"
+  },
+  {
+    "id": "order-003",
+    "customerId": "cust-004",
+    "items": [
+      {
+        "productId": "prod-003",
+        "productName": "Enterprise Service Plan",
+        "quantity": 1,
+        "unitPrice": 199.99,
+        "totalPrice": 199.99
+      }
+    ],
+    "totalAmount": 199.99,
+    "currency": "USD",
+    "status": "pending",
+    "createdAt": "2024-01-20T15:00:00Z"
+  }
+]

@@ -87,7 +87,7 @@ vi.mock('#app', async () => {
     ...actual,
     useRuntimeConfig: () => ({
       public: {
-        apiBaseUrl: 'http://localhost:8080/api'
+        apiBaseUrl: 'http://localhost:8080/api/v1'
       }
     }),
     useNuxtApp: () => ({

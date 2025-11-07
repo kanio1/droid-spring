@@ -1,0 +1,23 @@
+version: 2
+snapshot:
+  widths: [375, 768, 1280]
+  min-height: 1024
+  percy-css: |
+    /* Hide dynamic content that may cause flakiness */
+    [data-testid="loading"], .loading, .spinner {
+      visibility: hidden !important;
+    }
+
+    /* Stabilize animations */
+    * {
+      animation-duration: 0s !important;
+      transition-duration: 0s !important;
+    }
+discovery:
+  allowed-hostnames:
+    - localhost
+    - "*.example.com"
+    - "*.percy.dev"
+  network-idle-timeout: 750
+  request-headers:
+    User-Agent: Percy/Tests

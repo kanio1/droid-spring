@@ -1,0 +1,62 @@
+# Production Dockerfile for BSS Backend
+FROM eclipse-temurin:21-jre AS builder
+
+WORKDIR /app
+
+# Copy Maven wrapper and pom.xml
+COPY .mvn .mvn
+COPY mvnw pom.xml .
+
+# Make Maven wrapper executable
+RUN chmod +x ./mvnw
+
+# Download dependencies (layer caching)
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src src
+
+# Build application
+RUN ./mvnw clean package -DskipTests -B
+
+# Production stage
+FROM eclipse-temurin:21-jre
+
+# Create non-root user
+RUN groupadd -r bss && useradd -r -g bss bss
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy JAR from builder
+COPY --from=builder /app/target/*.jar app.jar
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R bss:bss /app
+
+# Switch to non-root user
+USER bss
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Expose port
+EXPOSE 8080
+
+# Run application
+ENTRYPOINT ["java", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-XX:+UseZGC", \
+  "-XX:+UnlockExperimentalVMOptions", \
+  "-XX:+UseTransparentHugePages", \
+  "-XX:+AlwaysPreTouch", \
+  "-XX:+DisableExplicitGC", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-Dspring.profiles.active=prod", \
+  "-Dfile.encoding=UTF-8", \
+  "-Duser.timezone=UTC", \
+  "-Djava.awt.headless=true", \
+  "-jar", "app.jar"]

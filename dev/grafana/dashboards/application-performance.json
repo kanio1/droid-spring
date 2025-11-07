@@ -1,0 +1,201 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "BSS Application Performance",
+    "tags": ["bss", "application", "performance", "spring-boot"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate (RPS)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_total[5m])) by (instance)",
+            "refId": "A",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Response Time - P50, P95, P99",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_duration_bucket[5m])) by (le))",
+            "refId": "A",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_duration_bucket[5m])) by (le))",
+            "refId": "B",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_duration_bucket[5m])) by (le))",
+            "refId": "C",
+            "legendFormat": "P99"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "HTTP Status Codes",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_total[5m])) by (status)",
+            "refId": "A",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Error Rate by Endpoint",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_total{status=~\"5..\"}[5m])) by (uri) / sum(rate(http_server_requests_total[5m])) by (uri) * 100",
+            "refId": "A",
+            "legendFormat": "{{uri}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "JVM Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+            "refId": "A",
+            "legendFormat": "Heap Used"
+          },
+          {
+            "expr": "jvm_memory_max_bytes{area=\"heap\"}",
+            "refId": "B",
+            "legendFormat": "Heap Max"
+          },
+          {
+            "expr": "jvm_memory_used_bytes{area=\"nonheap\"}",
+            "refId": "C",
+            "legendFormat": "Non-Heap Used"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "JVM GC Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jvm_gc_collection_duration_seconds_sum[5m])",
+            "refId": "A",
+            "legendFormat": "{{gc}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Thread Count",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_threads_state",
+            "refId": "A",
+            "legendFormat": "{{state}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Database Connection Pool",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "hikaricp_connections_active",
+            "refId": "A",
+            "legendFormat": "Active"
+          },
+          {
+            "expr": "hikaricp_connections_idle",
+            "refId": "B",
+            "legendFormat": "Idle"
+          },
+          {
+            "expr": "hikaricp_connections_pending",
+            "refId": "C",
+            "legendFormat": "Pending"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "Circuit Breaker Status",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "resilience4j_circuitbreaker_state",
+            "refId": "A",
+            "legendFormat": "{{name}} - {{state}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "id": 10,
+        "title": "Cache Hit Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(spring_cache_reads_total[5m]) > 0",
+            "refId": "A",
+            "legendFormat": "Total"
+          },
+          {
+            "expr": "rate(spring_cache_hits_total[5m])",
+            "refId": "B",
+            "legendFormat": "Hits"
+          },
+          {
+            "expr": "rate(spring_cache_misses_total[5m])",
+            "refId": "C",
+            "legendFormat": "Misses"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(http_server_requests_total, instance)",
+          "multi": true
+        }
+      ]
+    }
+  }
+}

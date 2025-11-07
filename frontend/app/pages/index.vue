@@ -187,9 +187,14 @@
 </template>
 
 <script setup lang="ts">
-// Page meta
+// Page meta with SEO
 definePageMeta({
-  title: 'Dashboard'
+  title: 'Dashboard',
+  description: 'BSS Dashboard - Monitor customers, orders, billing, and system status with real-time analytics and insights.',
+  ogTitle: 'BSS Dashboard - System Overview',
+  ogDescription: 'Monitor your Business Support System with real-time analytics, customer insights, and system health monitoring.',
+  ogImage: '/images/dashboard-og.png',
+  twitterCard: 'summary_large_image'
 })
 
 // Composables

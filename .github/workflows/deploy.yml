@@ -1,0 +1,257 @@
+name: Deploy to Environment
+
+on:
+  push:
+    branches: [ develop, main ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      service:
+        description: 'Service to deploy'
+        required: true
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+      backup_db:
+        description: 'Create database backup before deployment'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  determine-deployment:
+    name: Determine Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      should-deploy: ${{ steps.deploy.outputs.should-deploy }}
+
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine if should deploy
+        id: deploy
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" =~ ^refs/heads/(main|develop)$ ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  backup-database:
+    name: Backup Database
+    runs-on: ubuntu-latest
+    needs: determine-deployment
+    if: ${{ needs.determine-deployment.outputs.should-deploy == 'true' && (github.event.inputs.backup_db == 'true' || github.event.inputs.backup_db == '') && needs.determine-deployment.outputs.environment != 'dev' }}
+    environment: ${{ needs.determine-deployment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run database backup
+        run: |
+          ./dev/database/backup/restore/backup.sh \
+            --host ${{ secrets.DB_HOST }} \
+            --port ${{ secrets.DB_PORT }} \
+            --db-name ${{ secrets.DB_NAME }} \
+            --user ${{ secrets.DB_USER }} \
+            --password ${{ secrets.DB_PASSWORD }} \
+            --output /tmp/backup-${{ needs.determine-deployment.outputs.environment }}.sql
+
+      - name: Upload backup to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws s3 cp /tmp/backup-${{ needs.determine-deployment.outputs.environment }}.sql \
+            s3://${{ secrets.BACKUP_BUCKET }}/${{ needs.determine-deployment.outputs.environment }}/$(date +%Y%m%d-%H%M%S).sql
+
+  build-and-push-images:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    needs: [determine-deployment, backup-database]
+    if: ${{ needs.determine-deployment.outputs.should-deploy == 'true' }}
+    environment: ${{ needs.determine-deployment.outputs.environment }}
+
+    outputs:
+      backend-image: ${{ steps.meta.outputs.backend-image }}
+      frontend-image: ${{ steps.meta.outputs.frontend-image }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=${{ needs.determine-deployment.outputs.environment }}-
+            type=raw,value=${{ needs.determine-deployment.outputs.environment }}-latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        if: ${{ github.event.inputs.service == 'all' || github.event.inputs.service == 'backend' || github.event.inputs.service == '' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.backend-image }}
+          labels: ${{ steps.meta.outputs.backend-labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        if: ${{ github.event.inputs.service == 'all' || github.event.inputs.service == 'frontend' || github.event.inputs.service == '' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.frontend-image }}
+          labels: ${{ steps.meta.outputs.frontend-labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: [determine-deployment, build-and-push-images]
+    if: ${{ needs.determine-deployment.outputs.should-deploy == 'true' }}
+    environment: ${{ needs.determine-deployment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to environment
+        run: |
+          echo "Deploying to ${{ needs.determine-deployment.outputs.environment }}"
+          echo "Backend image: ${{ needs.build-and-push-images.outputs.backend-image }}"
+          echo "Frontend image: ${{ needs.build-and-push-images.outputs.frontend-image }}"
+
+          # Example deployment commands (customize based on your infrastructure)
+          if [[ "${{ needs.determine-deployment.outputs.environment }}" == "staging" ]]; then
+            # Deploy to staging using your deployment tool (e.g., kubectl, docker compose, etc.)
+            echo "Deploying to staging..."
+            # kubectl set image deployment/backend backend=${{ needs.build-and-push-images.outputs.backend-image }}
+            # kubectl set image deployment/frontend frontend=${{ needs.build-and-push-images.outputs.frontend-image }}
+          elif [[ "${{ needs.determine-deployment.outputs.environment }}" == "production" ]]; then
+            # Deploy to production with additional safety checks
+            echo "Deploying to production..."
+            # kubectl set image deployment/backend backend=${{ needs.build-and-push-images.outputs.backend-image }}
+            # kubectl set image deployment/frontend frontend=${{ needs.build-and-push-images.outputs.frontend-image }}
+          fi
+
+  database-migration:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: [determine-deployment, deploy-infrastructure]
+    if: ${{ needs.determine-deployment.outputs.should-deploy == 'true' }}
+    environment: ${{ needs.determine-deployment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run migrations
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+
+          # Run database migrations (Flyway, Liquibase, etc.)
+          cd backend
+          mvn -B flyway:migrate \
+            -Dflyway.url=${{ secrets.DB_URL }} \
+            -Dflyway.user=${{ secrets.DB_USER }} \
+            -Dflyway.password=${{ secrets.DB_PASSWORD }}
+
+  post-deployment-test:
+    name: Post-Deployment Tests
+    runs-on: ubuntu-latest
+    needs: [determine-deployment, database-migration]
+    if: ${{ needs.determine-deployment.outputs.should-deploy == 'true' }}
+    environment: ${{ needs.determine-deployment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for services to be ready..."
+          sleep 60
+
+      - name: Run health checks
+        run: |
+          # Check if services are responding
+          curl -f ${{ secrets.API_URL }}/actuator/health
+          curl -f ${{ secrets.FRONTEND_URL }}
+
+      - name: Run smoke tests
+        run: |
+          # Run minimal smoke tests to verify deployment
+          cd dev/tools/generators
+          python3 generate_test_data.py --count 10 --output json | head -20
+
+  notify-deployment:
+    name: Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [determine-deployment, post-deployment-test]
+    if: always()
+
+    steps:
+      - name: Notify Slack
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            Deployment to ${{ needs.determine-deployment.outputs.environment }}: ${{ job.status }}
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+            Actor: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

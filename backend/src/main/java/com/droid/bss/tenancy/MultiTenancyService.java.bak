@@ -1,0 +1,349 @@
+package com.droid.bss.tenancy;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Multi-Tenancy Service
+ * Manages tenant isolation, data segregation, and resource allocation
+ */
+@Service
+public class MultiTenancyService {
+
+    private static final Logger log = LoggerFactory.getLogger(MultiTenancyService.class);
+
+    private final Map<String, Tenant> tenants = new ConcurrentHashMap<>();
+    private final ThreadLocal<TenantContext> currentTenantContext = new ThreadLocal<>();
+    private final Map<String, TenantResourceQuota> resourceQuotas = new ConcurrentHashMap<>();
+
+    /**
+     * Register a new tenant
+     */
+    public void registerTenant(String tenantId, String name, TenantPlan plan) {
+        log.info("Registering tenant: {} with plan: {}", tenantId, plan);
+
+        Tenant tenant = new Tenant(
+            tenantId,
+            name,
+            plan,
+            TenantStatus.ACTIVE,
+            new Date(),
+            Map.of()
+        );
+
+        tenants.put(tenantId, tenant);
+        resourceQuotas.put(tenantId, calculateResourceQuota(plan));
+
+        log.info("Tenant registered successfully: {}", tenantId);
+    }
+
+    /**
+     * Set current tenant context
+     */
+    public void setCurrentTenant(String tenantId) {
+        Tenant tenant = tenants.get(tenantId);
+        if (tenant == null) {
+            throw new TenantNotFoundException("Tenant not found: " + tenantId);
+        }
+
+        if (tenant.status() != TenantStatus.ACTIVE) {
+            throw new TenantInactiveException("Tenant is not active: " + tenantId);
+        }
+
+        currentTenantContext.set(new TenantContext(tenantId, tenant));
+        log.debug("Set current tenant context: {}", tenantId);
+    }
+
+    /**
+     * Get current tenant
+     */
+    public Optional<Tenant> getCurrentTenant() {
+        TenantContext context = currentTenantContext.get();
+        return context != null ? Optional.of(tenants.get(context.tenantId())) : Optional.empty();
+    }
+
+    /**
+     * Clear tenant context
+     */
+    public void clearTenantContext() {
+        currentTenantContext.remove();
+        log.debug("Cleared tenant context");
+    }
+
+    /**
+     * Get tenant by ID
+     */
+    public Optional<Tenant> getTenant(String tenantId) {
+        return Optional.ofNullable(tenants.get(tenantId));
+    }
+
+    /**
+     * Get all tenants
+     */
+    public List<Tenant> getAllTenants() {
+        return new ArrayList<>(tenants.values());
+    }
+
+    /**
+     * Update tenant plan
+     */
+    public void updateTenantPlan(String tenantId, TenantPlan newPlan) {
+        Tenant tenant = tenants.get(tenantId);
+        if (tenant == null) {
+            throw new TenantNotFoundException("Tenant not found: " + tenantId);
+        }
+
+        Tenant updatedTenant = new Tenant(
+            tenant.tenantId(),
+            tenant.name(),
+            newPlan,
+            tenant.status(),
+            tenant.createdAt(),
+            tenant.metadata()
+        );
+
+        tenants.put(tenantId, updatedTenant);
+        resourceQuotas.put(tenantId, calculateResourceQuota(newPlan));
+
+        log.info("Updated tenant plan: {} to {}", tenantId, newPlan);
+    }
+
+    /**
+     * Suspend tenant
+     */
+    public void suspendTenant(String tenantId) {
+        Tenant tenant = tenants.get(tenantId);
+        if (tenant == null) {
+            throw new TenantNotFoundException("Tenant not found: " + tenantId);
+        }
+
+        tenants.put(tenantId, new Tenant(
+            tenant.tenantId(),
+            tenant.name(),
+            tenant.plan(),
+            TenantStatus.SUSPENDED,
+            tenant.createdAt(),
+            tenant.metadata()
+        ));
+
+        log.warn("Tenant suspended: {}", tenantId);
+    }
+
+    /**
+     * Reactivate tenant
+     */
+    public void reactivateTenant(String tenantId) {
+        Tenant tenant = tenants.get(tenantId);
+        if (tenant == null) {
+            throw new TenantNotFoundException("Tenant not found: " + tenantId);
+        }
+
+        tenants.put(tenantId, new Tenant(
+            tenant.tenantId(),
+            tenant.name(),
+            tenant.plan(),
+            TenantStatus.ACTIVE,
+            tenant.createdAt(),
+            tenant.metadata()
+        ));
+
+        log.info("Tenant reactivated: {}", tenantId);
+    }
+
+    /**
+     * Check resource quota
+     */
+    public boolean checkResourceQuota(String tenantId, String resourceType, long requestedAmount) {
+        TenantResourceQuota quota = resourceQuotas.get(tenantId);
+        if (quota == null) {
+            return true; // Allow if no quota defined
+        }
+
+        return quota.check(resourceType, requestedAmount);
+    }
+
+    /**
+     * Consume resource quota
+     */
+    public void consumeResourceQuota(String tenantId, String resourceType, long amount) {
+        TenantResourceQuota quota = resourceQuotas.get(tenantId);
+        if (quota != null) {
+            quota.consume(resourceType, amount);
+        }
+    }
+
+    /**
+     * Get tenant statistics
+     */
+    public Map<String, Object> getTenantStatistics(String tenantId) {
+        Tenant tenant = tenants.get(tenantId);
+        if (tenant == null) {
+            throw new TenantNotFoundException("Tenant not found: " + tenantId);
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("tenantId", tenant.tenantId());
+        stats.put("name", tenant.name());
+        stats.put("plan", tenant.plan());
+        stats.put("status", tenant.status());
+        stats.put("createdAt", tenant.createdAt().toString());
+
+        TenantResourceQuota quota = resourceQuotas.get(tenantId);
+        if (quota != null) {
+            stats.put("resourceUsage", quota.getUsage());
+            stats.put("resourceLimits", quota.getLimits());
+        }
+
+        return stats;
+    }
+
+    /**
+     * Get usage by tenant plan
+     */
+    public Map<String, Object> getUsageByPlan() {
+        Map<String, Integer> planUsage = new HashMap<>();
+        tenants.values().forEach(tenant -> {
+            String plan = tenant.plan().name();
+            planUsage.merge(plan, 1, Integer::sum);
+        });
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("byPlan", planUsage);
+        result.put("totalTenants", tenants.size());
+        result.put("activeTenants",
+            tenants.values().stream()
+                .filter(t -> t.status() == TenantStatus.ACTIVE)
+                .count());
+
+        return result;
+    }
+
+    /**
+     * Isolate tenant data
+     */
+    public String getTenantDataTable(String baseTable, String tenantId) {
+        return baseTable + "_" + tenantId;
+    }
+
+    /**
+     * Get tenant cache key prefix
+     */
+    public String getTenantCacheKey(String key, String tenantId) {
+        return tenantId + ":" + key;
+    }
+
+    /**
+     * Get tenant Kafka topic
+     */
+    public String getTenantTopic(String baseTopic, String tenantId) {
+        return baseTopic + "." + tenantId;
+    }
+
+    private TenantResourceQuota calculateResourceQuota(TenantPlan plan) {
+        return switch (plan) {
+            case FREE -> new TenantResourceQuota(Map.of(
+                "apiCalls", 10000L,
+                "storage", 1024L * 1024 * 100, // 100MB
+                "concurrentUsers", 10L,
+                "dataRetentionDays", 30L
+            ));
+            case BASIC -> new TenantResourceQuota(Map.of(
+                "apiCalls", 100000L,
+                "storage", 1024L * 1024 * 1024, // 1GB
+                "concurrentUsers", 50L,
+                "dataRetentionDays", 90L
+            ));
+            case PRO -> new TenantResourceQuota(Map.of(
+                "apiCalls", 1000000L,
+                "storage", 1024L * 1024 * 1024 * 10, // 10GB
+                "concurrentUsers", 200L,
+                "dataRetentionDays", 365L
+            ));
+            case ENTERPRISE -> new TenantResourceQuota(Map.of(
+                "apiCalls", 10000000L,
+                "storage", 1024L * 1024 * 1024 * 100, // 100GB
+                "concurrentUsers", 1000L,
+                "dataRetentionDays", 3650L // 10 years
+            ));
+        };
+    }
+
+    public enum TenantPlan {
+        FREE, BASIC, PRO, ENTERPRISE
+    }
+
+    public enum TenantStatus {
+        ACTIVE, SUSPENDED, DELETED
+    }
+
+    public record Tenant(
+        String tenantId,
+        String name,
+        TenantPlan plan,
+        TenantStatus status,
+        Date createdAt,
+        Map<String, Object> metadata
+    ) {}
+
+    private record TenantContext(
+        String tenantId,
+        Tenant tenant
+    ) {}
+
+    public static class TenantResourceQuota {
+        private final Map<String, Long> limits;
+        private final Map<String, Long> usage = new ConcurrentHashMap<>();
+
+        public TenantResourceQuota(Map<String, Long> limits) {
+            this.limits = new HashMap<>(limits);
+        }
+
+        public boolean check(String resourceType, long requestedAmount) {
+            Long limit = limits.get(resourceType);
+            if (limit == null) {
+                return true; // No limit defined
+            }
+
+            Long current = usage.getOrDefault(resourceType, 0L);
+            return (current + requestedAmount) <= limit;
+        }
+
+        public void consume(String resourceType, long amount) {
+            usage.computeIfAbsent(resourceType, k -> 0L);
+            usage.put(resourceType, usage.get(resourceType) + amount);
+        }
+
+        public Map<String, Long> getUsage() {
+            return new HashMap<>(usage);
+        }
+
+        public Map<String, Long> getLimits() {
+            return new HashMap<>(limits);
+        }
+
+        public double getUsagePercentage(String resourceType) {
+            Long limit = limits.get(resourceType);
+            Long used = usage.getOrDefault(resourceType, 0L);
+            if (limit == null || limit == 0) {
+                return 0;
+            }
+            return (used.doubleValue() / limit.doubleValue()) * 100;
+        }
+    }
+
+    public static class TenantNotFoundException extends RuntimeException {
+        public TenantNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    public static class TenantInactiveException extends RuntimeException {
+        public TenantInactiveException(String message) {
+            super(message);
+        }
+    }
+}

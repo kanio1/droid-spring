@@ -5,6 +5,11 @@ import com.droid.bss.application.dto.order.OrderResponse;
 import com.droid.bss.domain.order.OrderEntity;
 import com.droid.bss.domain.order.OrderStatus;
 import com.droid.bss.domain.order.repository.OrderRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +24,7 @@ import java.util.stream.Collectors;
  * Query service for order operations
  */
 @Component
+@CacheConfig(cacheNames = "orders")
 public class OrderQueryService {
 
     private final OrderRepository orderRepository;
@@ -30,14 +36,26 @@ public class OrderQueryService {
     /**
      * Get order by ID
      */
+    @CircuitBreaker(name = "orderQueryService", fallbackMethod = "findByIdFallback")
+    @Retry(name = "orderQueryService")
+    @TimeLimiter(name = "orderQueryService")
+    @Cacheable(key = "#id", unless = "#result == null")
     public Optional<OrderResponse> findById(UUID id) {
         return orderRepository.findById(id)
             .map(this::toOrderResponse);
     }
 
+    public Optional<OrderResponse> findByIdFallback(UUID id, Exception ex) {
+        // Circuit breaker is open - return empty result
+        return Optional.empty();
+    }
+
     /**
      * Get all orders with pagination
      */
+    @CircuitBreaker(name = "orderQueryService", fallbackMethod = "findAllFallback")
+    @Retry(name = "orderQueryService")
+    @TimeLimiter(name = "orderQueryService")
     public PageResponse<OrderResponse> findAll(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<OrderEntity> orderPage = orderRepository.findAll(pageable);
@@ -54,9 +72,18 @@ public class OrderQueryService {
         );
     }
 
+    public PageResponse<OrderResponse> findAllFallback(int page, int size, Exception ex) {
+        // Circuit breaker is open - return empty page
+        return PageResponse.of(List.of(), page, size, 0);
+    }
+
     /**
      * Find orders by status
      */
+    @CircuitBreaker(name = "orderQueryService", fallbackMethod = "findByStatusFallback")
+    @Retry(name = "orderQueryService")
+    @TimeLimiter(name = "orderQueryService")
+    @Cacheable(key = "{#status, #page, #size}")
     public PageResponse<OrderResponse> findByStatus(OrderStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<OrderEntity> orderPage = orderRepository.findByStatus(status, pageable);
@@ -73,9 +100,18 @@ public class OrderQueryService {
         );
     }
 
+    public PageResponse<OrderResponse> findByStatusFallback(OrderStatus status, int page, int size, Exception ex) {
+        // Circuit breaker is open - return empty page
+        return PageResponse.of(List.of(), page, size, 0);
+    }
+
     /**
      * Find orders by customer ID
      */
+    @CircuitBreaker(name = "orderQueryService", fallbackMethod = "findByCustomerIdFallback")
+    @Retry(name = "orderQueryService")
+    @TimeLimiter(name = "orderQueryService")
+    @Cacheable(key = "{#customerId, #page, #size}")
     public PageResponse<OrderResponse> findByCustomerId(UUID customerId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<OrderEntity> orderPage = orderRepository.findByCustomerId(customerId, pageable);
@@ -92,9 +128,18 @@ public class OrderQueryService {
         );
     }
 
+    public PageResponse<OrderResponse> findByCustomerIdFallback(UUID customerId, int page, int size, Exception ex) {
+        // Circuit breaker is open - return empty page
+        return PageResponse.of(List.of(), page, size, 0);
+    }
+
     /**
      * Search orders by order number or notes
      */
+    @CircuitBreaker(name = "orderQueryService", fallbackMethod = "searchOrdersFallback")
+    @Retry(name = "orderQueryService")
+    @TimeLimiter(name = "orderQueryService")
+    @Cacheable(key = "{#searchTerm, #page, #size}")
     public PageResponse<OrderResponse> searchOrders(String searchTerm, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<OrderEntity> orderPage = orderRepository.searchOrders(searchTerm, pageable);
@@ -111,11 +156,24 @@ public class OrderQueryService {
         );
     }
 
+    public PageResponse<OrderResponse> searchOrdersFallback(String searchTerm, int page, int size, Exception ex) {
+        // Circuit breaker is open - return empty page
+        return PageResponse.of(List.of(), page, size, 0);
+    }
+
     /**
      * Count orders by status
      */
+    @CircuitBreaker(name = "orderQueryService", fallbackMethod = "countByStatusFallback")
+    @Retry(name = "orderQueryService")
+    @TimeLimiter(name = "orderQueryService")
     public long countByStatus(OrderStatus status) {
         return orderRepository.countByStatus(status);
+    }
+
+    public long countByStatusFallback(OrderStatus status, Exception ex) {
+        // Circuit breaker is open - return 0
+        return 0;
     }
 
     /**

@@ -1,0 +1,305 @@
+package com.droid.bss.infrastructure.security;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.stereotype.Service;
+
+import java.security.Principal;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Security Service
+ * Manages advanced security features including RBAC, permissions, and session management
+ */
+@Service
+public class SecurityService {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityService.class);
+
+    private final Map<String, UserSession> activeSessions = new ConcurrentHashMap<>();
+    private final Map<String, List<String>> userPermissions = new ConcurrentHashMap<>();
+
+    /**
+     * Get current authenticated user
+     */
+    public Optional<UserIdentity> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            return extractUserFromJwt(jwtToken);
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Check if user has specific permission
+     */
+    public boolean hasPermission(String permission) {
+        return getCurrentUser()
+            .map(user -> user.getPermissions().contains(permission))
+            .orElse(false);
+    }
+
+    /**
+     * Check if user has any of the specified permissions
+     */
+    public boolean hasAnyPermission(String... permissions) {
+        return getCurrentUser()
+            .map(user -> Arrays.stream(permissions)
+                .anyMatch(user.getPermissions()::contains))
+            .orElse(false);
+    }
+
+    /**
+     * Check if user has all specified permissions
+     */
+    public boolean hasAllPermissions(String... permissions) {
+        return getCurrentUser()
+            .map(user -> Arrays.stream(permissions)
+                .allMatch(user.getPermissions()::contains))
+            .orElse(false);
+    }
+
+    /**
+     * Check if user has role
+     */
+    public boolean hasRole(String role) {
+        return getCurrentUser()
+            .map(user -> user.getRoles().contains(role))
+            .orElse(false);
+    }
+
+    /**
+     * Check if user has any of the specified roles
+     */
+    public boolean hasAnyRole(String... roles) {
+        return getCurrentUser()
+            .map(user -> Arrays.stream(roles)
+                .anyMatch(user.getRoles()::contains))
+            .orElse(false);
+    }
+
+    /**
+     * Check if user has admin role
+     */
+    public boolean isAdmin() {
+        return hasRole("ROLE_ADMIN") || hasRole("admin");
+    }
+
+    /**
+     * Check if user is owner of resource
+     */
+    public boolean isOwner(String resourceId, String ownerField) {
+        return getCurrentUser()
+            .map(user -> {
+                String userId = user.getId();
+                return userId != null && userId.equals(resourceId);
+            })
+            .orElse(false);
+    }
+
+    /**
+     * Register user session
+     */
+    public void registerSession(String sessionId, UserIdentity user) {
+        activeSessions.put(sessionId, new UserSession(
+            sessionId,
+            user,
+            new Date(),
+            new Date(),
+            0
+        ));
+        log.info("Registered session: {} for user: {}", sessionId, user.getUsername());
+    }
+
+    /**
+     * Update session activity
+     */
+    public void updateSessionActivity(String sessionId) {
+        UserSession session = activeSessions.get(sessionId);
+        if (session != null) {
+            session.setLastActivity(new Date());
+            session.incrementRequestCount();
+        }
+    }
+
+    /**
+     * Invalidate session
+     */
+    public void invalidateSession(String sessionId) {
+        UserSession session = activeSessions.remove(sessionId);
+        if (session != null) {
+            log.info("Invalidated session: {} for user: {}", sessionId, session.getUser().getUsername());
+        }
+    }
+
+    /**
+     * Get active sessions count
+     */
+    public int getActiveSessionCount() {
+        return activeSessions.size();
+    }
+
+    /**
+     * Get active sessions
+     */
+    public Map<String, UserSession> getActiveSessions() {
+        return new HashMap<>(activeSessions);
+    }
+
+    /**
+     * Clean up expired sessions
+     */
+    public void cleanupExpiredSessions(int maxIdleMinutes) {
+        Date cutoff = new Date(System.currentTimeMillis() - (maxIdleMinutes * 60 * 1000));
+        List<String> expiredSessions = activeSessions.entrySet().stream()
+            .filter(entry -> entry.getValue().getLastActivity().before(cutoff))
+            .map(Map.Entry::getKey)
+            .toList();
+
+        expiredSessions.forEach(this::invalidateSession);
+        log.info("Cleaned up {} expired sessions", expiredSessions.size());
+    }
+
+    /**
+     * Get user statistics
+     */
+    public Map<String, Object> getUserStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalActiveSessions", activeSessions.size());
+
+        Map<String, Integer> userSessionCount = new HashMap<>();
+        activeSessions.values().forEach(session -> {
+            String username = session.getUser().getUsername();
+            userSessionCount.merge(username, 1, Integer::sum);
+        });
+        stats.put("uniqueUsers", userSessionCount.size());
+        stats.put("userSessionCount", userSessionCount);
+
+        return stats;
+    }
+
+    private Optional<UserIdentity> extractUserFromJwt(JwtAuthenticationToken token) {
+        try {
+            Map<String, Object> claims = (Map<String, Object>) token.getToken().getClaims();
+
+            String id = (String) claims.get("sub");
+            String username = (String) claims.get("preferred_username");
+            String email = (String) claims.get("email");
+            List<String> roles = extractRoles(claims);
+            List<String> permissions = extractPermissions(claims, roles);
+
+            return Optional.of(new UserIdentity(
+                id,
+                username,
+                email,
+                roles,
+                permissions,
+                (String) claims.get("realm_access"),
+                (Map<String, Object>) claims.get("resource_access")
+            ));
+        } catch (Exception e) {
+            log.error("Error extracting user from JWT", e);
+            return Optional.empty();
+        }
+    }
+
+    private List<String> extractRoles(Map<String, Object> claims) {
+        List<String> roles = new ArrayList<>();
+
+        // Extract from realm_access
+        Map<String, Object> realmAccess = (Map<String, Object>) claims.get("realm_access");
+        if (realmAccess != null) {
+            @SuppressWarnings("unchecked")
+            List<String> realmRoles = (List<String>) realmAccess.get("roles");
+            if (realmRoles != null) {
+                roles.addAll(realmRoles);
+            }
+        }
+
+        // Extract from resource_access
+        Map<String, Object> resourceAccess = (Map<String, Object>) claims.get("resource_access");
+        if (resourceAccess != null) {
+            resourceAccess.forEach((resource, access) -> {
+                if (access instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    List<String> resourceRoles = (List<String>) ((Map<String, Object>) access).get("roles");
+                    if (resourceRoles != null) {
+                        resourceRoles.forEach(role -> roles.add(resource + ":" + role));
+                    }
+                }
+            });
+        }
+
+        return roles;
+    }
+
+    private List<String> extractPermissions(Map<String, Object> claims, List<String> roles) {
+        // Map roles to permissions
+        Map<String, List<String>> rolePermissions = Map.of(
+            "ROLE_ADMIN", List.of("read", "write", "delete", "manage"),
+            "ROLE_USER", List.of("read", "write:own"),
+            "ROLE_VIEWER", List.of("read")
+        );
+
+        List<String> permissions = new ArrayList<>();
+        roles.forEach(role -> {
+            if (rolePermissions.containsKey(role)) {
+                permissions.addAll(rolePermissions.get(role));
+            }
+        });
+
+        // Add permissions from JWT claims
+        Object jwtPermissions = claims.get("permissions");
+        if (jwtPermissions instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<String> jwtPerms = (List<String>) jwtPermissions;
+            permissions.addAll(jwtPerms);
+        }
+
+        return permissions;
+    }
+
+    public record UserIdentity(
+        String id,
+        String username,
+        String email,
+        List<String> roles,
+        List<String> permissions,
+        String realmAccess,
+        Map<String, Object> resourceAccess
+    ) {}
+
+    public static class UserSession {
+        private final String sessionId;
+        private final UserIdentity user;
+        private Date createdAt;
+        private Date lastActivity;
+        private int requestCount;
+
+        public UserSession(String sessionId, UserIdentity user, Date createdAt, Date lastActivity, int requestCount) {
+            this.sessionId = sessionId;
+            this.user = user;
+            this.createdAt = createdAt;
+            this.lastActivity = lastActivity;
+            this.requestCount = requestCount;
+        }
+
+        public String getSessionId() { return sessionId; }
+        public UserIdentity getUser() { return user; }
+        public Date getCreatedAt() { return createdAt; }
+        public Date getLastActivity() { return lastActivity; }
+        public void setLastActivity(Date lastActivity) { this.lastActivity = lastActivity; }
+        public int getRequestCount() { return requestCount; }
+        public void incrementRequestCount() { this.requestCount++; }
+    }
+}

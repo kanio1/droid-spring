@@ -5,6 +5,7 @@ package com.droid.bss.domain.billing;
  */
 public enum UsageUnit {
     SECONDS("Time in seconds"),
+    MINUTES("Time in minutes"),
     COUNT("Number of units"),
     MB("Megabytes"),
     GB("Gigabytes");

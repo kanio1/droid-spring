@@ -149,9 +149,15 @@ import type { Customer, CustomerStatus } from '~/schemas/customer'
 import { CUSTOMER_STATUS_LABELS } from '~/schemas/customer'
 import { formatCustomerName, getInitials } from '~/schemas/customer'
 
-// Page meta
+// Page meta with SEO
 definePageMeta({
-  title: 'Customers'
+  title: 'Customer Management',
+  description: 'Manage BSS customers efficiently. View, create, edit, and organize customer information with advanced filtering and search capabilities.',
+  keywords: 'customer management, BSS customers, customer database, CRM, customer relationships, customer profiles',
+  ogTitle: 'BSS Customer Management',
+  ogDescription: 'Manage BSS customers efficiently. View, create, edit, and organize customer information.',
+  ogImage: '/images/customers-og.png',
+  twitterCard: 'summary_large_image'
 })
 
 // Store

@@ -75,7 +75,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
         ...(params.overdue !== undefined && { overdue: params.overdue })
       }
 
-      const response = await get<InvoiceListResponse>('/invoices', { query })
+      const response = await get<InvoiceListResponse>('/api/v1/invoices', { query })
       invoices.value = response.data.content
 
       pagination.page = response.data.page
@@ -103,7 +103,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const response = await get<Invoice>(`/invoices/${id}`)
+      const response = await get<Invoice>(`/api/v1/invoices/${id}`)
       currentInvoice.value = response.data
       return response.data
     } catch (err: any) {
@@ -121,7 +121,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { post } = useApi()
-      const response = await post<Invoice>('/invoices', data)
+      const response = await post<Invoice>('/api/v1/invoices', data)
 
       invoices.value.unshift(response.data)
       pagination.totalElements++
@@ -142,7 +142,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { put } = useApi()
-      const response = await put<Invoice>(`/invoices/${data.id}/status`, data)
+      const response = await put<Invoice>(`/api/v1/invoices/${data.id}/status`, data)
 
       const index = invoices.value.findIndex(i => i.id === data.id)
       if (index !== -1) {
@@ -193,7 +193,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
     try {
       const { useApi } = await import('~/composables/useApi')
       const { get } = useApi()
-      const response = await get<Invoice>(`/invoices/by-invoice-number/${invoiceNumber}`)
+      const response = await get<Invoice>(`/api/v1/invoices/by-invoice-number/${invoiceNumber}`)
       return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch invoice by number'

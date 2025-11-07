@@ -24,9 +24,18 @@ FROM ${RUNTIME_IMAGE} AS runtime
 
 ENV TZ=UTC
 
+# Create non-root user
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
 WORKDIR /app
 
 COPY --from=builder /workspace/target/bss-backend-0.0.1-SNAPSHOT.jar /app/app.jar
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
 
 EXPOSE 8080
 
