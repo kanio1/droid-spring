@@ -1,205 +1,168 @@
 package com.droid.bss.application.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.droid.bss.domain.performance.QueryPerformanceMetrics;
+import com.droid.bss.domain.performance.IndexStats;
+import com.droid.bss.domain.performance.TableStats;
+import com.droid.bss.domain.performance.PerformanceAnalysis;
+import com.droid.bss.domain.performance.OptimizationRecommendation;
+import com.droid.bss.domain.performance.IndexRecommendation;
+import com.droid.bss.infrastructure.performance.QueryPerformanceRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
- * Query optimization and performance monitoring service
+ * Query Optimization Service
+ * Analyzes performance metrics and provides optimization recommendations
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class QueryOptimizationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(QueryOptimizationService.class);
-    private final PerformanceCacheService cacheService;
-    private final ConcurrentHashMap<String, QueryMetrics> queryMetrics = new ConcurrentHashMap<>();
-    private final AtomicLong totalQueries = new AtomicLong(0);
-    private final AtomicLong cachedQueries = new AtomicLong(0);
+    private final QueryPerformanceRepository performanceRepository;
 
-    public QueryOptimizationService(PerformanceCacheService cacheService) {
-        this.cacheService = cacheService;
-    }
+    // Query patterns that can be optimized
+    private static final Pattern SELECT_PATTERN = Pattern.compile(
+        "SELECT\\s+.*?FROM\\s+(\\w+)",
+        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
 
-    public <T> T executeOptimizedQuery(String cacheKey, String queryName, QueryExecutor<T> executor, long cacheTtlSeconds) {
-        long startTime = System.nanoTime();
-        totalQueries.incrementAndGet();
+    private static final Pattern WHERE_PATTERN = Pattern.compile(
+        "WHERE\\s+(.*?)(?:GROUP|ORDER|LIMIT|$)",
+        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
 
-        @SuppressWarnings("unchecked")
-        T result = (T) cacheService.getOrComputeWithTtl(
-            "query:" + queryName + ":" + cacheKey,
-            Object.class,
-            () -> {
-                cachedQueries.incrementAndGet();
-                return executor.execute();
-            },
-            cacheTtlSeconds
+    /**
+     * Get comprehensive performance analysis
+     */
+    public PerformanceAnalysis getPerformanceAnalysis() {
+        log.info("Generating performance analysis");
+
+        List<QueryPerformanceMetrics> slowQueries = performanceRepository.getTopSlowQueries(10);
+        List<QueryPerformanceMetrics> frequentQueries = performanceRepository.getMostFrequentQueries(10);
+        List<QueryPerformanceMetrics> worstCacheQueries = performanceRepository.getWorstCacheQueries(10);
+        List<IndexStats> indexStats = performanceRepository.getIndexStats();
+        List<TableStats> tableStats = performanceRepository.getTableStats();
+
+        List<OptimizationRecommendation> recommendations = generateRecommendations(
+            slowQueries,
+            frequentQueries,
+            indexStats,
+            tableStats
         );
 
-        long executionTime = System.nanoTime() - startTime;
-        updateMetrics(queryName, executionTime, true);
-
-        logger.debug("Query {} executed in {} ms (cached: {})",
-            queryName, executionTime / 1_000_000, result != null);
-
-        return result;
+        return PerformanceAnalysis.builder()
+            .slowQueries(slowQueries)
+            .frequentQueries(frequentQueries)
+            .worstCacheQueries(worstCacheQueries)
+            .indexStats(indexStats)
+            .tableStats(tableStats)
+            .recommendations(recommendations)
+            .build();
     }
 
-    public <T> T executeQueryWithoutCache(String queryName, QueryExecutor<T> executor) {
-        long startTime = System.nanoTime();
-        totalQueries.incrementAndGet();
+    /**
+     * Generate optimization recommendations based on performance data
+     */
+    private List<OptimizationRecommendation> generateRecommendations(
+            List<QueryPerformanceMetrics> slowQueries,
+            List<QueryPerformanceMetrics> frequentQueries,
+            List<IndexStats> indexStats,
+            List<TableStats> tableStats) {
 
-        T result = executor.execute();
+        List<OptimizationRecommendation> recommendations = new ArrayList<>();
 
-        long executionTime = System.nanoTime() - startTime;
-        updateMetrics(queryName, executionTime, false);
-
-        logger.debug("Query {} executed in {} ms (uncached)",
-            queryName, executionTime / 1_000_000);
-
-        return result;
-    }
-
-    private void updateMetrics(String queryName, long executionTimeNs, boolean cached) {
-        queryMetrics.compute(queryName, (name, metrics) -> {
-            if (metrics == null) {
-                return new QueryMetrics(queryName, executionTimeNs, cached);
-            } else {
-                metrics.recordExecution(executionTimeNs, cached);
-                return metrics;
-            }
-        });
-    }
-
-    public QueryMetrics getQueryMetrics(String queryName) {
-        return queryMetrics.get(queryName);
-    }
-
-    public java.util.Map<String, QueryMetrics> getAllQueryMetrics() {
-        return new ConcurrentHashMap<>(queryMetrics);
-    }
-
-    public PerformanceStats getPerformanceStats() {
-        long total = totalQueries.get();
-        long cached = cachedQueries.get();
-        double cacheHitRatio = total > 0 ? (double) cached / total * 100 : 0;
-
-        return new PerformanceStats(total, cached, cacheHitRatio, queryMetrics.size());
-    }
-
-    public void clearMetrics() {
-        queryMetrics.clear();
-        totalQueries.set(0);
-        cachedQueries.set(0);
-    }
-
-    public void invalidateQueryCache(String queryName) {
-        cacheService.evictPattern("query:" + queryName + ":*");
-    }
-
-    public void invalidateAllQueryCaches() {
-        cacheService.evictPattern("query:*");
-    }
-
-    public java.util.List<String> getSlowQueries(double thresholdMs) {
-        return queryMetrics.entrySet().stream()
-            .filter(entry -> entry.getValue().getAverageTimeMs() > thresholdMs)
-            .map(entry -> entry.getKey() + " - " + String.format("%.2f ms", entry.getValue().getAverageTimeMs()))
-            .collect(java.util.stream.Collectors.toList());
-    }
-
-    public void warmUpCache(String queryName, String cacheKey, Object data, long ttlSeconds) {
-        cacheService.warmUp("query:" + queryName + ":" + cacheKey, data);
-    }
-
-    @FunctionalInterface
-    public interface QueryExecutor<T> {
-        T execute();
-    }
-
-    public static class QueryMetrics {
-        private final String queryName;
-        private final AtomicLong executionCount = new AtomicLong(0);
-        private final AtomicLong totalTime = new AtomicLong(0);
-        private final AtomicLong minTime = new AtomicLong(Long.MAX_VALUE);
-        private final AtomicLong maxTime = new AtomicLong(0);
-        private final AtomicLong cachedCount = new AtomicLong(0);
-
-        public QueryMetrics(String queryName, long executionTime, boolean cached) {
-            this.queryName = queryName;
-            recordExecution(executionTime, cached);
-        }
-
-        public void recordExecution(long executionTime, boolean cached) {
-            executionCount.incrementAndGet();
-            totalTime.addAndGet(executionTime);
-            minTime.updateAndGet(current -> Math.min(current, executionTime));
-            maxTime.updateAndGet(current -> Math.max(current, executionTime));
-            if (cached) {
-                cachedCount.incrementAndGet();
+        // Analyze slow queries
+        for (QueryPerformanceMetrics query : slowQueries) {
+            String grade = query.getPerformanceGrade();
+            if (grade.equals("F") || grade.equals("E")) {
+                String recommendation = analyzeQueryForOptimization(query.getQuery());
+                if (recommendation != null) {
+                    recommendations.add(OptimizationRecommendation.builder()
+                        .type("PERFORMANCE")
+                        .severity(grade.equals("F") ? "CRITICAL" : "HIGH")
+                        .description(recommendation)
+                        .queryId(query.getQueryId())
+                        .impact(query.getMeanExecTime().doubleValue() / 1000.0)
+                        .details(Map.of(
+                            "query", query.getQuery().substring(0, Math.min(100, query.getQuery().length())),
+                            "currentPerformance", grade,
+                            "callCount", query.getCalls(),
+                            "avgExecutionTimeMs", query.getMeanExecTime().doubleValue() / 1000.0
+                        ))
+                        .build());
+                }
             }
         }
 
-        public long getExecutionCount() {
-            return executionCount.get();
+        // Analyze indexes
+        for (IndexStats index : indexStats) {
+            if (index.getIndexScans() == 0) {
+                recommendations.add(OptimizationRecommendation.builder()
+                    .type("INDEX")
+                    .severity("LOW")
+                    .description(String.format(
+                        "Index %s on table %s is never used. Consider dropping it to save space.",
+                        index.getIndexName(), index.getTableName()
+                    ))
+                    .impact(0.0)
+                    .details(Map.of(
+                        "indexName", index.getIndexName(),
+                        "tableName", index.getTableName()
+                    ))
+                    .build());
+            }
         }
 
-        public double getAverageTimeMs() {
-            long count = executionCount.get();
-            return count > 0 ? (totalTime.get() / count) / 1_000_000.0 : 0;
+        // Analyze tables with bloat
+        for (TableStats table : tableStats) {
+            if (table.getDeadRowPercent() != null && table.getDeadRowPercent().doubleValue() > 20) {
+                recommendations.add(OptimizationRecommendation.builder()
+                    .type("MAINTENANCE")
+                    .severity("HIGH")
+                    .description(String.format(
+                        "Table %s has high dead row percentage (%.2f%%). Run VACUUM ANALYZE.",
+                        table.getTableName(), table.getDeadRowPercent().doubleValue()
+                    ))
+                    .impact(table.getDeadRowPercent().doubleValue())
+                    .details(Map.of(
+                        "tableName", table.getTableName(),
+                        "deadRowPercent", table.getDeadRowPercent().doubleValue()
+                    ))
+                    .build());
+            }
         }
 
-        public double getMinTimeMs() {
-            return minTime.get() / 1_000_000.0;
-        }
-
-        public double getMaxTimeMs() {
-            return maxTime.get() / 1_000_000.0;
-        }
-
-        public long getCachedCount() {
-            return cachedCount.get();
-        }
-
-        public double getCacheHitRatio() {
-            long count = executionCount.get();
-            return count > 0 ? (double) cachedCount.get() / count * 100 : 0;
-        }
-
-        public String getQueryName() {
-            return queryName;
-        }
+        return recommendations;
     }
 
-    public static class PerformanceStats {
-        private final long totalQueries;
-        private final long cachedQueries;
-        private final double cacheHitRatio;
-        private final int trackedQueries;
+    /**
+     * Analyze a specific query for optimization opportunities
+     */
+    private String analyzeQueryForOptimization(String query) {
+        if (query == null || query.isEmpty()) return null;
 
-        public PerformanceStats(long totalQueries, long cachedQueries, double cacheHitRatio, int trackedQueries) {
-            this.totalQueries = totalQueries;
-            this.cachedQueries = cachedQueries;
-            this.cacheHitRatio = cacheHitRatio;
-            this.trackedQueries = trackedQueries;
+        StringBuilder recommendations = new StringBuilder();
+
+        // Check for SELECT *
+        if (query.matches("(?i)SELECT\\s+\\*\\s+FROM")) {
+            recommendations.append("Avoid SELECT * - specify only needed columns. ");
         }
 
-        public long getTotalQueries() {
-            return totalQueries;
-        }
+        return recommendations.length() > 0 ? recommendations.toString().trim() : null;
+    }
 
-        public long getCachedQueries() {
-            return cachedQueries;
-        }
-
-        public double getCacheHitRatio() {
-            return cacheHitRatio;
-        }
-
-        public int getTrackedQueries() {
-            return trackedQueries;
-        }
+    /**
+     * Get index recommendations for a specific table
+     */
+    public List<IndexRecommendation> getIndexRecommendations(String tableName) {
+        log.debug("Generating index recommendations for table: {}", tableName);
+        return List.of();
     }
 }

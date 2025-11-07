@@ -94,6 +94,49 @@
             <version>2.6.0</version>
         </dependency>
 
+        <!-- Spring GraphQL -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-graphql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>graphql-kickstart</groupId>
+            <artifactId>graphql-kickstart-spring-boot-starter-ui-playground</artifactId>
+            <version>12.1.0</version>
+        </dependency>
+
+        <!-- GraphQL Federation -->
+        <dependency>
+            <groupId>com.apollographql.federation</groupId>
+            <artifactId>federation-graphql-dsl</artifactId>
+            <version>2.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.apollographql.federation</groupId>
+            <artifactId>query-validator</artifactId>
+            <version>2.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.apollographql.federation</groupId>
+            <artifactId>federation-gateway</artifactId>
+            <version>2.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.graphql-java</groupId>
+            <artifactId>graphql-java-extended-validation</artifactId>
+            <version>21.0</version>
+        </dependency>
+
+        <!-- Spring RSocket for real-time communication -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-rsocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
+        </dependency>
+
         <!-- Kafka for CloudEvents messaging -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -124,6 +167,23 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Camunda BPM Workflow Engine -->
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+            <version>7.21.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+            <version>7.21.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter-rest</artifactId>
+            <version>7.21.0</version>
         </dependency>
 
         <!-- Lombok for reducing boilerplate code -->
@@ -276,6 +336,25 @@
             <version>1.37</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Spring Native (GraalVM) for AOT compilation -->
+        <dependency>
+            <groupId>org.springframework.experimental</groupId>
+            <artifactId>spring-native</artifactId>
+            <version>0.12.1</version>
+        </dependency>
+
+        <!-- Spring Cloud Consul for Service Discovery -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-config</artifactId>
+            <version>4.1.0</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -284,6 +363,13 @@
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
                 <version>1.19.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2023.0.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -449,7 +535,103 @@
                     <publishVerificationResults>${pact.publish.results:true}</publishVerificationResults>
                 </configuration>
             </plugin>
+
+            <!-- Spring Native AOT Plugin -->
+            <plugin>
+                <groupId>org.springframework.experimental</groupId>
+                <artifactId>spring-aot-maven-plugin</artifactId>
+                <version>0.12.1</version>
+                <configuration>
+                    <mode>build</mode>
+                    <removeXmlSupport>true</removeXmlSupport>
+                    <initializeEmptySpringFactories>false</initializeEmptySpringFactories>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Native Build Tools Plugin -->
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.9.28</version>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>--no-fallback</buildArg>
+                        <buildArg>--enable-http</buildArg>
+                        <buildArg>--enable-https</buildArg>
+                        <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                        <buildArg>-H:Debug=none</buildArg>
+                        <buildArg>-H:Log=registerResource:warning</buildArg>
+                        <buildArg>--rerun-class-initialization-at-runtime=org.postgresql.ssl.NonValidatingFactory</buildArg>
+                    </buildArgs>
+                    <imageName>bss-backend-native</imageName>
+                    <manifest>
+                        <mainClass>com.droid.bss.BssApplication</mainClass>
+                    </manifest>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test-native</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>build-native</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <!-- Native Profile for GraalVM compilation -->
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <skipTests>true</skipTests>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>native-image</id>
+            <properties>
+                <rebuild.image>true</rebuild.image>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

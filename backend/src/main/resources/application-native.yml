@@ -1,0 +1,163 @@
+# Native Profile Configuration
+# Optimized for GraalVM Native Image
+
+spring:
+  main:
+    banner-mode: off
+    lazy-initialization: true
+
+  # Native-specific datasource optimization
+  datasource:
+    hikari:
+      # Reduce connection pool for smaller memory footprint
+      maximum-pool-size: 5
+      minimum-idle: 2
+      idle-timeout: 300000
+      connection-timeout: 10000
+      max-lifetime: 600000
+      leak-detection-threshold: 0  # Disable leak detection in native
+
+  # Redis configuration for native
+  data:
+    redis:
+      lettuce:
+        pool:
+          max-active: 5
+          max-idle: 2
+          min-idle: 1
+
+  # JPA optimization
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Disable Hibernate statistics
+        generate_statistics: false
+        # Optimize for native
+        jdbc:
+          batch_size: 20
+
+  # Cache configuration
+  cache:
+    type: simple
+    redis:
+      time-to-live: 300000
+      cache-null-values: false
+
+# GraphQL Native Configuration
+graphql:
+  playground:
+    enabled: false  # Disable in production native
+  graphiql:
+    enabled: false
+  subscriptions:
+    enabled: false  # Disable subscriptions in native for smaller footprint
+
+# Actuator native optimization
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics  # Minimal endpoints
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: false
+      sla:
+        http.server.requests: 100ms,200ms,500ms,1s
+
+# Logging optimization
+logging:
+  level:
+    root: WARN
+    com.droid.bss: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.flywaydb: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 5
+
+# Native-specific JVM arguments
+native:
+  image:
+    # Arguments passed to native-image
+    args: >
+      --no-fallback
+      --enable-http
+      --enable-https
+      -H:+ReportExceptionStackTraces
+      -H:Debug=none
+      -H:Log=registerResource:warning
+      -H:ResourceConfigurationResources=META-INF/native-image/resource-config.json
+      -H:ReflectionConfigurationResources=META-INF/native-image/reflect-config.json
+      -H:ProxyConfigurationResources=META-INF/native-image/proxy-config.json
+      -H:SerializationConfigurationResources=META-INF/native-image/serialization-config.json
+
+# Security native optimization
+security:
+  oauth2:
+    resourceserver:
+      jwt:
+        issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8081/realms/bss}
+
+# BSS native optimizations
+bss:
+  session:
+    store-type: redis
+    redis:
+      timeout: 1000ms
+
+  cache:
+    invalidation:
+      enabled: false  # Disable in native for simplicity
+      warming:
+        enabled: false
+
+  threads:
+    virtual:
+      enabled: true
+
+# Server native optimization
+server:
+  tomcat:
+    remoteip:
+      protocol-header: X-Forwarded-Proto
+      remote-ip-header: X-Forwarded-For
+    threads:
+      max: 10  # Limit threads for smaller footprint
+
+# Resilience4j native optimization
+resilience4j:
+  circuitbreaker:
+    instances:
+      backendService:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        slow-call-rate-threshold: 100
+        slow-call-duration-threshold: 2s
+        automatic-transition-from-open-to-half-open-enabled: true
+  retry:
+    instances:
+      backendService:
+        max-attempts: 3
+        wait-duration: 1s
+  timelimiter:
+    instances:
+      backendService:
+        timeout-duration: 5s
+  ratelimiter:
+    instances:
+      backendService:
+        limit-for-period: 50
+        limit-refresh-period: 10s
+        timeout-duration: 0s

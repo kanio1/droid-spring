@@ -1,0 +1,137 @@
+{
+  "realm": "bss",
+  "authenticationFlows": [
+    {
+      "id": "webauthn-browser-flow",
+      "alias": "WebAuthn Browser Flow",
+      "description": "Browser flow with WebAuthn passwordless authentication",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "DISABLED",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "webauthn-authenticator",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "autheticatorFlow": false,
+          "userSetupAllowed": true
+        }
+      ]
+    },
+    {
+      "id": "webauthn-browser-passwordless-flow",
+      "alias": "WebAuthn Browser Passwordless",
+      "description": "Browser flow with WebAuthn only (no password)",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "webauthn-authenticator",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": true
+        }
+      ]
+    },
+    {
+      "id": "webauthn-form-flow",
+      "alias": "WebAuthn Form Flow",
+      "description": "Form flow with username/password and WebAuthn",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "webauthn-username-password-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": true
+        },
+        {
+          "authenticator": "webauthn-authenticator",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": true
+        }
+      ]
+    }
+  ],
+  "authenticators": [
+    {
+      "alias": "webauthn-authenticator",
+      "name": "WebAuthn Authenticator",
+      "providerId": "webauthn-authenticator",
+      "enabled": true,
+      "config": {
+        "webauthn-authenticator-attachment": "platform",
+        "webauthn-user-verification": "required",
+        "webauthn-resident-key": "preferred",
+        "webauthn-rp-id": "bss.local",
+        "webauthn-rp-name": "BSS Platform",
+        "webauthn-create-timeout-authenticator": "preferred",
+        "webauthn-create-timeout": "60000",
+        "webauthn-create-timeout-policy": "prefer-earliest",
+        "webauthn-appendix-remove-current-authenticator": "true"
+      }
+    },
+    {
+      "alias": "webauthn-username-password-form",
+      "name": "WebAuthn Username/Password Form",
+      "providerId": "webauthn-username-password-form",
+      "enabled": true,
+      "config": {
+        "webauthn-authenticator-attachment": "platform",
+        "webauthn-user-verification": "preferred"
+      }
+    }
+  ],
+  "requiredCredentials": [
+    {
+      "type": "password"
+    }
+  ],
+  "otpPolicy": {
+    "type": "totp",
+    "period": 30,
+    "digits": 6,
+    "algorithm": "HmacSHA1",
+    "counter": 0
+  },
+  "browserFlow": "WebAuthn Browser Flow",
+  "directGrantFlow": "WebAuthn Browser Flow",
+  "resetCredentialsFlow": "Reset Credentials",
+  "clientAuthenticationFlow": "Clients",
+  "dockerAuthenticationFlow": "Docker auth"
+}

@@ -1,0 +1,80 @@
+# Multi-stage Dockerfile for GraalVM Native Image
+# Stage 1: Build the native executable
+FROM ghcr.io/graalvm/graalvm-community:21 AS builder
+
+# Install native-image
+RUN gu install native-image
+
+# Set working directory
+WORKDIR /build
+
+# Copy Maven wrapper and pom.xml
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Make Maven wrapper executable
+RUN chmod +x ./mvnw
+
+# Download dependencies (this layer will be cached)
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src src
+
+# Build the native executable
+RUN ./mvnw -Pnative -DskipTests native:build
+
+# Stage 2: Create the runtime image
+FROM debian:bookworm-slim
+
+# Install CA certificates
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    fontconfig \
+    locales \
+    tzdata \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set locale
+RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen
+
+# Set timezone
+ENV TZ=UTC
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Create non-root user
+RUN groupadd -r bss && useradd -r -g bss bss
+
+# Set working directory
+WORKDIR /app
+
+# Copy the native executable from builder stage
+COPY --from=builder /build/target/bss-backend-native /app/bss-backend
+
+# Make the executable readable
+RUN chmod +x /app/bss-backend
+
+# Copy the native executable again with proper name
+RUN mv /app/bss-backend /app/bss-native && \
+    chmod +x /app/bss-native
+
+# Expose the port
+EXPOSE 8080
+
+# Set the user
+USER bss
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Run the native executable
+ENTRYPOINT ["/app/bss-native"]
+
+# Default arguments
+CMD ["--spring.profiles.active=prod"]

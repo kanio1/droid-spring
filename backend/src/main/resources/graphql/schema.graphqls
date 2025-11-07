@@ -1,0 +1,839 @@
+# BSS System GraphQL Schema
+# Comprehensive schema for Business Support System
+# Supports all major entities: Customer, Invoice, Payment, Subscription, Order, Product
+
+# Custom Scalars
+scalar DateTime
+scalar Date
+scalar BigDecimal
+scalar UUID
+
+# Enums
+enum CustomerStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+    PENDING
+}
+
+enum InvoiceStatus {
+    DRAFT
+    PENDING
+    PAID
+    OVERDUE
+    CANCELLED
+    REFUNDED
+}
+
+enum InvoiceType {
+    STANDARD
+    PROFORMA
+    CREDIT_NOTE
+    DEBIT_NOTE
+}
+
+enum PaymentStatus {
+    PENDING
+    COMPLETED
+    FAILED
+    REFUNDED
+    CANCELLED
+}
+
+enum PaymentMethod {
+    CARD
+    BANK_TRANSFER
+    CASH
+    CHEQUE
+    PAYPAL
+    CRYPTO
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    CANCELLED
+    EXPIRED
+    SUSPENDED
+    PENDING
+}
+
+enum OrderStatus {
+    PENDING
+    CONFIRMED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELLED
+    RETURNED
+}
+
+enum ProductStatus {
+    ACTIVE
+    INACTIVE
+    DISCONTINUED
+    DRAFT
+}
+
+# Root Types
+type Query {
+    # Customer queries
+    customer(id: UUID!): Customer
+    customers(
+        page: Int = 0
+        size: Int = 20
+        status: CustomerStatus
+        search: String
+    ): CustomerConnection!
+    searchCustomers(query: String!): [Customer!]!
+
+    # Invoice queries
+    invoice(id: UUID!): Invoice
+    invoices(
+        page: Int = 0
+        size: Int = 20
+        status: InvoiceStatus
+        customerId: UUID
+        fromDate: Date
+        toDate: Date
+    ): InvoiceConnection!
+    invoicesByCustomer(customerId: UUID!): [Invoice!]!
+
+    # Payment queries
+    payment(id: UUID!): Payment
+    payments(
+        page: Int = 0
+        size: Int = 20
+        status: PaymentStatus
+        customerId: UUID
+        invoiceId: UUID
+    ): PaymentConnection!
+    paymentsByInvoice(invoiceId: UUID!): [Payment!]!
+
+    # Subscription queries
+    subscription(id: UUID!): Subscription
+    subscriptions(
+        page: Int = 0
+        size: Int = 20
+        status: SubscriptionStatus
+        customerId: UUID
+    ): SubscriptionConnection!
+    subscriptionsByCustomer(customerId: UUID!): [Subscription!]!
+
+    # Order queries
+    order(id: UUID!): Order
+    orders(
+        page: Int = 0
+        size: Int = 20
+        status: OrderStatus
+        customerId: UUID
+    ): OrderConnection!
+
+    # Product queries
+    product(id: UUID!): Product
+    products(
+        page: Int = 0
+        size: Int = 20
+        status: ProductStatus
+        search: String
+    ): ProductConnection!
+    searchProducts(query: String!): [Product!]!
+
+    # Dashboard and Analytics
+    dashboardMetrics: DashboardMetrics!
+    customerAnalytics(customerId: UUID!): CustomerAnalytics!
+    revenueAnalytics(fromDate: Date!, toDate: Date!): RevenueAnalytics!
+    invoiceStatistics: InvoiceStatistics!
+    paymentStatistics: PaymentStatistics!
+    subscriptionStatistics: SubscriptionStatistics!
+}
+
+type Mutation {
+    # Customer mutations
+    createCustomer(input: CreateCustomerInput!): Customer!
+    updateCustomer(id: UUID!, input: UpdateCustomerInput!): Customer!
+    deleteCustomer(id: UUID!): Boolean!
+    changeCustomerStatus(id: UUID!, status: CustomerStatus!): Customer!
+
+    # Invoice mutations
+    createInvoice(input: CreateInvoiceInput!): Invoice!
+    updateInvoice(id: UUID!, input: UpdateInvoiceInput!): Invoice!
+    deleteInvoice(id: UUID!): Boolean!
+    changeInvoiceStatus(id: UUID!, status: InvoiceStatus!): Invoice!
+    sendInvoice(id: UUID!, email: String!): Boolean!
+    generateInvoicePDF(id: UUID!): String! # Returns PDF base64
+
+    # Payment mutations
+    createPayment(input: CreatePaymentInput!): Payment!
+    updatePayment(id: UUID!, input: UpdatePaymentInput!): Payment!
+    processPayment(id: UUID!): Payment!
+    refundPayment(id: UUID!, amount: BigDecimal, reason: String): Payment!
+    cancelPayment(id: UUID!): Payment!
+
+    # Subscription mutations
+    createSubscription(input: CreateSubscriptionInput!): Subscription!
+    updateSubscription(id: UUID!, input: UpdateSubscriptionInput!): Subscription!
+    cancelSubscription(id: UUID!, reason: String): Subscription!
+    renewSubscription(id: UUID!): Subscription!
+    suspendSubscription(id: UUID!, reason: String): Subscription!
+    activateSubscription(id: UUID!): Subscription!
+
+    # Order mutations
+    createOrder(input: CreateOrderInput!): Order!
+    updateOrder(id: UUID!, input: UpdateOrderInput!): Order!
+    cancelOrder(id: UUID!, reason: String): Order!
+    changeOrderStatus(id: UUID!, status: OrderStatus!): Order!
+
+    # Product mutations
+    createProduct(input: CreateProductInput!): Product!
+    updateProduct(id: UUID!, input: UpdateProductInput!): Product!
+    deleteProduct(id: UUID!): Boolean!
+    changeProductStatus(id: UUID!, status: ProductStatus!): Product!
+}
+
+type Subscription {
+    # Customer events
+    customerEvents(customerId: UUID): CustomerEvent!
+
+    # Invoice events
+    invoiceEvents(customerId: UUID): InvoiceEvent!
+
+    # Payment events
+    paymentEvents(customerId: UUID): PaymentEvent!
+
+    # Subscription events
+    subscriptionEvents(customerId: UUID): SubscriptionEvent!
+
+    # Order events
+    orderEvents(customerId: UUID): OrderEvent!
+
+    # System events
+    systemEvents: SystemEvent!
+}
+
+# Entity Types
+type Customer {
+    id: UUID!
+    firstName: String!
+    lastName: String!
+    pesel: String
+    nip: String
+    email: String!
+    phone: String
+    status: CustomerStatus!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    deletedAt: DateTime
+
+    # Relations
+    invoices(page: Int = 0, size: Int = 20): InvoiceConnection!
+    payments(page: Int = 0, size: Int = 20): PaymentConnection!
+    subscriptions(page: Int = 0, size: Int = 20): SubscriptionConnection!
+    orders(page: Int = 0, size: Int = 20): OrderConnection!
+    addresses: [Address!]!
+
+    # Computed fields
+    totalRevenue: BigDecimal!
+    activeSubscriptionsCount: Int!
+    overdueInvoicesCount: Int!
+    lastPaymentDate: DateTime
+    customerSince: Date!
+    lifetimeValue: BigDecimal!
+    riskScore: Float
+}
+
+type Invoice {
+    id: UUID!
+    invoiceNumber: String!
+    customer: Customer!
+    invoiceType: InvoiceType!
+    status: InvoiceStatus!
+    issueDate: Date!
+    dueDate: Date!
+    paidDate: Date
+    billingPeriodStart: Date
+    billingPeriodEnd: Date
+    subtotal: BigDecimal!
+    taxAmount: BigDecimal!
+    totalAmount: BigDecimal!
+    currency: String!
+    notes: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    deletedAt: DateTime
+
+    # Relations
+    items: [InvoiceItem!]!
+    payments: [Payment!]!
+
+    # Computed fields
+    daysOverdue: Int
+    isOverdue: Boolean!
+    paidAmount: BigDecimal!
+    remainingBalance: BigDecimal!
+    paymentStatus: String!
+}
+
+type InvoiceItem {
+    id: UUID!
+    invoice: Invoice!
+    description: String!
+    quantity: BigDecimal!
+    unitPrice: BigDecimal!
+    taxRate: BigDecimal!
+    totalPrice: BigDecimal!
+    sortOrder: Int!
+    createdAt: DateTime!
+}
+
+type Payment {
+    id: UUID!
+    invoice: Invoice!
+    amount: BigDecimal!
+    paymentMethod: PaymentMethod!
+    status: PaymentStatus!
+    transactionId: String
+    gatewayResponse: String
+    processedAt: DateTime
+    refundedAt: DateTime
+    refundAmount: BigDecimal
+    refundReason: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    deletedAt: DateTime
+
+    # Computed fields
+    isRefunded: Boolean!
+    refundStatus: String
+}
+
+type Subscription {
+    id: UUID!
+    customer: Customer!
+    product: Product!
+    status: SubscriptionStatus!
+    startDate: Date!
+    endDate: Date
+    billingCycle: String! # monthly, yearly, etc.
+    price: BigDecimal!
+    currency: String!
+    autoRenew: Boolean!
+    trialEndDate: Date
+    cancelledAt: DateTime
+    cancellationReason: String
+    suspendedAt: DateTime
+    suspensionReason: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+
+    # Computed fields
+    isActive: Boolean!
+    daysUntilExpiry: Int
+    monthsActive: Int!
+    totalPaid: BigDecimal!
+    nextBillingDate: Date
+}
+
+type Order {
+    id: UUID!
+    orderNumber: String!
+    customer: Customer!
+    status: OrderStatus!
+    totalAmount: BigDecimal!
+    taxAmount: BigDecimal!
+    shippingAmount: BigDecimal!
+    discountAmount: BigDecimal = 0
+    currency: String!
+    shippingAddress: String
+    billingAddress: String
+    notes: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    shippedAt: DateTime
+    deliveredAt: DateTime
+
+    # Relations
+    items: [OrderItem!]!
+
+    # Computed fields
+    isShipped: Boolean!
+    isDelivered: Boolean!
+    orderAge: Int!
+}
+
+type OrderItem {
+    id: UUID!
+    order: Order!
+    product: Product!
+    quantity: Int!
+    unitPrice: BigDecimal!
+    totalPrice: BigDecimal!
+    createdAt: DateTime!
+}
+
+type Product {
+    id: UUID!
+    name: String!
+    description: String
+    sku: String!
+    price: BigDecimal!
+    cost: BigDecimal
+    currency: String!
+    status: ProductStatus!
+    category: String
+    tags: [String!]!
+    imageUrl: String
+    stockQuantity: Int
+    weight: BigDecimal
+    dimensions: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+
+    # Relations
+    subscriptions: [Subscription!]!
+    orderItems: [OrderItem!]!
+
+    # Computed fields
+    isInStock: Boolean!
+    profitMargin: BigDecimal
+    totalSales: Int!
+    averageRating: Float
+}
+
+type Address {
+    id: UUID!
+    customer: Customer!
+    street: String!
+    city: String!
+    state: String!
+    postalCode: String!
+    country: String!
+    isPrimary: Boolean!
+    isBilling: Boolean!
+    isShipping: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+# Connection Types (for pagination)
+type CustomerConnection {
+    edges: [CustomerEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+    totalPages: Int!
+}
+
+type CustomerEdge {
+    node: Customer!
+    cursor: String!
+}
+
+type InvoiceConnection {
+    edges: [InvoiceEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+    totalPages: Int!
+}
+
+type InvoiceEdge {
+    node: Invoice!
+    cursor: String!
+}
+
+type PaymentConnection {
+    edges: [PaymentEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+    totalPages: Int!
+}
+
+type PaymentEdge {
+    node: Payment!
+    cursor: String!
+}
+
+type SubscriptionConnection {
+    edges: [SubscriptionEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+    totalPages: Int!
+}
+
+type SubscriptionEdge {
+    node: Subscription!
+    cursor: String!
+}
+
+type OrderConnection {
+    edges: [OrderEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+    totalPages: Int!
+}
+
+type OrderEdge {
+    node: Order!
+    cursor: String!
+}
+
+type ProductConnection {
+    edges: [ProductEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+    totalPages: Int!
+}
+
+type ProductEdge {
+    node: Product!
+    cursor: String!
+}
+
+# Page Info
+type PageInfo {
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+    endCursor: String
+}
+
+# Analytics Types
+type DashboardMetrics {
+    totalCustomers: Int!
+    activeCustomers: Int!
+    newCustomersThisMonth: Int!
+    totalInvoices: Int!
+    pendingInvoices: Int!
+    overdueInvoices: Int!
+    totalRevenue: BigDecimal!
+    revenueThisMonth: BigDecimal!
+    revenueGrowth: Float!
+    totalPayments: Int!
+    successfulPayments: Int!
+    failedPayments: Int!
+    activeSubscriptions: Int!
+    churnRate: Float!
+    averageOrderValue: BigDecimal!
+    topProducts: [Product!]!
+    recentTransactions: [Payment!]!
+    alerts: [Alert!]!
+}
+
+type CustomerAnalytics {
+    customer: Customer!
+    totalInvoices: Int!
+    totalPayments: Int!
+    totalRevenue: BigDecimal!
+    averageOrderValue: BigDecimal!
+    paymentHistory: [Payment!]!
+    subscriptionHistory: [Subscription!]!
+    lastActivity: DateTime!
+    riskScore: Float!
+    lifetimeValue: BigDecimal!
+    preferredPaymentMethod: PaymentMethod
+    invoicesByStatus: [InvoiceStatusCount!]!
+    paymentsByMethod: [PaymentMethodCount!]!
+}
+
+type RevenueAnalytics {
+    period: String!
+    fromDate: Date!
+    toDate: Date!
+    totalRevenue: BigDecimal!
+    totalInvoices: Int!
+    averageInvoiceValue: BigDecimal!
+    revenueByMonth: [MonthlyRevenue!]!
+    revenueByProduct: [ProductRevenue!]!
+    revenueByCustomer: [CustomerRevenue!]!
+    growthRate: Float!
+    projections: [RevenueProjection!]!
+}
+
+type InvoiceStatistics {
+    totalInvoices: Int!
+    invoicesByStatus: [InvoiceStatusCount!]!
+    averageInvoiceValue: BigDecimal!
+    totalOverdue: Int!
+    overdueAmount: BigDecimal!
+    averagePaymentTime: Int!
+    topCustomers: [CustomerInvoiceStats!]!
+}
+
+type PaymentStatistics {
+    totalPayments: Int!
+    totalAmount: BigDecimal!
+    paymentsByStatus: [PaymentStatusCount!]!
+    paymentsByMethod: [PaymentMethodCount!]!
+    averagePaymentAmount: BigDecimal!
+    successRate: Float!
+    refundsTotal: BigDecimal!
+}
+
+type SubscriptionStatistics {
+    totalSubscriptions: Int!
+    activeSubscriptions: Int!
+    subscriptionsByStatus: [SubscriptionStatusCount!]!
+    monthlyRecurringRevenue: BigDecimal!
+    annualRecurringRevenue: BigDecimal!
+    churnRate: Float!
+    averageLifetime: Int!
+    topProducts: [ProductSubscriptionStats!]!
+}
+
+# Event Types for Subscriptions
+type CustomerEvent {
+    eventId: UUID!
+    eventType: String!
+    customer: Customer!
+    timestamp: DateTime!
+    data: String!
+}
+
+type InvoiceEvent {
+    eventId: UUID!
+    eventType: String!
+    invoice: Invoice!
+    timestamp: DateTime!
+    data: String!
+}
+
+type PaymentEvent {
+    eventId: UUID!
+    eventType: String!
+    payment: Payment!
+    timestamp: DateTime!
+    data: String!
+}
+
+type SubscriptionEvent {
+    eventId: UUID!
+    eventType: String!
+    subscription: Subscription!
+    timestamp: DateTime!
+    data: String!
+}
+
+type OrderEvent {
+    eventId: UUID!
+    eventType: String!
+    order: Order!
+    timestamp: DateTime!
+    data: String!
+}
+
+type SystemEvent {
+    eventId: UUID!
+    eventType: String!
+    severity: String!
+    message: String!
+    timestamp: DateTime!
+    data: String!
+}
+
+# Utility Types
+type Alert {
+    id: UUID!
+    type: String!
+    severity: String!
+    message: String!
+    timestamp: DateTime!
+    acknowledged: Boolean!
+}
+
+type InvoiceStatusCount {
+    status: InvoiceStatus!
+    count: Int!
+    percentage: Float!
+}
+
+type PaymentStatusCount {
+    status: PaymentStatus!
+    count: Int!
+    percentage: Float!
+}
+
+type PaymentMethodCount {
+    method: PaymentMethod!
+    count: Int!
+    percentage: Float!
+    totalAmount: BigDecimal!
+}
+
+type SubscriptionStatusCount {
+    status: SubscriptionStatus!
+    count: Int!
+    percentage: Float!
+}
+
+type MonthlyRevenue {
+    month: String!
+    revenue: BigDecimal!
+    invoices: Int!
+}
+
+type ProductRevenue {
+    product: Product!
+    revenue: BigDecimal!
+    quantity: Int!
+}
+
+type CustomerRevenue {
+    customer: Customer!
+    revenue: BigDecimal!
+    invoices: Int!
+}
+
+type RevenueProjection {
+    month: String!
+    projectedRevenue: BigDecimal!
+    confidence: Float!
+}
+
+type CustomerInvoiceStats {
+    customer: Customer!
+    invoiceCount: Int!
+    totalAmount: BigDecimal!
+}
+
+type ProductSubscriptionStats {
+    product: Product!
+    subscriptionCount: Int!
+    activeCount: Int!
+}
+
+# Input Types
+input CreateCustomerInput {
+    firstName: String!
+    lastName: String!
+    pesel: String
+    nip: String
+    email: String!
+    phone: String
+    status: CustomerStatus = PENDING
+}
+
+input UpdateCustomerInput {
+    firstName: String
+    lastName: String
+    pesel: String
+    nip: String
+    email: String
+    phone: String
+    status: CustomerStatus
+}
+
+input CreateInvoiceInput {
+    customerId: UUID!
+    invoiceType: InvoiceType = STANDARD
+    dueDate: Date!
+    billingPeriodStart: Date
+    billingPeriodEnd: Date
+    currency: String = "PLN"
+    notes: String
+    items: [InvoiceItemInput!]!
+}
+
+input InvoiceItemInput {
+    description: String!
+    quantity: BigDecimal!
+    unitPrice: BigDecimal!
+    taxRate: BigDecimal = 0.23
+    sortOrder: Int = 0
+}
+
+input UpdateInvoiceInput {
+    invoiceType: InvoiceType
+    status: InvoiceStatus
+    dueDate: Date
+    paidDate: Date
+    billingPeriodStart: Date
+    billingPeriodEnd: Date
+    currency: String
+    notes: String
+}
+
+input CreatePaymentInput {
+    invoiceId: UUID!
+    amount: BigDecimal!
+    paymentMethod: PaymentMethod!
+    transactionId: String
+}
+
+input UpdatePaymentInput {
+    status: PaymentStatus
+    transactionId: String
+    gatewayResponse: String
+}
+
+input CreateSubscriptionInput {
+    customerId: UUID!
+    productId: UUID!
+    startDate: Date!
+    billingCycle: String!
+    price: BigDecimal!
+    currency: String = "PLN"
+    autoRenew: Boolean = true
+    trialEndDate: Date
+}
+
+input UpdateSubscriptionInput {
+    status: SubscriptionStatus
+    endDate: Date
+    billingCycle: String
+    price: BigDecimal
+    autoRenew: Boolean
+}
+
+input CreateOrderInput {
+    customerId: UUID!
+    currency: String = "PLN"
+    shippingAddress: String
+    billingAddress: String
+    notes: String
+    items: [OrderItemInput!]!
+}
+
+input OrderItemInput {
+    productId: UUID!
+    quantity: Int!
+    unitPrice: BigDecimal
+}
+
+input UpdateOrderInput {
+    status: OrderStatus
+    shippingAddress: String
+    billingAddress: String
+    notes: String
+    shippedAt: Date
+    deliveredAt: Date
+}
+
+input CreateProductInput {
+    name: String!
+    description: String
+    sku: String!
+    price: BigDecimal!
+    cost: BigDecimal
+    currency: String = "PLN"
+    status: ProductStatus = DRAFT
+    category: String
+    tags: [String!]
+    imageUrl: String
+    stockQuantity: Int
+    weight: BigDecimal
+    dimensions: String
+}
+
+input UpdateProductInput {
+    name: String
+    description: String
+    sku: String
+    price: BigDecimal
+    cost: BigDecimal
+    currency: String
+    status: ProductStatus
+    category: String
+    tags: [String!]
+    imageUrl: String
+    stockQuantity: Int
+    weight: BigDecimal
+    dimensions: String
+}

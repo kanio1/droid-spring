@@ -47,6 +47,18 @@ export { PaymentFactory, PaymentProfiles, type PaymentFactoryOptions, type Payme
 export { SubscriptionFactory, SubscriptionProfiles, type SubscriptionFactoryOptions, type SubscriptionStatus }
   from './subscription.factory'
 
+// Tenant Factories (Multi-tenancy support)
+export { TenantFactory, TenantProfiles, type TenantFactoryOptions, type TenantStatus, type TenantTier, type UserTenantRole, type TenantSettings }
+  from './tenant.factory'
+
+// Locale Factories (i18n support)
+export { LocaleFactory, LocaleProfiles, type LocaleFactoryOptions, type LocaleConfig, type LanguageCode, type RegionCode, type CurrencyCode, type DateFormat, type TimeFormat, type LayoutDirection }
+  from './locale.factory'
+
+// Translation Factories
+export { TranslationFactory, UITranslations, TranslationValidator, type TranslationEntry }
+  from './translation.factory'
+
 // Enhanced Data Factory Exports
 // Data Correlator - Manages entity relationships
 export { DataCorrelator, dataCorrelator, type EntityRelationship }

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="customerOnboarding" name="Customer Onboarding" isExecutable="true">
+    <bpmn:documentation>
+      Workflow for onboarding new customers.
+      Triggers on customer.created event.
+      Steps:
+      1. Send welcome email
+      2. Provision default services
+      3. Wait 30 days (timer)
+      4. Create check-in ticket
+    </bpmn:documentation>
+
+    <!-- Start Event: Triggered by customer.created event -->
+    <bpmn:startEvent id="StartEvent" name="Customer Created">
+      <bpmn:outgoing>Flow_SendWelcomeEmail</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Service Task 1: Send Welcome Email -->
+    <bpmn:serviceTask id="SendWelcomeEmail" name="Send Welcome Email">
+      <bpmn:incoming>Flow_SendWelcomeEmail</bpmn:incoming>
+      <bpmn:outgoing>Flow_ProvisionServices</bpmn:outgoing>
+      <bpmn:documentation>Sends a welcome email to the new customer</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="to">${customer_email}</camunda:inputParameter>
+          <camunda:inputParameter name="subject">Welcome to BSS!</camunda:inputParameter>
+          <camunda:inputParameter name="template">welcome_email</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- Service Task 2: Provision Default Services -->
+    <bpmn:serviceTask id="ProvisionDefaultServices" name="Provision Default Services">
+      <bpmn:incoming>Flow_ProvisionServices</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait30Days</bpmn:outgoing>
+      <bpmn:documentation>Provisions default services for the customer</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="customerId">${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="services">["basic_support", "customer_portal"]</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- Timer Event: Wait 30 days -->
+    <bpmn:intermediateCatchEvent id="Wait30Days" name="Wait 30 Days">
+      <bpmn:incoming>Flow_Wait30Days</bpmn:incoming>
+      <bpmn:outgoing>Flow_CreateCheckInTicket</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <!-- Service Task 3: Create Check-in Ticket -->
+    <bpmn:serviceTask id="CreateCheckInTicket" name="Create Check-in Ticket">
+      <bpmn:incoming>Flow_CreateCheckInTicket</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+      <bpmn:documentation>Creates a customer success ticket for 30-day follow-up</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="customerId">${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="queue">customer_success</camunda:inputParameter>
+          <camunda:inputParameter name="priority">normal</camunda:inputParameter>
+          <camunda:inputParameter name="subject">30-day check-in for customer ${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="description">Please follow up with the customer after 30 days</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- End Event: Workflow Complete -->
+    <bpmn:endEvent id="EndEvent" name="Onboarding Complete">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_SendWelcomeEmail" sourceRef="StartEvent" targetRef="SendWelcomeEmail"/>
+    <bpmn:sequenceFlow id="Flow_ProvisionServices" sourceRef="SendWelcomeEmail" targetRef="ProvisionDefaultServices"/>
+    <bpmn:sequenceFlow id="Flow_Wait30Days" sourceRef="ProvisionDefaultServices" targetRef="Wait30Days"/>
+    <bpmn:sequenceFlow id="Flow_CreateCheckInTicket" sourceRef="Wait30Days" targetRef="CreateCheckInTicket"/>
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="CreateCheckInTicket" targetRef="EndEvent"/>
+
+  </bpmn:process>
+
+  <bpmn:error id="Error_ServiceFailure" name="Service Failure" errorCode="SERVICE_FAILURE"/>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="customerOnboarding">
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="_startEvent" bpmnElement="StartEvent">
+        <dc:Bounds height="36" width="36" x="10" y="88"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 1 -->
+      <bpmndi:BPMNShape id="_serviceTask1" bpmnElement="SendWelcomeEmail">
+        <dc:Bounds height="80" width="120" x="100" y="66"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 2 -->
+      <bpmndi:BPMNShape id="_serviceTask2" bpmnElement="ProvisionDefaultServices">
+        <dc:Bounds height="80" width="120" x="270" y="66"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Timer Event -->
+      <bpmndi:BPMNShape id="_timerEvent" bpmnElement="Wait30Days">
+        <dc:Bounds height="36" width="36" x="440" y="88"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 3 -->
+      <bpmndi:BPMNShape id="_serviceTask3" bpmnElement="CreateCheckInTicket">
+        <dc:Bounds height="80" width="120" x="530" y="66"/>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event -->
+      <bpmndi:BPMNShape id="_endEvent" bpmnElement="EndEvent">
+        <dc:Bounds height="36" width="36" x="700" y="88"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flows -->
+      <bpmndi:BPMNEdge id="_edge1" bpmnElement="Flow_SendWelcomeEmail" sourceElement="_startEvent" targetElement="_serviceTask1">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="46" y="106"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="100" y="106"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge2" bpmnElement="Flow_ProvisionServices" sourceElement="_serviceTask1" targetElement="_serviceTask2">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="220" y="106"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="270" y="106"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge3" bpmnElement="Flow_Wait30Days" sourceElement="_serviceTask2" targetElement="_timerEvent">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="390" y="106"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="440" y="106"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge4" bpmnElement="Flow_CreateCheckInTicket" sourceElement="_timerEvent" targetElement="_serviceTask3">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="476" y="106"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="530" y="106"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge5" bpmnElement="Flow_End" sourceElement="_serviceTask3" targetElement="_endEvent">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="650" y="106"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="700" y="106"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

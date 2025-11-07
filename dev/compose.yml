@@ -13,8 +13,6 @@ services:
     environment:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./certs/postgres:/etc/ssl/certs:ro
@@ -106,17 +104,17 @@ services:
       # TLS Configuration
       SERVER_SSL_ENABLED: "true"
       SERVER_SSL_KEY_STORE: /etc/ssl/certs/backend-cert.p12
-      SERVER_SSL_KEY_STORE_PASSWORD: "changeit"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${BACKEND_KEYSTORE_PASSWORD}
       SERVER_SSL_KEY_STORE_TYPE: PKCS12
       SERVER_SSL_TRUST_STORE: /etc/ssl/certs/truststore.jks
-      SERVER_SSL_TRUST_STORE_PASSWORD: "changeit"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${BACKEND_TRUSTSTORE_PASSWORD}
       SERVER_SSL_CLIENT_AUTH_ENABLED: "true"
       SERVER_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
       SERVER_SSL_CIPHERS: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
       # Kafka SSL Configuration
       KAFKA_SSL_ENABLED: "true"
-      KAFKA_SSL_KEYSTORE_PASSWORD: "changeit"
-      KAFKA_SSL_TRUSTSTORE_PASSWORD: "changeit"
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_KEYSTORE_PASSWORD}
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_TRUSTSTORE_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -480,10 +478,10 @@ services:
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       # SSL Configuration
       KAFKA_SSL_KEYSTORE_LOCATION: /etc/ssl/certs/kafka.p12
-      KAFKA_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_KEYSTORE_PASSWORD}
       KAFKA_SSL_KEYSTORE_TYPE: PKCS12
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/ssl/certs/truststore.jks
-      KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_TRUSTSTORE_PASSWORD}
       KAFKA_SSL_CLIENT_AUTH: required
       KAFKA_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
       KAFKA_SSL_CIPHER_SUITES: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -537,10 +535,10 @@ services:
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       # SSL Configuration
       KAFKA_SSL_KEYSTORE_LOCATION: /etc/ssl/certs/kafka.p12
-      KAFKA_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_KEYSTORE_PASSWORD}
       KAFKA_SSL_KEYSTORE_TYPE: PKCS12
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/ssl/certs/truststore.jks
-      KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_TRUSTSTORE_PASSWORD}
       KAFKA_SSL_CLIENT_AUTH: required
       KAFKA_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
       KAFKA_SSL_CIPHER_SUITES: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -594,10 +592,10 @@ services:
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       # SSL Configuration
       KAFKA_SSL_KEYSTORE_LOCATION: /etc/ssl/certs/kafka.p12
-      KAFKA_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_KEYSTORE_PASSWORD}
       KAFKA_SSL_KEYSTORE_TYPE: PKCS12
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/ssl/certs/truststore.jks
-      KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_TRUSTSTORE_PASSWORD}
       KAFKA_SSL_CLIENT_AUTH: required
       KAFKA_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
       KAFKA_SSL_CIPHER_SUITES: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -674,9 +672,9 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: SSL://kafka-1:9092,SSL://kafka-2:9092,SSL://kafka-3:9092
       SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SSL
       SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: /etc/ssl/certs/truststore.jks
-      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: changeit
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_TRUSTSTORE_PASSWORD}
       SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION: /etc/ssl/certs/kafka.p12
-      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD: changeit
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD: ${KAFKA_KEYSTORE_PASSWORD}
       SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_TYPE: PKCS12
       SCHEMA_REGISTRY_KAFKASTORE_SSL_CLIENT_AUTH: required
       SCHEMA_REGISTRY_KAFKASTORE_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
@@ -762,9 +760,9 @@ services:
                 bootstrap.servers: kafka-1:9092,kafka-2:9092,kafka-3:9092
                 security.protocol: SSL
                 ssl.truststore.location: /etc/ssl/certs/truststore.jks
-                ssl.truststore.password: changeit
+                ssl.truststore.password: ${KAFKA_TRUSTSTORE_PASSWORD}
                 ssl.keystore.location: /etc/ssl/certs/kafka.p12
-                ssl.keystore.password: changeit
+                ssl.keystore.password: ${KAFKA_KEYSTORE_PASSWORD}
                 ssl.keystore.type: PKCS12
       AKHQ_OPTS: -Xms256m -Xmx512m
     ports:
@@ -954,8 +952,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_MASTER_SERVICE: bss-postgres
       POSTGRES_REPLICA_MODE: slave
-    ports:
-      - "5433:5432"
     volumes:
       - postgres-replica-1-data:/var/lib/postgresql/data
     healthcheck:
@@ -998,8 +994,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_MASTER_SERVICE: bss-postgres
       POSTGRES_REPLICA_MODE: slave
-    ports:
-      - "5434:5432"
     volumes:
       - postgres-replica-2-data:/var/lib/postgresql/data
     healthcheck:

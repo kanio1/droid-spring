@@ -50,6 +50,7 @@ public class CustomerQueryService {
     @CircuitBreaker(name = "customerQueryService", fallbackMethod = "findAllFallback")
     @Retry(name = "customerQueryService")
     @TimeLimiter(name = "customerQueryService")
+    @Cacheable(key = "{#page, #size, #sort}", unless = "#result == null")
     public PageResponse<CustomerResponse> findAll(int page, int size, String sort) {
         String[] sortFields = parseSort(sort);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(sortFields));

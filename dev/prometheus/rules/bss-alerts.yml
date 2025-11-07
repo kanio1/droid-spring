@@ -320,3 +320,128 @@ groups:
         annotations:
           summary: "High database growth rate"
           description: "Database read rate is {{ $value }} blocks/sec on {{ $labels.instance }}"
+
+# =============================================================================
+# HIGH PRIORITY ALERTS - Infrastructure Security & Performance
+# =============================================================================
+
+  # Redis Authentication Failures / Low Connections
+  - alert: RedisAuthenticationFailures
+    expr: increase(redis_connected_clients[5m]) < 1
+    for: 2m
+    labels:
+      severity: warning
+      component: redis
+    annotations:
+      summary: "Redis authentication or connection issues"
+      description: "Redis has low connection count ({{ $value }}) - possible authentication failure"
+      runbook: "https://docs.bss.local/runbooks/redis-connections"
+
+  # PostgreSQL Replication Lag
+  - alert: PostgreSQLReplicationLag
+    expr: pg_replication_lag_seconds > 30
+    for: 1m
+    labels:
+      severity: critical
+      component: postgresql
+    annotations:
+      summary: "PostgreSQL replication lag detected"
+      description: "PostgreSQL replica lag is {{ $value }}s - replicas falling behind primary"
+      runbook: "https://docs.bss.local/runbooks/postgresql-replication"
+
+  # Kafka Consumer Lag (HIGH)
+  - alert: KafkaConsumerLagHigh
+    expr: kafka_consumer_lag_sum > 10000
+    for: 5m
+    labels:
+      severity: critical
+      component: kafka
+    annotations:
+      summary: "High Kafka consumer lag detected"
+      description: "Consumer lag is {{ $value }} messages - consumers not keeping up"
+      runbook: "https://docs.bss.local/runbooks/kafka-consumer-lag"
+
+  # Kafka Messages in DLQ
+  - alert: KafkaDLQMessages
+    expr: increase(kafka_consumer_dlq_count[5m]) > 10
+    for: 1m
+    labels:
+      severity: warning
+      component: kafka
+    annotations:
+      summary: "Messages sent to Kafka Dead Letter Queue"
+      description: "{{ $value }} messages sent to DLQ in the last 5 minutes - possible processing errors"
+      runbook: "https://docs.bss.local/runbooks/kafka-dlq"
+
+  # Keycloak Login Failures
+  - alert: KeycloakLoginFailures
+    expr: increase(keycloak_login_errors_total[5m]) > 50
+    for: 2m
+    labels:
+      severity: warning
+      component: keycloak
+    annotations:
+      summary: "High number of Keycloak login failures"
+      description: "{{ $value }} login failures in 5 minutes - possible brute force attack"
+      runbook: "https://docs.bss.local/runbooks/keycloak-auth"
+
+  # High Error Rate on Backend
+  - alert: BackendErrorRateHigh
+    expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+    for: 2m
+    labels:
+      severity: critical
+      component: backend
+    annotations:
+      summary: "High error rate on backend API"
+      description: "Backend error rate is {{ $value }} requests/second - {{ $value | humanizePercentage }} of total requests"
+      runbook: "https://docs.bss.local/runbooks/backend-errors"
+
+  # Database Connection Pool Exhaustion
+  - alert: DatabaseConnectionPoolExhaustion
+    expr: HikariPoolConnectionsActive / HikariPoolConnectionsMax > 0.8
+    for: 1m
+    labels:
+      severity: warning
+      component: database
+    annotations:
+      summary: "Database connection pool near exhaustion"
+      description: "Connection pool is {{ $value | humanizePercentage }} full - {{ $value | humanize }} active connections"
+      runbook: "https://docs.bss.local/runbooks/db-connections"
+
+  # Certificate Expiration (SSL/TLS)
+  - alert: CertificateExpiringSoon
+    expr: (certificate_expiration_timestamp - time()) / 86400 < 30
+    for: 1h
+    labels:
+      severity: warning
+      component: security
+    annotations:
+      summary: "SSL/TLS certificate expiring soon"
+      description: "Certificate expires in {{ $value }} days - renew before expiration"
+      runbook: "https://docs.bss.local/runbooks/cert-renewal"
+
+  # Disk Space Low
+  - alert: DiskSpaceLow
+    expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+    for: 5m
+    labels:
+      severity: critical
+      component: infrastructure
+    annotations:
+      summary: "Disk space critically low"
+      description: "Disk usage is {{ $value | humanizePercentage }} - less than 10% free space"
+      runbook: "https://docs.bss.local/runbooks/disk-space"
+
+  # Outbox Event Processing Delay
+  - alert: OutboxEventProcessingDelay
+    expr: time() - outbox_event_published_at > 300
+    for: 5m
+    labels:
+      severity: warning
+      component: messaging
+    annotations:
+      summary: "Outbox events not being processed"
+      description: "Oldest unprocessed event is {{ $value }}s old - event publishing may be stuck"
+      runbook: "https://docs.bss.local/runbooks/outbox-events"
+

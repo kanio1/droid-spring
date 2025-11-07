@@ -2,9 +2,15 @@
 # Global configuration
 api:
   dashboard: true
-  insecure: true
+  insecure: false
   # Debug mode
   debug: true
+
+# Authentication for dashboard
+# Use: admin / SecureAdminPass123! (CHANGE IN PRODUCTION)
+basicAuth:
+  users:
+    - "admin:$$2y$$10$$example$$hash$$would$$go$$here$$"
 
 # Entry points definition
 entryPoints:

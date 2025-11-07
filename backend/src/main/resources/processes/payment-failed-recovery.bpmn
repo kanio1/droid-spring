@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="paymentFailedRecovery" name="Payment Failed Recovery" isExecutable="true">
+    <bpmn:documentation>
+      Workflow for handling payment failures.
+      Triggers on payment.failed event.
+      Steps:
+      1. Send payment alert email
+      2. Wait 3 days (timer)
+      3. Retry payment
+      4. Gateway: Check if payment succeeded
+         - Path A (Success): End
+         - Path B (Failure): Wait 7 days, suspend services, wait 30 days, escalate to human
+    </bpmn:documentation>
+
+    <!-- Start Event: Triggered by payment.failed event -->
+    <bpmn:startEvent id="StartEvent" name="Payment Failed">
+      <bpmn:outgoing>Flow_SendPaymentAlert</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Service Task 1: Send Payment Alert -->
+    <bpmn:serviceTask id="SendPaymentAlert" name="Send Payment Alert">
+      <bpmn:incoming>Flow_SendPaymentAlert</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait3Days</bpmn:outgoing>
+      <bpmn:documentation>Sends payment failure alert to customer</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="to">${customer_email}</camunda:inputParameter>
+          <camunda:inputParameter name="subject">Payment Failed - Action Required</camunda:inputParameter>
+          <camunda:inputParameter name="template">payment_failed</camunda:inputParameter>
+          <camunda:inputParameter name="amount">${payment_amount}</camunda:inputParameter>
+          <camunda:inputParameter name="paymentId">${payment_id}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- Timer Event: Wait 3 days -->
+    <bpmn:intermediateCatchEvent id="Wait3Days" name="Wait 3 Days">
+      <bpmn:incoming>Flow_Wait3Days</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryPayment</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <!-- Service Task 2: Retry Payment -->
+    <bpmn:serviceTask id="RetryPayment" name="Retry Payment">
+      <bpmn:incoming>Flow_RetryPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckPaymentStatus</bpmn:outgoing>
+      <bpmn:documentation>Attempts to retry the payment</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="paymentId">${payment_id}</camunda:inputParameter>
+          <camunda:inputParameter name="customerId">${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="amount">${payment_amount}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- Exclusive Gateway: Check Payment Status -->
+    <bpmn:exclusiveGateway id="Gateway_CheckPaymentStatus" name="Payment Success?">
+      <bpmn:incoming>Flow_CheckPaymentStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentSucceeded</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PaymentFailed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Service Task 3: Payment Succeeded (End Path) -->
+    <bpmn:serviceTask id="PaymentSucceeded" name="Payment Succeeded">
+      <bpmn:incoming>Flow_PaymentSucceeded</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndSuccess</bpmn:outgoing>
+      <bpmn:documentation>Confirms payment success and completes workflow</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="status">COMPLETED</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- End Event 1: Success -->
+    <bpmn:endEvent id="EndEvent_Success" name="Payment Success">
+      <bpmn:incoming>Flow_EndSuccess</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Service Task 4: Suspend Services -->
+    <bpmn:serviceTask id="SuspendServices" name="Suspend Services">
+      <bpmn:incoming>Flow_PaymentFailed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait7Days</bpmn:outgoing>
+      <bpmn:documentation>Suspends customer services after payment failure</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="customerId">${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="reason">Payment failed after retry</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- Timer Event: Wait 7 days before next step -->
+    <bpmn:intermediateCatchEvent id="Wait7Days" name="Wait 7 More Days">
+      <bpmn:incoming>Flow_Wait7Days</bpmn:incoming>
+      <bpmn:outgoing>Flow_EscalateToHuman</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <!-- Service Task 5: Escalate to Human -->
+    <bpmn:serviceTask id="EscalateToHuman" name="Escalate to Human">
+      <bpmn:incoming>Flow_EscalateToHuman</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndFailure</bpmn:outgoing>
+      <bpmn:documentation>Creates high-priority ticket for manual intervention</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="customerId">${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="queue">billing</camunda:inputParameter>
+          <camunda:inputParameter name="priority">high</camunda:inputParameter>
+          <camunda:inputParameter name="subject">Payment failed after retries - ${customer_id}</camunda:inputParameter>
+          <camunda:inputParameter name="description">Payment has failed after automatic retry attempts. Manual intervention required.</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <!-- End Event 2: Failure -->
+    <bpmn:endEvent id="EndEvent_Failure" name="Escalated to Human">
+      <bpmn:incoming>Flow_EndFailure</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_SendPaymentAlert" sourceRef="StartEvent" targetRef="SendPaymentAlert"/>
+    <bpmn:sequenceFlow id="Flow_Wait3Days" sourceRef="SendPaymentAlert" targetRef="Wait3Days"/>
+    <bpmn:sequenceFlow id="Flow_RetryPayment" sourceRef="Wait3Days" targetRef="RetryPayment"/>
+    <bpmn:sequenceFlow id="Flow_CheckPaymentStatus" sourceRef="RetryPayment" targetRef="Gateway_CheckPaymentStatus"/>
+
+    <!-- Conditional flows from gateway -->
+    <bpmn:sequenceFlow id="Flow_PaymentSucceeded" name="Success" sourceRef="Gateway_CheckPaymentStatus" targetRef="PaymentSucceeded">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${payment_status == "COMPLETED"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_PaymentFailed" name="Failure" sourceRef="Gateway_CheckPaymentStatus" targetRef="SuspendServices">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${payment_status != "COMPLETED"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_EndSuccess" sourceRef="PaymentSucceeded" targetRef="EndEvent_Success"/>
+    <bpmn:sequenceFlow id="Flow_Wait7Days" sourceRef="SuspendServices" targetRef="Wait7Days"/>
+    <bpmn:sequenceFlow id="Flow_EscalateToHuman" sourceRef="Wait7Days" targetRef="EscalateToHuman"/>
+    <bpmn:sequenceFlow id="Flow_EndFailure" sourceRef="EscalateToHuman" targetRef="EndEvent_Failure"/>
+
+  </bpmn:process>
+
+  <bpmn:error id="Error_PaymentRetryFailure" name="Payment Retry Failure" errorCode="PAYMENT_RETRY_FAILED"/>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="paymentFailedRecovery">
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="_startEvent" bpmnElement="StartEvent">
+        <dc:Bounds height="36" width="36" x="10" y="150"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 1 -->
+      <bpmndi:BPMNShape id="_serviceTask1" bpmnElement="SendPaymentAlert">
+        <dc:Bounds height="80" width="120" x="100" y="128"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Timer 3 days -->
+      <bpmndi:BPMNShape id="_timer3Days" bpmnElement="Wait3Days">
+        <dc:Bounds height="36" width="36" x="270" y="150"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 2 -->
+      <bpmndi:BPMNShape id="_serviceTask2" bpmnElement="RetryPayment">
+        <dc:Bounds height="80" width="120" x="360" y="128"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway -->
+      <bpmndi:BPMNShape id="_gateway" bpmnElement="Gateway_CheckPaymentStatus">
+        <dc:Bounds height="40" width="40" x="540" y="148"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 3 (Success Path) -->
+      <bpmndi:BPMNShape id="_serviceTask3" bpmnElement="PaymentSucceeded">
+        <dc:Bounds height="80" width="120" x="630" y="60"/>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event Success -->
+      <bpmndi:BPMNShape id="_endSuccess" bpmnElement="EndEvent_Success">
+        <dc:Bounds height="36" width="36" x="800" y="82"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 4 (Failure Path) -->
+      <bpmndi:BPMNShape id="_serviceTask4" bpmnElement="SuspendServices">
+        <dc:Bounds height="80" width="120" x="630" y="240"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Timer 7 days -->
+      <bpmndi:BPMNShape id="_timer7Days" bpmnElement="Wait7Days">
+        <dc:Bounds height="36" width="36" x="800" y="262"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task 5 -->
+      <bpmndi:BPMNShape id="_serviceTask5" bpmnElement="EscalateToHuman">
+        <dc:Bounds height="80" width="120" x="890" y="240"/>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event Failure -->
+      <bpmndi:BPMNShape id="_endFailure" bpmnElement="EndEvent_Failure">
+        <dc:Bounds height="36" width="36" x="1060" y="262"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flows -->
+      <bpmndi:BPMNEdge id="_edge1" bpmnElement="Flow_SendPaymentAlert" sourceElement="_startEvent" targetElement="_serviceTask1">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="46" y="168"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="100" y="168"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge2" bpmnElement="Flow_Wait3Days" sourceElement="_serviceTask1" targetElement="_timer3Days">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="220" y="168"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="270" y="168"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge3" bpmnElement="Flow_RetryPayment" sourceElement="_timer3Days" targetElement="_serviceTask2">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="306" y="168"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="360" y="168"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge4" bpmnElement="Flow_CheckPaymentStatus" sourceElement="_serviceTask2" targetElement="_gateway">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="480" y="168"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="540" y="168"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Success Path -->
+      <bpmndi:BPMNEdge id="_edge5" bpmnElement="Flow_PaymentSucceeded" sourceElement="_gateway" targetElement="_serviceTask3">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="560" y="148"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="560" y="60"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="630" y="100"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge6" bpmnElement="Flow_EndSuccess" sourceElement="_serviceTask3" targetElement="_endSuccess">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="750" y="100"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="800" y="100"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Failure Path -->
+      <bpmndi:BPMNEdge id="_edge7" bpmnElement="Flow_PaymentFailed" sourceElement="_gateway" targetElement="_serviceTask4">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="560" y="188"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="560" y="240"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="630" y="280"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge8" bpmnElement="Flow_Wait7Days" sourceElement="_serviceTask4" targetElement="_timer7Days">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="750" y="280"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="800" y="280"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge9" bpmnElement="Flow_EscalateToHuman" sourceElement="_timer7Days" targetElement="_serviceTask5">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="836" y="280"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="890" y="280"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="_edge10" bpmnElement="Flow_EndFailure" sourceElement="_serviceTask5" targetElement="_endFailure">
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="1010" y="280"/>
+        <di:waypoint xmlns:di="http://www.omg.org/spec/DD/20100524/DI" x="1060" y="280"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

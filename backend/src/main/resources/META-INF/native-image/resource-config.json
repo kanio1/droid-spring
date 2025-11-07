@@ -1,0 +1,100 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qapplication.yaml\\E"
+      },
+      {
+        "pattern": "\\Qapplication-native.yml\\E"
+      },
+      {
+        "pattern": "\\Qapplication-prod.yml\\E"
+      },
+      {
+        "pattern": "\\Qgraphql/schema.graphqls\\E"
+      },
+      {
+        "pattern": "\\Qgraphql/schema.graphql\\E"
+      },
+      {
+        "pattern": "\\Qdb/migration/V[0-9]+__.*\\.sql\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/spring.factories\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/web/servlet/servlet.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/web/servlet/ DispatcherServletDispatcherServlet-initializer.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/http/codec/codecs-default.properties\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/http/logging/http-tracing-default.properties\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/boot/logging/logback/defaults.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/boot/logging/logback/console-appender.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/boot/logging/logback/file-appender.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/boot/logging/logback/rolling-file-appender.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/springframework/boot/info/build.properties\\E"
+      }
+    ],
+    "excludes": [
+      {
+        "pattern": "\\QMETA-INF/INDEX.LIST\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/DEPENDENCIES\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/LICENSE\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/LICENSE.txt\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/NOTICE\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/NOTICE.txt\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/MANIFEST.MF\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/spring.handlers\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/spring.schemas\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/spring.tooling\\E"
+      }
+    ]
+  },
+  "bundles": [
+    {
+      "name": "org.springframework.boot.logging.LogMessage"
+    },
+    {
+      "name": "org.springframework.boot.actuate.endpoint.default"
+    },
+    {
+      "name": "org.springframework.boot.autoconfigure.DefaultMessageCodesResolver"
+    }
+  ]
+}

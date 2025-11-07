@@ -1,0 +1,282 @@
+# ============================================
+# Kafka Consumer Lag Monitoring Rules
+# ============================================
+# Monitors consumer lag across all topics
+# Alerts when lag exceeds thresholds
+# Created: 2025-11-07
+# ============================================
+
+groups:
+  - name: kafka-consumer-lag
+    interval: 30s
+    rules:
+      # Alert: High consumer lag on any topic
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumer_lag_sum > 10000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "High consumer lag detected on Kafka topic"
+          description: "Consumer lag on topic {{ $labels.topic }} in group {{ $labels.consumergroup }} is {{ $value }} messages (threshold: 10,000)"
+          runbook_url: "https://kb.company.com/kafka-consumer-lag"
+          dashboard_url: "https://grafana.bss.local/d/kafka/consumer-lag"
+
+      # Alert: Critical consumer lag
+      - alert: KafkaConsumerLagCritical
+        expr: kafka_consumer_lag_sum > 100000
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Critical consumer lag detected on Kafka topic"
+          description: "Consumer lag on topic {{ $labels.topic }} in group {{ $labels.consumergroup }} is {{ $value }} messages (threshold: 100,000)"
+          runbook_url: "https://kb.company.com/kafka-consumer-lag"
+          dashboard_url: "https://grafana.bss.local/d/kafka/consumer-lag"
+          action: "URGENT: Investigate consumer health, scale consumers, or check for consumer failures"
+
+      # Alert: Consumer not consuming (zero lag but also zero offset)
+      - alert: KafkaConsumerNotConsuming
+        expr: kafka_consumer_lag_sum == 0 and kafka_consumer_offset_sum == 0
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Consumer not consuming messages"
+          description: "Consumer group {{ $labels.consumergroup }} on topic {{ $labels.topic }} has not consumed any messages in the last 10 minutes"
+          runbook_url: "https://kb.company.com/kafka-consumer-not-consuming"
+          dashboard_url: "https://grafana.bss.local/d/kafka/consumer-lag"
+
+      # Alert: Consumer group offline
+      - alert: KafkaConsumerGroupOffline
+        expr: kafka_consumer_group_members < 1
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Kafka consumer group has no active members"
+          description: "Consumer group {{ $labels.consumergroup }} has {{ $value }} active members (expected: >= 1)"
+          runbook_url: "https://kb.company.com/kafka-consumer-group-offline"
+          action: "URGENT: All consumers in group are offline. Restart consumer services immediately"
+
+      # Alert: Consumer lag increasing rapidly
+      - alert: KafkaConsumerLagIncreasing
+        expr: increase(kafka_consumer_lag_sum[5m]) > 50000
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Consumer lag increasing rapidly"
+          description: "Consumer lag on topic {{ $labels.topic }} in group {{ $labels.consumergroup }} increased by {{ $value }} messages in the last 5 minutes"
+          runbook_url: "https://kb.company.com/kafka-consumer-lag"
+          dashboard_url: "https://grafana.bss.local/d/kafka/consumer-lag"
+
+      # Alert: High consumer lag on specific business-critical topics
+      - alert: KafkaBusinessCriticalTopicLag
+        expr: kafka_consumer_lag_sum > 5000
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+          component: kafka
+          business_critical: "true"
+        annotations:
+          summary: "High lag on business-critical Kafka topic"
+          description: "Consumer lag on critical topic {{ $labels.topic }} is {{ $value }} messages. This may impact customer experience."
+          runbook_url: "https://kb.company.com/kafka-business-critical-lag"
+          dashboard_url: "https://grafana.bss.local/d/kafka/business-critical"
+          action: "CRITICAL: Check customer-related consumers and increase capacity if needed"
+
+      # Alert: Slow consumer group (processing time increased)
+      - alert: KafkaConsumerProcessingSlow
+        expr: rate(kafka_consumer_fetch_rate_sum[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Kafka consumer processing is slow"
+          description: "Consumer group {{ $labels.consumergroup }} is processing at {{ $value }} messages/second (expected: > 1 msg/sec)"
+          runbook_url: "https://kb.company.com/kafka-consumer-slow"
+          dashboard_url: "https://grafana.bss.local/d/kafka/consumer-lag"
+
+      # Metric: Consumer lag by topic and group
+      - record: kafka:consumer_lag:group_topic
+        expr: sum by (consumergroup, topic) (kafka_consumer_lag_sum)
+
+      # Metric: Total consumer lag across all topics
+      - record: kafka:consumer_lag:total
+        expr: sum(kafka_consumer_lag_sum)
+
+      # Metric: Consumer lag rate of change
+      - record: kafka:consumer_lag:rate
+        expr: rate(kafka_consumer_lag_sum[5m])
+
+      # Metric: Consumer offset by topic and group
+      - record: kafka:consumer_offset:group_topic
+        expr: sum by (consumergroup, topic) (kafka_consumer_offset_sum)
+
+      # Metric: Number of active consumer groups
+      - record: kafka:consumer_groups:count
+        expr: count(kafka_consumer_group_members)
+
+      # Metric: Average consumer lag
+      - record: kafka:consumer_lag:avg
+        expr: avg(kafka_consumer_lag_sum)
+
+      # Metric: Maximum consumer lag
+      - record: kafka:consumer_lag:max
+        expr: max(kafka_consumer_lag_sum)
+
+      # Metric: 95th percentile consumer lag
+      - record: kafka:consumer_lag:p95
+        expr: histogram_quantile(0.95, kafka_consumer_lag_bucket)
+
+      # Metric: 99th percentile consumer lag
+      - record: kafka:consumer_lag:p99
+        expr: histogram_quantile(0.99, kafka_consumer_lag_bucket)
+
+      # Business-critical topics (based on naming convention)
+      - record: kafka:business_critical_lag
+        expr: sum(kafka_consumer_lag_sum) by (topic)
+        labels:
+          business_area: "{{ $labels.topic | regexMatch 'bss\\.(customer|order|payment|invoice)' | then 'core-business' | else 'other' }}"
+
+  - name: kafka-consumer-throughput
+    interval: 30s
+    rules:
+      # Alert: Low message consumption rate
+      - alert: KafkaConsumerLowThroughput
+        expr: rate(kafka_consumer_messages_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Low message consumption rate detected"
+          description: "Consumer group {{ $labels.consumergroup }} is consuming at {{ $value }} messages/second (expected: > 1 msg/sec)"
+          runbook_url: "https://kb.company.com/kafka-consumer-throughput"
+
+      # Alert: Zero message consumption (consumers stopped)
+      - alert: KafkaConsumerNoMessages
+        expr: rate(kafka_consumer_messages_total[10m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Consumer group stopped consuming messages"
+          description: "Consumer group {{ $labels.consumergroup }} has not consumed any messages in the last 10 minutes"
+          runbook_url: "https://kb.company.com/kafka-consumer-stopped"
+          action: "CRITICAL: Check consumer service status and restart if needed"
+
+      # Metric: Consumer throughput by group
+      - record: kafka:consumer:throughput:group
+        expr: sum by (consumergroup) (rate(kafka_consumer_messages_total[5m]))
+
+      # Metric: Consumer throughput by topic
+      - record: kafka:consumer:throughput:topic
+        expr: sum by (topic) (rate(kafka_consumer_messages_total[5m]))
+
+  - name: kafka-consumer-health
+    interval: 60s
+    rules:
+      # Alert: Consumer group rebalancing frequently
+      - alert: KafkaConsumerRebalancing
+        expr: increase(kafka_consumer_rebalance_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "Consumer group rebalancing detected"
+          description: "Consumer group {{ $labels.consumergroup }} has rebalanced {{ $value }} times in the last 10 minutes"
+          runbook_url: "https://kb.company.com/kafka-consumer-rebalancing"
+
+      # Alert: Consumer commit failures
+      - alert: KafkaConsumerCommitFailures
+        expr: rate(kafka_consumer_offset_commit_failures_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "High offset commit failure rate"
+          description: "Consumer group {{ $labels.consumergroup }} has commit failure rate of {{ $value }} failures/second"
+          runbook_url: "https://kb.company.com/kafka-consumer-commit-failures"
+
+      # Alert: Consumer fetch errors
+      - alert: KafkaConsumerFetchErrors
+        expr: rate(kafka_consumer_fetch_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+          component: kafka
+        annotations:
+          summary: "High fetch error rate"
+          description: "Consumer group {{ $labels.consumergroup }} has fetch error rate of {{ $value }} errors/second"
+          runbook_url: "https://kb.company.com/kafka-consumer-fetch-errors"
+
+      # Metric: Consumer health score (composite metric)
+      - record: kafka:consumer:health_score
+        expr: |
+          (
+            # Normalize lag (lower is better, cap at 1.0)
+            clamp_max(kafka_consumer_lag_sum / 100000, 1.0) * 0.5 +
+            # Normalize rebalances (lower is better, cap at 1.0)
+            clamp_max(increase(kafka_consumer_rebalance_total[1h]) / 10, 1.0) * 0.3 +
+            # Normalize commit failures (lower is better, cap at 1.0)
+            clamp_max(rate(kafka_consumer_offset_commit_failures_total[5m]) * 10, 1.0) * 0.2
+          ) * 100
+
+  # Business SLA monitoring
+  - name: kafka-consumer-sla
+    interval: 60s
+    rules:
+      # Alert: Consumer SLA breach (lag > SLA threshold)
+      - alert: KafkaConsumerSLABreach
+        expr: kafka_consumer_lag_sum > 1000
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          component: kafka
+          sla: "true"
+        annotations:
+          summary: "Consumer SLA breach: high lag"
+          description: "Consumer lag on topic {{ $labels.topic }} has exceeded SLA threshold (1,000 messages) for 2 minutes"
+          sla_target: "< 1000 messages lag"
+          current_value: "{{ $value }} messages"
+          runbook_url: "https://kb.company.com/kafka-sla-breach"
+
+      # Alert: Processing time SLA breach
+      - alert: KafkaConsumerProcessingSLABreach
+        expr: kafka_consumer_processing_time_seconds > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          component: kafka
+          sla: "true"
+        annotations:
+          summary: "Consumer processing time SLA breach"
+          description: "Message processing time on topic {{ $labels.topic }} exceeds SLA threshold (5 seconds)"
+          sla_target: "< 5 seconds processing time"
+          current_value: "{{ $value }} seconds"
+          runbook_url: "https://kb.company.com/kafka-processing-sla-breach"

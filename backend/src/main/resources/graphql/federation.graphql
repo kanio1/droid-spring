@@ -1,0 +1,445 @@
+# GraphQL Federation Schema
+# BSS Backend - Federated Schema
+
+# Entity definition for Product (can be extended by other services)
+# This schema defines the base types that can be federated
+
+scalar DateTime
+scalar JSON
+scalar Object
+
+# Product entity with @key directive for federation
+type Product @key(fields: "id") {
+  id: ID!
+  name: String!
+  description: String
+  price: Float!
+  currency: String = "USD"
+  status: ProductStatus!
+  metadata: JSON
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+  DISCONTINUED
+}
+
+# Customer entity with @key directive
+type Customer @key(fields: "id") {
+  id: ID!
+  email: String!
+  name: String!
+  firstName: String
+  lastName: String
+  status: CustomerStatus!
+  addresses: [Address!]!
+  orders: [Order!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+# Address type
+type Address {
+  id: ID!
+  street: String!
+  city: String!
+  state: String
+  country: String!
+  postalCode: String
+  isPrimary: Boolean!
+}
+
+# Order entity with @key directive
+type Order @key(fields: "id") {
+  id: ID!
+  customer: Customer!
+  items: [OrderItem!]!
+  total: Float!
+  currency: String = "USD"
+  status: OrderStatus!
+  orderDate: DateTime!
+  fulfillmentDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type OrderItem {
+  id: ID!
+  product: Product!
+  quantity: Int!
+  unitPrice: Float!
+  totalPrice: Float!
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+# Invoice entity with @key directive
+type Invoice @key(fields: "id") {
+  id: ID!
+  order: Order!
+  customer: Customer!
+  items: [InvoiceItem!]!
+  total: Float!
+  currency: String = "USD"
+  status: InvoiceStatus!
+  dueDate: DateTime!
+  paidDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InvoiceItem {
+  id: ID!
+  description: String!
+  quantity: Int!
+  unitPrice: Float!
+  totalPrice: Float!
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+# Payment entity with @key directive
+type Payment @key(fields: "id") {
+  id: ID!
+  invoice: Invoice!
+  customer: Customer!
+  amount: Float!
+  currency: String = "USD"
+  status: PaymentStatus!
+  paymentMethod: PaymentMethod!
+  paymentDate: DateTime!
+  transactionId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  CASH
+}
+
+# Subscription entity with @key directive
+type Subscription @key(fields: "id") {
+  id: ID!
+  customer: Customer!
+  product: Product!
+  status: SubscriptionStatus!
+  startDate: DateTime!
+  endDate: DateTime
+  renewalDate: DateTime
+  price: Float!
+  currency: String = "USD"
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+# Root Query type for federation
+type Query {
+  # Product queries
+  product(id: ID!): Product
+  products(filter: ProductFilter, limit: Int = 20, offset: Int = 0): [Product!]!
+  productsConnection(filter: ProductFilter): ProductConnection!
+
+  # Customer queries
+  customer(id: ID!): Customer
+  customers(filter: CustomerFilter, limit: Int = 20, offset: Int = 0): [Customer!]!
+  customersConnection(filter: CustomerFilter): CustomerConnection!
+
+  # Order queries
+  order(id: ID!): Order
+  orders(filter: OrderFilter, limit: Int = 20, offset: Int = 0): [Order!]!
+  ordersConnection(filter: OrderFilter): OrderConnection!
+
+  # Invoice queries
+  invoice(id: ID!): Invoice
+  invoices(filter: InvoiceFilter, limit: Int = 20, offset: Int = 0): [Invoice!]!
+  invoicesConnection(filter: InvoiceFilter): InvoiceConnection!
+
+  # Payment queries
+  payment(id: ID!): Payment
+  payments(filter: PaymentFilter, limit: Int = 20, offset: Int = 0): [Payment!]!
+  paymentsConnection(filter: PaymentFilter): PaymentConnection!
+
+  # Subscription queries
+  subscription(id: ID!): Subscription
+  subscriptions(filter: SubscriptionFilter, limit: Int = 20, offset: Int = 0): [Subscription!]!
+  subscriptionsConnection(filter: SubscriptionFilter): SubscriptionConnection!
+
+  # Entity query for federation
+  _entities(representations: [_Any!]!): [_Entity!]!
+  _service: _Service!
+}
+
+# Input types for filtering
+input ProductFilter {
+  status: ProductStatus
+  minPrice: Float
+  maxPrice: Float
+  search: String
+}
+
+input CustomerFilter {
+  status: CustomerStatus
+  search: String
+}
+
+input OrderFilter {
+  status: OrderStatus
+  customerId: ID
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input InvoiceFilter {
+  status: InvoiceStatus
+  customerId: ID
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input PaymentFilter {
+  status: PaymentStatus
+  customerId: ID
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input SubscriptionFilter {
+  status: SubscriptionStatus
+  customerId: ID
+}
+
+# Connection types for pagination
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ProductEdge {
+  node: Product!
+  cursor: String!
+}
+
+type CustomerConnection {
+  edges: [CustomerEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type CustomerEdge {
+  node: Customer!
+  cursor: String!
+}
+
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type OrderEdge {
+  node: Order!
+  cursor: String!
+}
+
+type InvoiceConnection {
+  edges: [InvoiceEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type InvoiceEdge {
+  node: Invoice!
+  cursor: String!
+}
+
+type PaymentConnection {
+  edges: [PaymentEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type PaymentEdge {
+  node: Payment!
+  cursor: String!
+}
+
+type SubscriptionConnection {
+  edges: [SubscriptionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type SubscriptionEdge {
+  node: Subscription!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+# Mutation type
+type Mutation {
+  # Create mutations
+  createProduct(input: CreateProductInput!): Product!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  deleteProduct(id: ID!): Boolean!
+
+  createCustomer(input: CreateCustomerInput!): Customer!
+  updateCustomer(id: ID!, input: UpdateCustomerInput!): Customer!
+  deleteCustomer(id: ID!): Boolean!
+
+  createOrder(input: CreateOrderInput!): Order!
+  updateOrderStatus(id: ID!, status: OrderStatus!): Order!
+  cancelOrder(id: ID!): Order!
+
+  createInvoice(input: CreateInvoiceInput!): Invoice!
+  updateInvoice(id: ID!, input: UpdateInvoiceInput!): Invoice!
+  sendInvoice(id: ID!): Invoice!
+
+  processPayment(input: ProcessPaymentInput!): Payment!
+  refundPayment(id: ID!): Payment!
+
+  createSubscription(input: CreateSubscriptionInput!): Subscription!
+  updateSubscription(id: ID!, input: UpdateSubscriptionInput!): Subscription!
+  cancelSubscription(id: ID!): Subscription!
+}
+
+# Input types
+input CreateProductInput {
+  name: String!
+  description: String
+  price: Float!
+  currency: String
+}
+
+input UpdateProductInput {
+  name: String
+  description: String
+  price: Float
+  currency: String
+  status: ProductStatus
+}
+
+input CreateCustomerInput {
+  email: String!
+  name: String!
+  firstName: String
+  lastName: String
+}
+
+input UpdateCustomerInput {
+  name: String
+  firstName: String
+  lastName: String
+  status: CustomerStatus
+}
+
+input CreateOrderInput {
+  customerId: ID!
+  items: [OrderItemInput!]!
+}
+
+input OrderItemInput {
+  productId: ID!
+  quantity: Int!
+}
+
+input CreateInvoiceInput {
+  orderId: ID!
+  dueDate: DateTime!
+}
+
+input UpdateInvoiceInput {
+  status: InvoiceStatus
+  paidDate: DateTime
+}
+
+input ProcessPaymentInput {
+  invoiceId: ID!
+  paymentMethod: PaymentMethod!
+  amount: Float!
+}
+
+input CreateSubscriptionInput {
+  customerId: ID!
+  productId: ID!
+  startDate: DateTime!
+  price: Float!
+  currency: String
+}
+
+input UpdateSubscriptionInput {
+  status: SubscriptionStatus
+  renewalDate: DateTime
+  price: Float
+}
+
+# Subscription type for real-time updates
+type Subscription {
+  productUpdated(id: ID!): Product!
+  customerUpdated(id: ID!): Customer!
+  orderUpdated(id: ID!): Order!
+  invoiceUpdated(id: ID!): Invoice!
+  paymentUpdated(id: ID!): Payment!
+  subscriptionUpdated(id: ID!): Subscription!
+}
+
+# Federation service type
+type _Service {
+  sdl: String!
+}
+
+# Entity union for federation
+union _Entity = Product | Customer | Order | Invoice | Payment | Subscription
+
+# Any scalar for _Entity representations
+scalar _Any
